@@ -68,6 +68,10 @@
 
 状态：本机已改。方法段落由服务端模板生成，写明细胞水平、探索性、临时标签。复现包是 zip，含 config、argv、引擎信息，不含数据。两次运行并排对比参数、细胞数、cluster 数和图质量。运行从进行中变成结束时，已授权的浏览器可以发桌面通知。GitHub CI 仍未跑。
 
+## 单元 F1 Host 头
+
+状态：本机已改。`TrustedHostMiddleware` 只允许 `127.0.0.1` 和 `localhost`。`Host: evil.example` 请求 `/api/bootstrap` 得到 400，响应里没有令牌。GitHub CI 仍未跑。
+
 ## M1 到 M7
 
-状态：未开始。单元 E3 及以后还没做。
+状态：未开始。单元 F 还在做。正式分析和助手没开始。

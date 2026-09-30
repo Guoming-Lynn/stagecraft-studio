@@ -22,6 +22,20 @@ TOKEN = {
 }
 
 
+def test_untrusted_host_does_not_receive_the_token() -> None:
+    launch = EngineLaunch(
+        python=Path(r"D:\engines\python.exe"),
+        script=Path(r"D:\engines\run_pipeline.py"),
+    )
+    client = TestClient(
+        create_app("secret-token", port=8765, launch=launch),
+        base_url="http://evil.example",
+    )
+    response = client.get("/api/bootstrap")
+    assert response.status_code == 400
+    assert "secret-token" not in response.text
+
+
 def test_bootstrap_shows_server_engine_and_gmt(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("STAGECRAFT_QUICKLOOK_GMT", r"D:\sets\hallmark.gmt")
     launch = EngineLaunch(

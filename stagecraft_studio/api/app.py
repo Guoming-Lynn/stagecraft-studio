@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from stagecraft_studio.api.routes import build_router
 from stagecraft_studio.api.steps import engine_identity
@@ -25,6 +26,10 @@ def create_app(
     include_ui: bool = True,
 ) -> FastAPI:
     app = FastAPI(title="Stagecraft Studio", version="0.0.0")
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["127.0.0.1", "localhost"],
+    )
     allowed_origin = f"http://127.0.0.1:{port}"
     if state_path is None:
         state_path = Path(tempfile.mkdtemp(prefix="stagecraft-runs-")) / "runs.json"
