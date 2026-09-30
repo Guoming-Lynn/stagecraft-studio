@@ -46,6 +46,10 @@
 
 状态：本机已改。`POST /quicklook` 立即跳到 `/runs/<id>`。同一时间只能有一次速览。取消会停掉进程树。结果页分开显示引擎、输入和图质量。`templates.py` 没有改。GitHub CI 仍未跑。
 
+## 单元 D 引擎卫生检查和 CI
+
+状态：在 `D:\scrna-target-engine`。本仓库没有改。
+
 ## M1 到 M7
 
 状态：未开始。单元 C 及以后还没做。
