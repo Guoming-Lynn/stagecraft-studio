@@ -46,10 +46,11 @@ export function CsvView({ runId, rel }: { runId: string; rel: string }) {
   const start = virtualizer.getVirtualItems()[0]?.index ?? 0;
 
   useEffect(() => {
-    const end = start + 40;
+    if (total > 0 && start >= total) return;
+    const end = total > 0 ? Math.min(start + 40, total) : start + 40;
     let hole = start;
     while (hole < end && cache.current.has(hole)) hole += 1;
-    if (hole >= end && cache.current.size > 0) return;
+    if (hole >= end) return;
     const key = `${needle}|${sort}|${desc}|${rel}|${hole}`;
     if (requestKey.current === key) return;
     requestKey.current = key;
@@ -74,7 +75,7 @@ export function CsvView({ runId, rel }: { runId: string; rel: string }) {
       stop = true;
       requestKey.current = "";
     };
-  }, [start, stamp, needle, sort, desc, rel, runId]);
+  }, [start, stamp, total, needle, sort, desc, rel, runId]);
 
   const columns = useMemo<LegacyColumnDef<GridRow>[]>(
     () =>
