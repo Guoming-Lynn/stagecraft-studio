@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -105,13 +106,22 @@ def require_empty_output(path: Path) -> None:
         raise OutputRejected(path, "输出目录不是空的。请换一个空目录，以免覆盖已有文件。")
 
 
-def run_quicklook(
+@dataclass(frozen=True)
+class PreparedQuicklook:
+    command: list[str]
+    config_path: Path
+    tier_path: Path
+    enrichment: str
+    stopped_after: str
+
+
+def prepare_quicklook(
     request: QuicklookRequest,
     *,
     python: Path,
     script: Path,
-) -> QuicklookResult:
-    """Run the registered quicklook task. The engine is only this script path."""
+) -> PreparedQuicklook:
+    """Write config and the quicklook marker, then return the command array."""
     require_task("quicklook_run")
     if not python.is_file() or not script.is_file():
         raise FileNotFoundError(python if not python.is_file() else script)
@@ -125,20 +135,43 @@ def run_quicklook(
         encoding="utf-8",
     )
     tier_path = _write_tier(request.output_root)
-    command = engine_argv(python, script, config_path, scope)
-    completed = subprocess.run(command, check=False)
-    status = "succeeded" if completed.returncode == 0 else "failed"
-    _write_status(
+    write_run_status(
         request.output_root,
-        status,
-        completed.returncode,
+        "running",
+        None,
         enrichment=scope.enrichment,
         stopped_after=scope.stopped_after,
     )
-    return QuicklookResult(
-        returncode=completed.returncode,
+    return PreparedQuicklook(
+        command=engine_argv(python, script, config_path, scope),
         config_path=config_path,
         tier_path=tier_path,
+        enrichment=scope.enrichment,
+        stopped_after=scope.stopped_after,
+    )
+
+
+def run_quicklook(
+    request: QuicklookRequest,
+    *,
+    python: Path,
+    script: Path,
+) -> QuicklookResult:
+    """Run the registered quicklook task and wait. The HTTP form does not use this."""
+    prepared = prepare_quicklook(request, python=python, script=script)
+    completed = subprocess.run(prepared.command, check=False)
+    status = "succeeded" if completed.returncode == 0 else "failed"
+    write_run_status(
+        request.output_root,
+        status,
+        completed.returncode,
+        enrichment=prepared.enrichment,
+        stopped_after=prepared.stopped_after,
+    )
+    return QuicklookResult(
+        returncode=completed.returncode,
+        config_path=prepared.config_path,
+        tier_path=prepared.tier_path,
     )
 
 
@@ -159,10 +192,10 @@ def _write_tier(output_root: Path) -> Path:
     return tier_path
 
 
-def _write_status(
+def write_run_status(
     output_root: Path,
     status: str,
-    returncode: int,
+    returncode: int | None,
     *,
     enrichment: str,
     stopped_after: str,

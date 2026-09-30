@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -67,13 +68,16 @@ def test_form_runs_quicklook_before_enrichment(tmp_path: Path) -> None:
         headers={"origin": "http://127.0.0.1:8765"},
     )
     assert response.status_code == 200
-    assert 'data-returncode="0"' in response.text
-    assert "探索性结果" in response.text
-    assert "已完成" in response.text
-    assert "quicklook" in response.text
-    assert "未运行，等本地基因集" in response.text
-    assert "LOG-TAIL-OK" in response.text
-    assert "line-00" not in response.text
+    assert "/runs/" in str(response.url)
+    text = _until(client, str(response.url), 'data-returncode="0"')
+    assert "已完成" in text
+    assert "quicklook" in text
+    assert "未运行，等本地基因集" in text
+    assert "LOG-TAIL-OK" in text
+    assert "line-00" not in text
+    assert "速览已跑到聚类" in text
+    assert "图质量" in text
+    assert "未找到" in text
     output = tmp_path / "project"
     recorded = json.loads((output / "argv.json").read_text(encoding="utf-8"))
     assert recorded[recorded.index("--stop-after") + 1] == "phase03"
@@ -176,6 +180,16 @@ def test_post_from_other_origin_is_rejected() -> None:
         headers={"origin": "http://evil.example"},
     )
     assert response.status_code == 403
+
+
+def _until(client: TestClient, url: str, marker: str) -> str:
+    text = ""
+    for _ in range(40):
+        text = client.get(url).text
+        if marker in text:
+            return text
+        time.sleep(0.05)
+    return text
 
 
 def _app(script: Path) -> FastAPI:

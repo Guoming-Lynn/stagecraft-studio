@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import os
 import secrets
+import tempfile
 from html import escape
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 
-from stagecraft_studio.api.templates import ERROR_PAGE, FORM_PAGE, INSPECT_PAGE, RESULT_PAGE
+from stagecraft_studio.api.run_page import render_run_page
+from stagecraft_studio.api.templates import ERROR_PAGE, FORM_PAGE, INSPECT_PAGE
 from stagecraft_studio.engine.input_format import UnsupportedInput
 from stagecraft_studio.engine.inspect import (
     InspectColumn,
@@ -26,13 +27,23 @@ from stagecraft_studio.engine.quicklook import (
     OutputRejected,
     QuicklookRequest,
     require_empty_output,
-    run_quicklook,
 )
+from stagecraft_studio.worker.runs import RunBusy, RunStore
 
 
-def create_app(token: str, *, port: int, launch: EngineLaunch) -> FastAPI:
+def create_app(
+    token: str,
+    *,
+    port: int,
+    launch: EngineLaunch,
+    state_path: Path | None = None,
+) -> FastAPI:
     app = FastAPI()
     allowed_origin = f"http://127.0.0.1:{port}"
+    if state_path is None:
+        state_path = Path(tempfile.mkdtemp(prefix="stagecraft-runs-")) / "runs.json"
+    store = RunStore(state_path)
+    store.recover()
 
     @app.get("/", response_class=HTMLResponse)
     def home() -> str:
@@ -93,7 +104,7 @@ def create_app(token: str, *, port: int, launch: EngineLaunch) -> FastAPI:
         local_gmt: str = Form(default=""),
         python_path: str | None = Form(default=None),
         script: str | None = Form(default=None),
-    ) -> HTMLResponse:
+    ) -> Response:
         _guard(request, token, allowed_origin, token_field, python_path, script)
         parsed = _parse_request(
             input_path,
@@ -108,11 +119,35 @@ def create_app(token: str, *, port: int, launch: EngineLaunch) -> FastAPI:
         if isinstance(parsed, HTMLResponse):
             return parsed
         try:
-            result = run_quicklook(parsed, python=launch.python, script=launch.script)
-        except (FileNotFoundError, UnsupportedInput, OutputRejected) as exc:
+            run_id = store.start(parsed, launch)
+        except RunBusy as exc:
+            return _error(str(exc), 409)
+        except (FileNotFoundError, UnsupportedInput, OutputRejected, OSError) as exc:
             return _error(str(exc), 400)
-        page = _result_page(result.returncode, parsed.output_root)
+        return RedirectResponse(f"/runs/{run_id}", status_code=303)
+
+    @app.get("/runs/{run_id}", response_class=HTMLResponse)
+    def run_page(run_id: str) -> HTMLResponse:
+        if not _run_id_ok(run_id):
+            return _error("没有这次运行。", 404)
+        record = store.get(run_id)
+        if record is None:
+            return _error("没有这次运行。", 404)
+        page = render_run_page(token, record)
         return HTMLResponse(page)
+
+    @app.post("/runs/{run_id}/cancel", response_class=HTMLResponse)
+    def cancel(
+        request: Request,
+        run_id: str,
+        token_field: str = Form(alias="token"),
+        python_path: str | None = Form(default=None),
+        script: str | None = Form(default=None),
+    ) -> Response:
+        _guard(request, token, allowed_origin, token_field, python_path, script)
+        if _run_id_ok(run_id):
+            store.cancel(run_id)
+        return RedirectResponse(f"/runs/{run_id}", status_code=303)
 
     return app
 
@@ -213,151 +248,8 @@ def _error(message: str, status_code: int) -> HTMLResponse:
     return HTMLResponse(page, status_code=status_code)
 
 
-def _result_page(returncode: int, output_root: Path) -> str:
-    ok = returncode == 0
-    if ok:
-        heading = "速览已跑完聚类"
-        lede = "产物标记为 quicklook。它不能当作正式分析的输入。"
-        status_class = "ok"
-        status = "探索性结果"
-    else:
-        heading = "速览没有完成"
-        lede = "目录已标记为 quicklook，不能当作正式分析的输入。"
-        status_class = "bad"
-        status = "未完成"
-    return (
-        RESULT_PAGE.replace("__TITLE__", "Stagecraft 速览")
-        .replace("__HEADING__", escape(heading))
-        .replace("__LEDE__", escape(lede))
-        .replace("__STATUS_CLASS__", status_class)
-        .replace("__STATUS__", status)
-        .replace("__RETURNCODE__", str(returncode))
-        .replace("__BODY__", _result_body(output_root))
-    )
-
-
-def _result_body(output_root: Path) -> str:
-    status = _read_object(output_root / "run_status.json")
-    tier = _read_object(output_root / "analysis_tier.json")
-    blocks = [
-        "<h2>运行状态</h2>",
-        _pairs(
-            [
-                ("任务", _field(status, "task_id")),
-                ("状态", _status_label(status)),
-                ("退出码", _field(status, "returncode")),
-                ("富集", _enrichment(status)),
-                ("停止于", _field(status, "stopped_after")),
-            ]
-        ),
-        "<h2>速览标记</h2>",
-        _pairs(
-            [
-                ("analysis_tier", _field(tier, "analysis_tier")),
-                ("标签", _provisional(tier)),
-                ("donor 推断", _donor(tier)),
-            ]
-        ),
-        "<h2>日志</h2>",
-        _logs(output_root),
-    ]
-    return "".join(blocks)
-
-
-def _pairs(rows: list[tuple[str, str]]) -> str:
-    body = "".join(
-        f'<div class="pair"><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>'
-        for label, value in rows
-    )
-    return f"<dl>{body}</dl>"
-
-
-def _logs(output_root: Path) -> str:
-    tails = _log_tails(output_root)
-    if not tails:
-        return '<p class="hint">这次没有日志。</p>'
-    chunks: list[str] = []
-    for name, text in tails:
-        chunks.append(f'<p class="log-name">{escape(name)}</p><pre>{escape(text)}</pre>')
-    return "".join(chunks)
-
-
-def _log_tails(output_root: Path, limit: int = 30) -> list[tuple[str, str]]:
-    folder = output_root / "99_logs"
-    if not folder.is_dir() or not _inside(output_root, folder):
-        return []
-    found: list[tuple[str, str]] = []
-    for path in sorted(folder.glob("*.log")):
-        if len(found) == 8 or not path.is_file() or not _inside(output_root, path):
-            continue
-        found.append((path.name, _tail_text(path, limit)))
-    return found
-
-
-def _tail_text(path: Path, limit: int) -> str:
-    data = path.read_bytes()[-65536:]
-    text = data.decode("utf-8", errors="replace")
-    return "\n".join(text.splitlines()[-limit:])
-
-
-def _inside(root: Path, path: Path) -> bool:
-    try:
-        path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    return True
-
-
-def _read_object(path: Path) -> dict[str, object] | None:
-    if not path.is_file():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    return {str(key): value for key, value in payload.items()}
-
-
-def _field(payload: dict[str, object] | None, key: str) -> str:
-    if payload is None or key not in payload:
-        return "未找到"
-    return str(payload[key])
-
-
-def _status_label(payload: dict[str, object] | None) -> str:
-    labels = {"succeeded": "已完成", "failed": "未完成"}
-    return labels.get(_field(payload, "status"), _field(payload, "status"))
-
-
-def _provisional(payload: dict[str, object] | None) -> str:
-    if payload is None:
-        return "未找到"
-    if payload.get("labels_provisional") is True:
-        return "临时，不能导入正式审阅"
-    return "未找到"
-
-
-def _donor(payload: dict[str, object] | None) -> str:
-    if payload is None:
-        return "未找到"
-    if payload.get("donor_level_inference") is False:
-        return "不做"
-    return "未找到"
-
-
-def _enrichment(payload: dict[str, object] | None) -> str:
-    if payload is None:
-        return "未找到"
-    labels = {
-        "not_run_until_local_gmt": "未运行，等本地基因集",
-        "local_gmt": "本地基因集",
-    }
-    value = payload.get("enrichment")
-    if isinstance(value, str) and value in labels:
-        return labels[value]
-    return _field(payload, "enrichment")
+def _run_id_ok(value: str) -> bool:
+    return len(value) == 16 and all(character in "0123456789abcdef" for character in value)
 
 
 def serve(
@@ -370,8 +262,9 @@ def serve(
     import uvicorn
 
     launch = resolve_engine_launch(python, script)
+    state = Path(tempfile.gettempdir()) / "stagecraft-studio" / "quicklook_runs.json"
     uvicorn.run(
-        create_app(secrets.token_hex(16), port=port, launch=launch),
+        create_app(secrets.token_hex(16), port=port, launch=launch, state_path=state),
         host="127.0.0.1",
         port=port,
     )

@@ -5,7 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def write_fake_engine(directory: Path, exit_code: int = 0, *, logs: bool = False) -> Path:
+def write_fake_engine(
+    directory: Path,
+    exit_code: int = 0,
+    *,
+    logs: bool = False,
+    sleep_seconds: float = 0,
+    report: str | None = None,
+) -> Path:
     log_lines = ""
     if logs:
         log_lines = (
@@ -15,6 +22,7 @@ def write_fake_engine(directory: Path, exit_code: int = 0, *, logs: bool = False
             "lines.append('LOG-TAIL-OK')\n"
             "(logs / 'phase03.log').write_text('\\n'.join(lines) + '\\n', encoding='utf-8')\n"
         )
+    directory.mkdir(parents=True, exist_ok=True)
     script = directory / "run_pipeline.py"
     script.write_text(
         "import json\n"
@@ -28,10 +36,39 @@ def write_fake_engine(directory: Path, exit_code: int = 0, *, logs: bool = False
         "(out / 'argv.json').write_text(json.dumps(args), encoding='utf-8')\n"
         "(out / 'argv0.txt').write_text(sys.executable, encoding='utf-8')\n"
         + log_lines
+        + _report_lines(report)
+        + (f"import time\ntime.sleep({sleep_seconds})\n" if sleep_seconds else "")
         + f"raise SystemExit({exit_code})\n",
         encoding="utf-8",
     )
     return script
+
+
+def _report_lines(kind: str | None) -> str:
+    if kind is None:
+        return ""
+    if kind == "pass":
+        quality = '{"status": "pass", "bad_figures": []}'
+        outcome = "completed_analysis"
+    elif kind == "reject":
+        quality = (
+            '{"status": "reject", "bad_figures": [{"figure": "04_figures/volcano.png", '
+            '"reasons": ["empty_violin", "no_significant_genes"]}]}'
+        )
+        outcome = "completed_analysis"
+    elif kind == "rejected_input":
+        quality = '{"status": "pass", "bad_figures": []}'
+        outcome = "rejected_input"
+    else:
+        return ""
+    return (
+        "folder = out / '99_logs'\n"
+        "folder.mkdir(parents=True, exist_ok=True)\n"
+        f"(folder / 'pipeline_status.json').write_text("
+        f"json.dumps({{'outcome': '{outcome}'}}), encoding='utf-8')\n"
+        f"(folder / 'figure_quality_dataset_report.json').write_text("
+        f"'{quality}', encoding='utf-8')\n"
+    )
 
 
 def write_fake_inspect(directory: Path) -> Path:

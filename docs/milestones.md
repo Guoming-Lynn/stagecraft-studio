@@ -42,6 +42,10 @@
 
 状态：本机已改。表单不能指定要执行的程序。失败运行仍带 quicklook 标记。输入格式写入 `INPUT_FORMAT`。`quicklook_inspect` 列出 h5ad 的 obs 列。非空输出目录会拒绝。引擎 `BATCH_COLUMN` 默认值只在 `config_contract.py`。GitHub CI 仍未跑。
 
+## 单元 B 后台运行与结果状态
+
+状态：本机已改。`POST /quicklook` 立即跳到 `/runs/<id>`。同一时间只能有一次速览。取消会停掉进程树。结果页分开显示引擎、输入和图质量。`templates.py` 没有改。GitHub CI 仍未跑。
+
 ## M1 到 M7
 
-状态：未开始。单元 B 及以后还没做。
+状态：未开始。单元 C 及以后还没做。
