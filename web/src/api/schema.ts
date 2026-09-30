@@ -38,6 +38,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/compare": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Compare */
+    get: operations["compare_api_compare_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs": {
     parameters: {
       query?: never;
@@ -65,6 +82,23 @@ export interface paths {
     };
     /** Run */
     get: operations["run_api_runs__run_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/runs/{run_id}/bundle": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Bundle */
+    get: operations["bundle_api_runs__run_id__bundle_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -308,6 +342,42 @@ export interface components {
       /** Values */
       values: string[];
     };
+    /** CompareRow */
+    CompareRow: {
+      /** Name */
+      name: string;
+      /** Left */
+      left: string;
+      /** Right */
+      right: string;
+      /** Same */
+      same: boolean;
+    };
+    /** CompareView */
+    CompareView: {
+      /** Left Id */
+      left_id: string;
+      /** Right Id */
+      right_id: string;
+      /** Left Heading */
+      left_heading: string;
+      /** Right Heading */
+      right_heading: string;
+      /** Cells Left */
+      cells_left: string;
+      /** Cells Right */
+      cells_right: string;
+      /** Clusters Left */
+      clusters_left: string;
+      /** Clusters Right */
+      clusters_right: string;
+      /** Figure Left */
+      figure_left: string;
+      /** Figure Right */
+      figure_right: string;
+      /** Parameters */
+      parameters: components["schemas"]["CompareRow"][];
+    };
     /** DemoStarted */
     DemoStarted: {
       /** Run Id */
@@ -521,6 +591,8 @@ export interface components {
       figure_status: string;
       /** Figure Label */
       figure_label: string;
+      /** Methods Text */
+      methods_text: string;
       /** Images */
       images: components["schemas"]["ImageView"][];
     };
@@ -650,6 +722,38 @@ export interface operations {
       };
     };
   };
+  compare_api_compare_get: {
+    parameters: {
+      query: {
+        left: string;
+        right: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompareView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   runs_api_runs_get: {
     parameters: {
       query?: never;
@@ -721,6 +825,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RunView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  bundle_api_runs__run_id__bundle_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

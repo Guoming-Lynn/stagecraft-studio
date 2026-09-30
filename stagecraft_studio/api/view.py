@@ -22,6 +22,7 @@ from stagecraft_studio.api.copy import (
     STEP_STATUS,
 )
 from stagecraft_studio.api.files import PathRejected, resolve_inside
+from stagecraft_studio.api.methods import methods_paragraph
 from stagecraft_studio.api.models import (
     ArtifactView,
     ImageView,
@@ -52,6 +53,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
     stopped_after = record.stopped_after or _text(status_file, "stopped_after")
     figure_status, figure_label = _figure_status(quality)
     config_text, parameters = _parameters(root)
+    enrichment_label = ENRICHMENT.get(enrichment, enrichment or MISSING)
     bad = _bad_figures(quality)
     return RunView(
         run_id=record.run_id,
@@ -63,7 +65,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
         can_cancel=record.status in {"running", "starting"},
         returncode=_returncode(status_file),
         enrichment=enrichment,
-        enrichment_label=ENRICHMENT.get(enrichment, enrichment or MISSING),
+        enrichment_label=enrichment_label,
         stopped_after=stopped_after,
         output_root=str(root),
         engine_name=identity.name,
@@ -78,6 +80,15 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
         pipeline_label=_outcome(pipeline),
         figure_status=figure_status,
         figure_label=figure_label,
+        methods_text=methods_paragraph(
+            gene=_param(parameters, "TARGET_GENE"),
+            seed=_param(parameters, "RANDOM_SEED"),
+            engine_name=identity.name,
+            engine_version=identity.version,
+            engine_git=identity.git,
+            stopped_after=stopped_after,
+            enrichment_label=enrichment_label,
+        ),
         images=_images(root, bad, quality is not None and figure_status == "pass"),
     )
 
@@ -117,6 +128,13 @@ def step_views(record: RunRecord) -> list[StepView]:
             )
         )
     return views
+
+
+def _param(parameters: list[ParameterRow], name: str) -> str:
+    for row in parameters:
+        if row.name == name:
+            return row.value
+    return MISSING
 
 
 def _heading(status: str, stopped_after: str) -> str:

@@ -70,6 +70,15 @@ export const chrome = {
   kindTable: "表格",
   kindText: "文本",
   kindOther: "其他",
+  methodsHeading: "方法",
+  bundle: "下载复现包",
+  compareRuns: "对比",
+  leftRun: "左侧运行",
+  rightRun: "右侧运行",
+  cells: "细胞数",
+  clusters: "cluster 数",
+  notify: "运行结束时通知我",
+  notifyOn: "结束时会通知",
 } as const;
 
 export function rowCount(total: number): string {

@@ -1,6 +1,7 @@
 import type { components } from "./schema";
 
 export type Bootstrap = components["schemas"]["Bootstrap"];
+export type CompareView = components["schemas"]["CompareView"];
 export type InspectView = components["schemas"]["InspectView"];
 export type QuicklookForm = components["schemas"]["QuicklookForm"];
 export type RevealResult = components["schemas"]["RevealResult"];
@@ -70,6 +71,15 @@ export function loadTable(
     desc: String(query.desc),
   });
   return send(`/api/runs/${runId}/table?${params}`);
+}
+
+export function bundleUrl(runId: string): string {
+  return `/api/runs/${runId}/bundle`;
+}
+
+export function loadCompare(left: string, right: string): Promise<CompareView> {
+  const params = new URLSearchParams({ left, right });
+  return send(`/api/compare?${params}`);
 }
 
 export function loadEnvironment(): Promise<EnvironmentReport> {

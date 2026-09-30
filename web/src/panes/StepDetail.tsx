@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { RunView, SourceView, StepView } from "../api/client";
+import {
+  bundleUrl,
+  type RunView,
+  type SourceView,
+  type StepView,
+} from "../api/client";
 import { lineClass, shouldFollowLog } from "../log_lines";
 import { chrome } from "../text/chrome";
 import { CodeBlock } from "./CodeBlock";
@@ -50,6 +55,11 @@ export function StepDetail({
             <dd>{run.enrichment_label}</dd>
           </div>
         </dl>
+        <h2>{chrome.methodsHeading}</h2>
+        <p className="methods">{run.methods_text}</p>
+        <p>
+          <a href={bundleUrl(run.run_id)}>{chrome.bundle}</a>
+        </p>
       </header>
       <div className="tabs">
         {TABS.map((item) => (

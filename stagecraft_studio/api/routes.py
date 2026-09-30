@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import TypeVar
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import ValidationError
 
+from stagecraft_studio.api.bundle import build_bundle
+from stagecraft_studio.api.compare import compare_runs
 from stagecraft_studio.api.copy import GROUP_NOTE
 from stagecraft_studio.api.demo import DEMO_SOURCE, DemoFailed, start_demo
 from stagecraft_studio.api.environment import collect_environment
@@ -25,6 +27,7 @@ from stagecraft_studio.api.files import (
 from stagecraft_studio.api.models import (
     Bootstrap,
     ColumnView,
+    CompareView,
     DemoStarted,
     EnvironmentReport,
     FilePreview,
@@ -84,6 +87,10 @@ def build_router(
     def environment() -> EnvironmentReport:
         return collect_environment(launch, identity)
 
+    @router.get("/api/compare")
+    def compare(left: str = Query(), right: str = Query()) -> CompareView:
+        return compare_runs(_record(store, left), _record(store, right), identity)
+
     @router.get("/api/runs")
     def runs() -> list[RunListItem]:
         return [run_item(record) for record in store.records()]
@@ -91,6 +98,21 @@ def build_router(
     @router.get("/api/runs/{run_id}")
     def run(run_id: str) -> RunView:
         return run_view(_record(store, run_id), identity)
+
+    @router.get("/api/runs/{run_id}/bundle")
+    def bundle(run_id: str) -> Response:
+        record = _record(store, run_id)
+        payload = build_bundle(
+            record.output_root,
+            run_view(record, identity).command_line,
+            identity,
+        )
+        filename = f"{run_id}-reproduce.zip"
+        return Response(
+            content=payload,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @router.get("/api/runs/{run_id}/steps")
     def steps(run_id: str) -> list[StepView]:

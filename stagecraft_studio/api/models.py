@@ -117,6 +117,7 @@ class RunView(BaseModel):
     pipeline_label: str
     figure_status: str
     figure_label: str
+    methods_text: str
     images: list[ImageView]
 
 
@@ -195,3 +196,24 @@ class EnvironmentReport(BaseModel):
 class DemoStarted(BaseModel):
     run_id: str
     source: str
+
+
+class CompareRow(BaseModel):
+    name: str
+    left: str
+    right: str
+    same: bool
+
+
+class CompareView(BaseModel):
+    left_id: str
+    right_id: str
+    left_heading: str
+    right_heading: str
+    cells_left: str
+    cells_right: str
+    clusters_left: str
+    clusters_right: str
+    figure_left: str
+    figure_right: str
+    parameters: list[CompareRow]

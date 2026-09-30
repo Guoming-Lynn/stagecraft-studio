@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Bootstrap, RunView, StepView } from "../src/api/client";
 import { saveLayout } from "../src/layout_store";
 import { lineClass } from "../src/log_lines";
+import { shouldNotify } from "../src/notify";
 import { Assistant } from "../src/panes/Assistant";
 import { Images } from "../src/panes/Images";
 import { StartForm } from "../src/panes/StartForm";
@@ -93,6 +94,16 @@ describe("shell", () => {
       parameters?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
     );
     expect(host.textContent).toContain("用户填写");
+    expect(host.textContent).toContain("细胞水平");
+    expect(host.textContent).toContain("下载复现包");
+  });
+
+  it("notifies only after a granted run leaves the running state", () => {
+    expect(shouldNotify("running", "succeeded", "granted")).toBe(true);
+    expect(shouldNotify("starting", "failed", "granted")).toBe(true);
+    expect(shouldNotify("", "succeeded", "granted")).toBe(false);
+    expect(shouldNotify("running", "succeeded", "default")).toBe(false);
+    expect(shouldNotify("succeeded", "succeeded", "granted")).toBe(false);
   });
 });
 
@@ -165,6 +176,8 @@ function run(): RunView {
     pipeline_label: "分析已完成",
     figure_status: "reject",
     figure_label: "未通过",
+    methods_text:
+      "本段按固定模板写成，没有调用模型。分析在细胞水平进行，结果是探索性的，标签是临时的。",
     images: [
       {
         rel: "04_figures/volcano.png",

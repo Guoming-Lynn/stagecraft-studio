@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   cancelRun,
   errorText,
@@ -7,9 +9,10 @@ import {
   type RunView,
   type StepView,
 } from "../api/client";
+import { noticePermission } from "../notify";
 import { chrome } from "../text/chrome";
 
-type Mode = "quicklook" | "formal" | "environment";
+export type Mode = "quicklook" | "formal" | "environment" | "compare";
 
 export function TopBar({
   bootstrap,
@@ -30,6 +33,7 @@ export function TopBar({
   onSteps: (steps: StepView[]) => void;
   onError: (message: string) => void;
 }) {
+  const [permission, setPermission] = useState(noticePermission);
   return (
     <header className="topbar">
       <div className="brand">
@@ -78,6 +82,24 @@ export function TopBar({
           onClick={() => onMode("formal")}
         >
           {chrome.formal}
+        </button>
+        <button
+          type="button"
+          className={mode === "compare" ? "on" : ""}
+          onClick={() => onMode("compare")}
+        >
+          {chrome.compareRuns}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof Notification === "undefined") return;
+            void Notification.requestPermission().then((next) =>
+              setPermission(next),
+            );
+          }}
+        >
+          {permission === "granted" ? chrome.notifyOn : chrome.notify}
         </button>
         <button
           type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import {
@@ -20,7 +20,9 @@ import {
   type TreeEntry,
 } from "./api/client";
 import { readLayout, saveLayout } from "./layout_store";
+import { noticePermission, shouldNotify } from "./notify";
 import { Assistant } from "./panes/Assistant";
+import { Compare } from "./panes/Compare";
 import { Environment } from "./panes/Environment";
 import { Files } from "./panes/Files";
 import { FileView } from "./panes/FileView";
@@ -28,7 +30,7 @@ import { Images } from "./panes/Images";
 import { StartForm } from "./panes/StartForm";
 import { StepDetail } from "./panes/StepDetail";
 import { Steps } from "./panes/Steps";
-import { TopBar } from "./panes/TopBar";
+import { TopBar, type Mode } from "./panes/TopBar";
 import { chrome } from "./text/chrome";
 
 export function App() {
@@ -41,9 +43,8 @@ export function App() {
   const [stepId, setStepId] = useState("");
   const [left, setLeft] = useState<"steps" | "files">("steps");
   const [right, setRight] = useState<"images" | "assistant">("images");
-  const [mode, setMode] = useState<"quicklook" | "formal" | "environment">(
-    "quicklook",
-  );
+  const [mode, setMode] = useState<Mode>("quicklook");
+  const previousStatus = useRef("");
   const [focus, setFocus] = useState("");
   const [fileRel, setFileRel] = useState("");
   const [error, setError] = useState("");
@@ -110,6 +111,15 @@ export function App() {
       .then(setSource)
       .catch(() => setSource(null));
   }, [stepId]);
+
+  useEffect(() => {
+    const next = run?.status ?? "";
+    const before = previousStatus.current;
+    previousStatus.current = next;
+    if (!shouldNotify(before, next, noticePermission())) return;
+    if (typeof Notification === "undefined" || !run) return;
+    new Notification(run.heading);
+  }, [run]);
 
   const step = steps.find((item) => item.step_id === stepId) ?? null;
   const selected = step?.step_id === source?.step_id ? source : null;
@@ -178,6 +188,7 @@ export function App() {
               <p className="hint">{chrome.formalNote}</p>
             ) : null}
             {mode === "environment" ? <Environment /> : null}
+            {mode === "compare" ? <Compare runs={runs} /> : null}
             {mode === "quicklook" && run && fileRel ? (
               <FileView
                 runId={run.run_id}

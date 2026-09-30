@@ -41,6 +41,54 @@
         }
       }
     },
+    "/api/compare": {
+      "get": {
+        "summary": "Compare",
+        "operationId": "compare_api_compare_get",
+        "parameters": [
+          {
+            "name": "left",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Left"
+            }
+          },
+          {
+            "name": "right",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Right"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs": {
       "get": {
         "summary": "Runs",
@@ -122,6 +170,43 @@
                 "schema": {
                   "$ref": "#/components/schemas/RunView"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/bundle": {
+      "get": {
+        "summary": "Bundle",
+        "operationId": "bundle_api_runs__run_id__bundle_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -744,6 +829,100 @@
         ],
         "title": "ColumnView"
       },
+      "CompareRow": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "left": {
+            "type": "string",
+            "title": "Left"
+          },
+          "right": {
+            "type": "string",
+            "title": "Right"
+          },
+          "same": {
+            "type": "boolean",
+            "title": "Same"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "left",
+          "right",
+          "same"
+        ],
+        "title": "CompareRow"
+      },
+      "CompareView": {
+        "properties": {
+          "left_id": {
+            "type": "string",
+            "title": "Left Id"
+          },
+          "right_id": {
+            "type": "string",
+            "title": "Right Id"
+          },
+          "left_heading": {
+            "type": "string",
+            "title": "Left Heading"
+          },
+          "right_heading": {
+            "type": "string",
+            "title": "Right Heading"
+          },
+          "cells_left": {
+            "type": "string",
+            "title": "Cells Left"
+          },
+          "cells_right": {
+            "type": "string",
+            "title": "Cells Right"
+          },
+          "clusters_left": {
+            "type": "string",
+            "title": "Clusters Left"
+          },
+          "clusters_right": {
+            "type": "string",
+            "title": "Clusters Right"
+          },
+          "figure_left": {
+            "type": "string",
+            "title": "Figure Left"
+          },
+          "figure_right": {
+            "type": "string",
+            "title": "Figure Right"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/CompareRow"
+            },
+            "type": "array",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "left_id",
+          "right_id",
+          "left_heading",
+          "right_heading",
+          "cells_left",
+          "cells_right",
+          "clusters_left",
+          "clusters_right",
+          "figure_left",
+          "figure_right",
+          "parameters"
+        ],
+        "title": "CompareView"
+      },
       "DemoStarted": {
         "properties": {
           "run_id": {
@@ -1245,6 +1424,10 @@
             "type": "string",
             "title": "Figure Label"
           },
+          "methods_text": {
+            "type": "string",
+            "title": "Methods Text"
+          },
           "images": {
             "items": {
               "$ref": "#/components/schemas/ImageView"
@@ -1279,6 +1462,7 @@
           "pipeline_label",
           "figure_status",
           "figure_label",
+          "methods_text",
           "images"
         ],
         "title": "RunView"
