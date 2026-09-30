@@ -21,6 +21,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/environment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Environment */
+    get: operations["environment_api_environment_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs": {
     parameters: {
       query?: never;
@@ -175,6 +192,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/demo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Demo */
+    post: operations["demo_api_demo_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/inspect": {
     parameters: {
       query?: never;
@@ -259,6 +293,8 @@ export interface components {
       engine_git: string;
       /** Environment Ok */
       environment_ok: boolean;
+      /** Demo Source */
+      demo_source: string;
     };
     /** ColumnView */
     ColumnView: {
@@ -266,6 +302,31 @@ export interface components {
       name: string;
       /** Values */
       values: string[];
+    };
+    /** DemoStarted */
+    DemoStarted: {
+      /** Run Id */
+      run_id: string;
+      /** Source */
+      source: string;
+    };
+    /** EnvCheck */
+    EnvCheck: {
+      /** Name */
+      name: string;
+      /** Status */
+      status: string;
+      /** Label */
+      label: string;
+      /** Detail */
+      detail: string;
+      /** Fix */
+      fix: string;
+    };
+    /** EnvironmentReport */
+    EnvironmentReport: {
+      /** Checks */
+      checks: components["schemas"]["EnvCheck"][];
     };
     /** FilePreview */
     FilePreview: {
@@ -507,6 +568,11 @@ export interface components {
       offset: number;
       /** Limit */
       limit: number;
+      /**
+       * Total
+       * @default 0
+       */
+      total: number;
     };
     /** TreeEntry */
     TreeEntry: {
@@ -555,6 +621,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Bootstrap"];
+        };
+      };
+    };
+  };
+  environment_api_environment_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnvironmentReport"];
         };
       };
     };
@@ -808,6 +894,9 @@ export interface operations {
         rel: string;
         offset?: number;
         limit?: number;
+        q?: string;
+        sort?: string;
+        desc?: boolean;
       };
       header?: never;
       path: {
@@ -864,6 +953,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  demo_api_demo_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DemoStarted"];
         };
       };
     };

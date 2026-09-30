@@ -23,6 +23,24 @@
         }
       }
     },
+    "/api/environment": {
+      "get": {
+        "summary": "Environment",
+        "operationId": "environment_api_environment_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs": {
       "get": {
         "summary": "Runs",
@@ -382,6 +400,36 @@
               "default": 100,
               "title": "Limit"
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "desc",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Desc"
+            }
           }
         ],
         "responses": {
@@ -440,6 +488,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demo": {
+      "post": {
+        "summary": "Demo",
+        "operationId": "demo_api_demo_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoStarted"
                 }
               }
             }
@@ -626,6 +692,10 @@
           "environment_ok": {
             "type": "boolean",
             "title": "Environment Ok"
+          },
+          "demo_source": {
+            "type": "string",
+            "title": "Demo Source"
           }
         },
         "type": "object",
@@ -638,7 +708,8 @@
           "engine_name",
           "engine_version",
           "engine_git",
-          "environment_ok"
+          "environment_ok",
+          "demo_source"
         ],
         "title": "Bootstrap"
       },
@@ -662,6 +733,73 @@
           "values"
         ],
         "title": "ColumnView"
+      },
+      "DemoStarted": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "source"
+        ],
+        "title": "DemoStarted"
+      },
+      "EnvCheck": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "fix": {
+            "type": "string",
+            "title": "Fix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "label",
+          "detail",
+          "fix"
+        ],
+        "title": "EnvCheck"
+      },
+      "EnvironmentReport": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/EnvCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checks"
+        ],
+        "title": "EnvironmentReport"
       },
       "FilePreview": {
         "properties": {
@@ -1264,6 +1402,11 @@
             "maximum": 500.0,
             "minimum": 1.0,
             "title": "Limit"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
           }
         },
         "type": "object",

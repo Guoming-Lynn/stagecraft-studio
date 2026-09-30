@@ -13,9 +13,11 @@ import { chrome } from "../text/chrome";
 export function StartForm({
   bootstrap,
   onStarted,
+  onDemo,
 }: {
   bootstrap: Bootstrap;
   onStarted: (runId: string) => void;
+  onDemo: () => void;
 }) {
   const [inputPath, setInputPath] = useState("");
   const [gene, setGene] = useState("");
@@ -53,6 +55,7 @@ export function StartForm({
     >
       <h1>{chrome.quicklook}</h1>
       <p className="hint">{bootstrap.group_note}</p>
+      <p className="hint">{bootstrap.demo_source}</p>
       <label>
         {chrome.inputPath}
         <input
@@ -116,6 +119,9 @@ export function StartForm({
       ) : null}
       {message ? <p className="log-error">{message}</p> : null}
       <button type="submit">{chrome.start}</button>
+      <button type="button" onClick={onDemo}>
+        {chrome.demo}
+      </button>
     </form>
   );
 }

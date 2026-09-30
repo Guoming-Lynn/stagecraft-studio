@@ -102,32 +102,38 @@ def media_file(root: Path, rel: str) -> Path:
     return _file(root, rel, _MEDIA_SUFFIXES, "这个文件不是图片")
 
 
-def preview_table(root: Path, rel: str, offset: int, limit: int) -> TablePage:
-    """Return one page of a CSV or TSV. The caller caps limit at 500."""
+def preview_table(
+    root: Path,
+    rel: str,
+    offset: int,
+    limit: int,
+    *,
+    query: str = "",
+    sort: str = "",
+    descending: bool = False,
+) -> TablePage:
+    """Return one page after filtering and sorting. The whole table is not sent."""
     path = _file(root, rel, _TABLE_SUFFIXES, "这个文件不是表格")
     delimiter = "\t" if path.suffix.casefold() == ".tsv" else ","
-    columns: list[str] = []
-    rows: list[list[str]] = []
     with path.open(encoding="utf-8", errors="replace", newline="") as handle:
         reader = csv.reader(handle, delimiter=delimiter)
         try:
             columns = [str(item) for item in next(reader)]
         except StopIteration:
             columns = []
-        skipped = 0
-        for row in reader:
-            if skipped < offset:
-                skipped += 1
-                continue
-            if len(rows) >= limit:
-                break
-            rows.append([str(item) for item in row])
+        # ponytail: sort/filter holds the matching rows in memory; stream if a table exceeds RAM
+        matched = [_row(row) for row in reader if _matches(row, query)]
+    index = columns.index(sort) if sort in columns else -1
+    if index >= 0:
+        matched.sort(key=lambda row: _sort_key(row, index), reverse=descending)
+    page = matched[offset : offset + limit]
     return TablePage(
         rel=path.relative_to(root.resolve()).as_posix(),
         columns=columns,
-        rows=rows,
+        rows=page,
         offset=offset,
         limit=limit,
+        total=len(matched),
     )
 
 
@@ -151,6 +157,25 @@ def _file(root: Path, rel: str, suffixes: set[str], wrong_type: str) -> Path:
     if path.suffix.casefold() not in suffixes:
         raise PathRejected(415, wrong_type)
     return path
+
+
+def _row(row: list[str]) -> list[str]:
+    return [str(item) for item in row]
+
+
+def _matches(row: list[str], query: str) -> bool:
+    needle = query.casefold().strip()
+    if not needle:
+        return True
+    return any(needle in str(item).casefold() for item in row)
+
+
+def _sort_key(row: list[str], index: int) -> tuple[int, float, str]:
+    cell = row[index] if index < len(row) else ""
+    try:
+        return (0, float(cell), "")
+    except ValueError:
+        return (1, 0.0, cell.casefold())
 
 
 def _outside(root: Path, path: Path) -> bool:

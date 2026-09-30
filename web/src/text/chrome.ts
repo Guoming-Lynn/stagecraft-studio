@@ -46,4 +46,9 @@ export const chrome = {
   script: "步骤脚本",
   project: "运行",
   newRun: "新的速览",
+  demo: "运行演示",
+  environment: "环境",
+  back: "返回步骤",
+  searchGene: "搜索基因",
+  preview: "预览",
 } as const;

@@ -12,6 +12,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import ValidationError
 
 from stagecraft_studio.api.copy import GROUP_NOTE
+from stagecraft_studio.api.demo import DEMO_SOURCE, DemoFailed, start_demo
+from stagecraft_studio.api.environment import collect_environment
 from stagecraft_studio.api.files import (
     PathRejected,
     list_tree,
@@ -23,6 +25,8 @@ from stagecraft_studio.api.files import (
 from stagecraft_studio.api.models import (
     Bootstrap,
     ColumnView,
+    DemoStarted,
+    EnvironmentReport,
     FilePreview,
     InspectView,
     QuicklookForm,
@@ -73,7 +77,12 @@ def build_router(
             engine_version=identity.version,
             engine_git=identity.git,
             environment_ok=launch.python.is_file() and launch.script.is_file(),
+            demo_source=DEMO_SOURCE,
         )
+
+    @router.get("/api/environment")
+    def environment() -> EnvironmentReport:
+        return collect_environment(launch, identity)
 
     @router.get("/api/runs")
     def runs() -> list[RunListItem]:
@@ -116,13 +125,39 @@ def build_router(
         rel: str = Query(),
         offset: int = Query(default=0, ge=0),
         limit: int = Query(default=100, ge=1, le=500),
+        q: str = Query(default=""),
+        sort: str = Query(default=""),
+        desc: bool = Query(default=False),
     ) -> TablePage:
         root = _record(store, run_id).output_root
-        return _files(lambda: preview_table(root, rel, offset, limit))
+        return _files(
+            lambda: preview_table(
+                root,
+                rel,
+                offset,
+                limit,
+                query=q,
+                sort=sort,
+                descending=desc,
+            )
+        )
 
     @router.get("/api/steps/{step_id}/source")
     def source(step_id: str) -> SourceView:
         return _files(lambda: read_source(identity, step_id))
+
+    @router.post("/api/demo", status_code=201)
+    def demo(request: Request) -> DemoStarted:
+        _mutation(request, token, origin)
+        try:
+            run_id, source = start_demo(store, launch)
+        except RunBusy as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except DemoFailed as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except (FileNotFoundError, UnsupportedInput, OutputRejected, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return DemoStarted(run_id=run_id, source=source)
 
     @router.post("/api/runs", status_code=201)
     def start(request: Request, form: QuicklookForm) -> Started:

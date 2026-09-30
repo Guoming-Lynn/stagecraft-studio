@@ -12,6 +12,7 @@ import {
   loadTree,
   rememberToken,
   revealRun,
+  startDemo,
   type Bootstrap,
   type RunListItem,
   type RunView,
@@ -21,7 +22,9 @@ import {
 } from "./api/client";
 import { readLayout, saveLayout } from "./layout_store";
 import { Assistant } from "./panes/Assistant";
+import { Environment } from "./panes/Environment";
 import { Files } from "./panes/Files";
+import { FileView } from "./panes/FileView";
 import { Images } from "./panes/Images";
 import { StartForm } from "./panes/StartForm";
 import { StepDetail } from "./panes/StepDetail";
@@ -38,8 +41,11 @@ export function App() {
   const [stepId, setStepId] = useState("");
   const [left, setLeft] = useState<"steps" | "files">("steps");
   const [right, setRight] = useState<"images" | "assistant">("images");
-  const [mode, setMode] = useState<"quicklook" | "formal">("quicklook");
+  const [mode, setMode] = useState<"quicklook" | "formal" | "environment">(
+    "quicklook",
+  );
   const [focus, setFocus] = useState("");
+  const [fileRel, setFileRel] = useState("");
   const [error, setError] = useState("");
   const [layout] = useState(readLayout);
 
@@ -143,11 +149,15 @@ export function App() {
         >
           {chrome.formal}
         </button>
-        <span>
+        <button
+          type="button"
+          className={mode === "environment" ? "on" : ""}
+          onClick={() => setMode("environment")}
+        >
           {bootstrap?.environment_ok
             ? chrome.environmentOk
             : chrome.environmentBad}
-        </span>
+        </button>
         <button
           type="button"
           disabled={!run?.can_cancel}
@@ -200,9 +210,10 @@ export function App() {
                   if (run) void revealRun(run.run_id);
                 }}
                 onOpen={(rel) => {
+                  setFileRel(rel);
+                  setMode("quicklook");
                   if (rel.endsWith(".png") || rel.endsWith(".svg")) {
                     setFocus(rel);
-                    setRight("images");
                   }
                 }}
               />
@@ -215,7 +226,15 @@ export function App() {
             {mode === "formal" ? (
               <p className="hint">{chrome.formalNote}</p>
             ) : null}
-            {mode === "quicklook" && run ? (
+            {mode === "environment" ? <Environment /> : null}
+            {mode === "quicklook" && run && fileRel ? (
+              <FileView
+                runId={run.run_id}
+                rel={fileRel}
+                onBack={() => setFileRel("")}
+              />
+            ) : null}
+            {mode === "quicklook" && run && !fileRel ? (
               <StepDetail run={run} step={step} source={selected} />
             ) : null}
             {mode === "quicklook" && !run && bootstrap ? (
@@ -223,6 +242,13 @@ export function App() {
                 bootstrap={bootstrap}
                 onStarted={(runId) => {
                   window.location.hash = `#/runs/${runId}`;
+                }}
+                onDemo={() => {
+                  void startDemo()
+                    .then((started) => {
+                      window.location.hash = `#/runs/${started.run_id}`;
+                    })
+                    .catch((reason: unknown) => setError(errorText(reason)));
                 }}
               />
             ) : null}

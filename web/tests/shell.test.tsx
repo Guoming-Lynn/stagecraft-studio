@@ -64,9 +64,15 @@ describe("shell", () => {
 
   it("shows the server group note and not an engine path field", () => {
     const host = mount(
-      <StartForm bootstrap={bootstrap()} onStarted={() => undefined} />,
+      <StartForm
+        bootstrap={bootstrap()}
+        onStarted={() => undefined}
+        onDemo={() => undefined}
+      />,
     );
     expect(host.textContent).toContain("没有分组时不出 case/control 对比图");
+    expect(host.textContent).toContain("运行演示");
+    expect(host.textContent).toContain("不是策展数据");
     expect(host.querySelector("[name=python_path]")).toBeNull();
     expect(host.textContent).toContain("python.exe");
   });
@@ -121,6 +127,8 @@ function bootstrap(): Bootstrap {
     engine_version: "0.1.0",
     engine_git: "abc",
     environment_ok: true,
+    demo_source:
+      "合成矩阵，由 write_demo_h5ad.py 用种子 42 生成。不是策展数据，不能当作正式分析。",
   };
 }
 

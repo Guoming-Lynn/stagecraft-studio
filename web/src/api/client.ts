@@ -10,6 +10,10 @@ export type SourceView = components["schemas"]["SourceView"];
 export type Started = components["schemas"]["Started"];
 export type StepView = components["schemas"]["StepView"];
 export type TreeEntry = components["schemas"]["TreeEntry"];
+export type TablePage = components["schemas"]["TablePage"];
+export type FilePreview = components["schemas"]["FilePreview"];
+export type EnvironmentReport = components["schemas"]["EnvironmentReport"];
+export type DemoStarted = components["schemas"]["DemoStarted"];
 
 let token = "";
 
@@ -39,6 +43,41 @@ export function loadSteps(runId: string): Promise<StepView[]> {
 
 export function loadTree(runId: string): Promise<TreeEntry[]> {
   return send(`/api/runs/${runId}/tree`);
+}
+
+export function loadFile(runId: string, rel: string): Promise<FilePreview> {
+  const params = new URLSearchParams({ rel });
+  return send(`/api/runs/${runId}/file?${params}`);
+}
+
+export function loadTable(
+  runId: string,
+  rel: string,
+  query: {
+    offset: number;
+    limit: number;
+    q: string;
+    sort: string;
+    desc: boolean;
+  },
+): Promise<TablePage> {
+  const params = new URLSearchParams({
+    rel,
+    offset: String(query.offset),
+    limit: String(query.limit),
+    q: query.q,
+    sort: query.sort,
+    desc: String(query.desc),
+  });
+  return send(`/api/runs/${runId}/table?${params}`);
+}
+
+export function loadEnvironment(): Promise<EnvironmentReport> {
+  return send("/api/environment");
+}
+
+export function startDemo(): Promise<DemoStarted> {
+  return send("/api/demo", { method: "POST", body: "{}" });
 }
 
 export function loadSource(stepId: string): Promise<SourceView> {

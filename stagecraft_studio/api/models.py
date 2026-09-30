@@ -60,6 +60,7 @@ class Bootstrap(BaseModel):
     engine_version: str
     engine_git: str
     environment_ok: bool
+    demo_source: str
 
 
 class ParameterRow(BaseModel):
@@ -173,3 +174,21 @@ class TablePage(BaseModel):
     rows: list[list[str]]
     offset: int
     limit: int = Field(ge=1, le=500)
+    total: int = 0
+
+
+class EnvCheck(BaseModel):
+    name: str
+    status: str
+    label: str
+    detail: str
+    fix: str
+
+
+class EnvironmentReport(BaseModel):
+    checks: list[EnvCheck]
+
+
+class DemoStarted(BaseModel):
+    run_id: str
+    source: str

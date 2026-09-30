@@ -174,3 +174,27 @@ button.on,
 .highlighted pre {
   overflow: auto;
 }
+.csv-body {
+  position: relative;
+  height: 18rem;
+  overflow: auto;
+}
+.csv-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 0.6rem;
+}
+.csv-head {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.checks {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}

@@ -23,6 +23,9 @@ class EngineLaunch(BaseModel):
     def inspect_script(self) -> Path:
         return self.script.parent / "inspect_obs.py"
 
+    def demo_script(self) -> Path:
+        return self.script.parent / "write_demo_h5ad.py"
+
 
 def resolve_engine_launch(
     python: Path | None = None,

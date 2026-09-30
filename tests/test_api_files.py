@@ -66,7 +66,19 @@ def test_table_pages_and_rejects_a_limit_over_500(tmp_path: Path) -> None:
         params={"rel": "genes.csv", "offset": 1, "limit": 1},
     )
     assert page.status_code == 200
-    assert page.json()["rows"] == [["B", "2"]]
+    body = page.json()
+    assert body["rows"] == [["B", "2"]]
+    assert body["total"] == 3
+    found = client.get(
+        f"/api/runs/{RUN_ID}/table",
+        params={"rel": "genes.csv", "q": "B"},
+    )
+    assert found.json()["rows"] == [["B", "2"]]
+    ordered = client.get(
+        f"/api/runs/{RUN_ID}/table",
+        params={"rel": "genes.csv", "sort": "score", "desc": True},
+    )
+    assert ordered.json()["rows"][0] == ["C", "3"]
     too_many = client.get(
         f"/api/runs/{RUN_ID}/table",
         params={"rel": "genes.csv", "limit": 501},
