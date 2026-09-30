@@ -72,6 +72,10 @@
 
 状态：本机已改。`TrustedHostMiddleware` 只允许 `127.0.0.1` 和 `localhost`。`Host: evil.example` 请求 `/api/bootstrap` 得到 400，响应里没有令牌。GitHub CI 仍未跑。
 
+## 单元 F2 合成矩阵四阶段
+
+状态：在速览引擎 `d5f27cd`。Studio 没有改运行逻辑。80 细胞、250 基因的合成矩阵在断网时跑完四个阶段。图质量是拒绝。GitHub CI 仍未跑。
+
 ## M1 到 M7
 
 状态：未开始。单元 F 还在做。正式分析和助手没开始。
