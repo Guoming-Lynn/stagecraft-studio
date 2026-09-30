@@ -8,7 +8,7 @@ import { flexRender } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { errorText, loadTable, type TablePage } from "../api/client";
-import { chrome } from "../text/chrome";
+import { chrome, rowCount } from "../text/chrome";
 
 type GridRow = string[];
 
@@ -105,13 +105,19 @@ export function CsvView({ runId, rel }: { runId: string; rel: string }) {
 
   return (
     <div className="csv">
-      <label>
-        {chrome.searchGene}
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
+      <div className="csv-toolbar">
+        <label>
+          {chrome.searchGene}
+          <input
+            placeholder={chrome.searchPlaceholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        {total > 0 ? (
+          <span className="csv-count">{rowCount(total)}</span>
+        ) : null}
+      </div>
       {message ? <p className="log-error">{message}</p> : null}
       <div className="csv-head">
         {table.getHeaderGroups().map((group) =>

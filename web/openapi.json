@@ -645,13 +645,23 @@
           "quality_label": {
             "type": "string",
             "title": "Quality Label"
+          },
+          "quality_status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "missing"
+            ],
+            "title": "Quality Status"
           }
         },
         "type": "object",
         "required": [
           "rel",
           "size",
-          "quality_label"
+          "quality_label",
+          "quality_status"
         ],
         "title": "ArtifactView"
       },

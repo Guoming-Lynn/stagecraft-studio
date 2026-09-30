@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import {
-  cancelRun,
   errorText,
   loadBootstrap,
   loadRun,
@@ -29,6 +28,7 @@ import { Images } from "./panes/Images";
 import { StartForm } from "./panes/StartForm";
 import { StepDetail } from "./panes/StepDetail";
 import { Steps } from "./panes/Steps";
+import { TopBar } from "./panes/TopBar";
 import { chrome } from "./text/chrome";
 
 export function App() {
@@ -99,7 +99,7 @@ export function App() {
 
   useEffect(() => {
     if (!stepId && steps.length > 0) {
-      const running = steps.find((step) => step.status === "running");
+      const running = steps.find((item) => item.status === "running");
       setStepId((running ?? steps[0]).step_id);
     }
   }, [stepId, steps]);
@@ -116,64 +116,16 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <label>
-          {chrome.project}
-          <select
-            value={run?.run_id ?? ""}
-            onChange={(event) => {
-              window.location.hash = event.target.value
-                ? `#/runs/${event.target.value}`
-                : "";
-            }}
-          >
-            <option value="">{chrome.newRun}</option>
-            {runs.map((item) => (
-              <option key={item.run_id} value={item.run_id}>
-                {item.run_id} · {item.status_label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className={mode === "quicklook" ? "on" : ""}
-          onClick={() => setMode("quicklook")}
-        >
-          {chrome.quicklook}
-        </button>
-        <button
-          type="button"
-          className={mode === "formal" ? "on" : ""}
-          onClick={() => setMode("formal")}
-        >
-          {chrome.formal}
-        </button>
-        <button
-          type="button"
-          className={mode === "environment" ? "on" : ""}
-          onClick={() => setMode("environment")}
-        >
-          {bootstrap?.environment_ok
-            ? chrome.environmentOk
-            : chrome.environmentBad}
-        </button>
-        <button
-          type="button"
-          disabled={!run?.can_cancel}
-          onClick={() => {
-            if (!run) return;
-            void cancelRun(run.run_id)
-              .then((next) => {
-                setRun(next);
-                return loadSteps(next.run_id).then(setSteps);
-              })
-              .catch((reason: unknown) => setError(errorText(reason)));
-          }}
-        >
-          {chrome.cancel}
-        </button>
-      </header>
+      <TopBar
+        bootstrap={bootstrap}
+        runs={runs}
+        run={run}
+        mode={mode}
+        onMode={setMode}
+        onRun={setRun}
+        onSteps={setSteps}
+        onError={setError}
+      />
       {error ? <p className="log-error">{error}</p> : null}
       <Group
         orientation="horizontal"
@@ -212,9 +164,8 @@ export function App() {
                 onOpen={(rel) => {
                   setFileRel(rel);
                   setMode("quicklook");
-                  if (rel.endsWith(".png") || rel.endsWith(".svg")) {
+                  if (rel.endsWith(".png") || rel.endsWith(".svg"))
                     setFocus(rel);
-                  }
                 }}
               />
             ) : null}
@@ -282,11 +233,20 @@ export function App() {
         </Panel>
       </Group>
       <footer>
-        {run
-          ? `${run.engine_name} ${run.engine_version} (${run.engine_git}) · ${run.output_root} · ${run.run_id}`
-          : bootstrap
-            ? `${bootstrap.engine_name} ${bootstrap.engine_version} (${bootstrap.engine_git})`
-            : ""}
+        {run ? (
+          <>
+            <span className="footer-item">
+              {run.engine_name} {run.engine_version} ({run.engine_git})
+            </span>
+            <span className="footer-item">{run.output_root}</span>
+            <span className="footer-item">{run.run_id}</span>
+          </>
+        ) : bootstrap ? (
+          <span className="footer-item">
+            {bootstrap.engine_name} {bootstrap.engine_version} (
+            {bootstrap.engine_git})
+          </span>
+        ) : null}
       </footer>
     </div>
   );

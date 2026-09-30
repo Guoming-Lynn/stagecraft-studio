@@ -1,5 +1,9 @@
 import { chrome } from "../text/chrome";
 
 export function Assistant() {
-  return <p className="hint">{chrome.assistantNote}</p>;
+  return (
+    <div className="assistant-card">
+      <p className="hint">{chrome.assistantNote}</p>
+    </div>
+  );
 }

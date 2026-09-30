@@ -16,12 +16,19 @@ export function FileView({
 }) {
   const kind = kindOf(rel);
   return (
-    <section className="detail">
-      <button type="button" onClick={onBack}>
-        {chrome.back}
-      </button>
-      <h1>{rel}</h1>
-      {kind === "image" ? <img src={mediaUrl(runId, rel)} alt={rel} /> : null}
+    <section className="detail file-view-detail">
+      <div className="file-view-header">
+        <button type="button" className="btn-back" onClick={onBack}>
+          {chrome.back}
+        </button>
+        <span className="file-view-tag">{kindLabel(kind)}</span>
+      </div>
+      <h1 className="file-view-title">{rel}</h1>
+      {kind === "image" ? (
+        <div className="file-img-frame">
+          <img src={mediaUrl(runId, rel)} alt={rel} />
+        </div>
+      ) : null}
       {kind === "table" ? <CsvView runId={runId} rel={rel} /> : null}
       {kind === "text" ? (
         <TextPreview
@@ -30,9 +37,7 @@ export function FileView({
           json={kind === "text" && rel.endsWith(".json")}
         />
       ) : null}
-      {kind === "other" ? (
-        <p className="hint">这个文件不能在页面里打开。</p>
-      ) : null}
+      {kind === "other" ? <p className="hint">{chrome.cannotPreview}</p> : null}
     </section>
   );
 }
@@ -88,6 +93,13 @@ function pretty(text: string): string {
   } catch {
     return text;
   }
+}
+
+function kindLabel(kind: "image" | "table" | "text" | "other"): string {
+  if (kind === "image") return chrome.kindImage;
+  if (kind === "table") return chrome.kindTable;
+  if (kind === "text") return chrome.kindText;
+  return chrome.kindOther;
 }
 
 function kindOf(rel: string): "image" | "table" | "text" | "other" {

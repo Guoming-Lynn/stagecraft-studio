@@ -272,6 +272,11 @@ export interface components {
       size: number;
       /** Quality Label */
       quality_label: string;
+      /**
+       * Quality Status
+       * @enum {string}
+       */
+      quality_status: "pass" | "fail" | "missing";
     };
     /** Bootstrap */
     Bootstrap: {

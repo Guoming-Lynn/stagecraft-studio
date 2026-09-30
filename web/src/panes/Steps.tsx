@@ -20,7 +20,13 @@ export function Steps({
             className={step.step_id === selected ? "step selected" : "step"}
             onClick={() => onSelect(step.step_id)}
           >
-            <span>{step.name}</span>
+            <div className="step-main">
+              <span className="step-name">
+                <span className={`status-dot status-${step.status}`} />
+                {step.name}
+              </span>
+              <span className="step-script">{step.script_name}</span>
+            </div>
             <span className={`mark mark-${step.status}`}>
               {step.status_label}
             </span>

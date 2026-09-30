@@ -50,5 +50,28 @@ export const chrome = {
   environment: "环境",
   back: "返回步骤",
   searchGene: "搜索基因",
+  searchPlaceholder: "过滤基因符号",
   preview: "预览",
+  basicInputs: "基础输入参数",
+  groupSection: "观测矩阵探测与分组",
+  runtime: "执行环境",
+  inputPlaceholder: "h5ad 文件，或 10x mtx 目录",
+  genePlaceholder: "例如 IFITM3",
+  outputPlaceholder: "空目录，或还不存在的目录",
+  gmtPlaceholder: "本地基因集文件，可留空",
+  currentStep: "当前步骤",
+  parameter: "参数",
+  value: "值",
+  source: "来源",
+  otherFigures: "其他",
+  suggestion: "建议：",
+  cannotPreview: "这个文件不能在页面里打开。",
+  kindImage: "图片",
+  kindTable: "表格",
+  kindText: "文本",
+  kindOther: "其他",
 } as const;
+
+export function rowCount(total: number): string {
+  return `共 ${total} 行`;
+}

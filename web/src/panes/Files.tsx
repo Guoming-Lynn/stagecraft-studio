@@ -12,28 +12,34 @@ export function Files({
 }) {
   return (
     <div className="files">
-      <button type="button" onClick={onReveal}>
+      <button type="button" className="btn-reveal" onClick={onReveal}>
         {chrome.reveal}
       </button>
       <ul>
-        {entries.map((entry) => (
-          <li
-            key={entry.rel}
-            style={{ paddingLeft: `${entry.rel.split("/").length * 0.6}rem` }}
-          >
-            {entry.kind === "file" ? (
-              <button
-                type="button"
-                className="link"
-                onClick={() => onOpen(entry.rel)}
-              >
-                {entry.rel.split("/").pop()}
-              </button>
-            ) : (
-              <span>{entry.rel.split("/").pop()}</span>
-            )}
-          </li>
-        ))}
+        {entries.map((entry) => {
+          const depth = entry.rel.split("/").length;
+          const name = entry.rel.split("/").pop();
+          return (
+            <li
+              key={entry.rel}
+              style={{ paddingLeft: `${(depth - 1) * 0.85}rem` }}
+            >
+              {entry.kind === "file" ? (
+                <button
+                  type="button"
+                  className="link file-item"
+                  onClick={() => onOpen(entry.rel)}
+                >
+                  <span className="file-name">{name}</span>
+                </button>
+              ) : (
+                <span className="dir-item">
+                  <span className="file-name">{name}</span>
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

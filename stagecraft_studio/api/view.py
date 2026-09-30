@@ -7,6 +7,7 @@ import os
 import shlex
 import subprocess
 from pathlib import Path
+from typing import Literal
 
 from stagecraft_studio.api.copy import (
     ENGINE_STATUS,
@@ -242,13 +243,24 @@ def _artifacts(
                 size = path.stat().st_size
             except (ValueError, PathRejected, OSError):
                 continue
+            quality_status: Literal["pass", "fail", "missing"]
             if rel in bad:
                 label = FIGURE_FAIL
+                quality_status = "fail"
             elif known:
                 label = FIGURE_PASS
+                quality_status = "pass"
             else:
                 label = MISSING
-            found.append(ArtifactView(rel=rel, size=size, quality_label=label))
+                quality_status = "missing"
+            found.append(
+                ArtifactView(
+                    rel=rel,
+                    size=size,
+                    quality_label=label,
+                    quality_status=quality_status,
+                )
+            )
     return found
 
 

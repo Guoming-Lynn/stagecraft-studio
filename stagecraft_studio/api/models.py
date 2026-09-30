@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -133,6 +135,7 @@ class ArtifactView(BaseModel):
     rel: str
     size: int
     quality_label: str
+    quality_status: Literal["pass", "fail", "missing"]
 
 
 class StepView(BaseModel):
