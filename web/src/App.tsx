@@ -1,0 +1,272 @@
+import { useEffect, useState } from "react";
+import { Group, Panel, Separator } from "react-resizable-panels";
+
+import {
+  cancelRun,
+  errorText,
+  loadBootstrap,
+  loadRun,
+  loadRuns,
+  loadSource,
+  loadSteps,
+  loadTree,
+  rememberToken,
+  revealRun,
+  type Bootstrap,
+  type RunListItem,
+  type RunView,
+  type SourceView,
+  type StepView,
+  type TreeEntry,
+} from "./api/client";
+import { readLayout, saveLayout } from "./layout_store";
+import { Assistant } from "./panes/Assistant";
+import { Files } from "./panes/Files";
+import { Images } from "./panes/Images";
+import { StartForm } from "./panes/StartForm";
+import { StepDetail } from "./panes/StepDetail";
+import { Steps } from "./panes/Steps";
+import { chrome } from "./text/chrome";
+
+export function App() {
+  const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
+  const [runs, setRuns] = useState<RunListItem[]>([]);
+  const [run, setRun] = useState<RunView | null>(null);
+  const [steps, setSteps] = useState<StepView[]>([]);
+  const [tree, setTree] = useState<TreeEntry[]>([]);
+  const [source, setSource] = useState<SourceView | null>(null);
+  const [stepId, setStepId] = useState("");
+  const [left, setLeft] = useState<"steps" | "files">("steps");
+  const [right, setRight] = useState<"images" | "assistant">("images");
+  const [mode, setMode] = useState<"quicklook" | "formal">("quicklook");
+  const [focus, setFocus] = useState("");
+  const [error, setError] = useState("");
+  const [layout] = useState(readLayout);
+
+  useEffect(() => {
+    void loadBootstrap()
+      .then((next) => {
+        rememberToken(next.token);
+        setBootstrap(next);
+      })
+      .catch((reason: unknown) => setError(errorText(reason)));
+  }, []);
+
+  useEffect(() => {
+    if (!bootstrap) return;
+    let timer = 0;
+    let stop = false;
+    const tick = () => {
+      window.clearTimeout(timer);
+      const runId = runIdFromHash();
+      void loadRuns()
+        .then((list) => {
+          if (!stop) setRuns(list);
+        })
+        .catch((reason: unknown) => setError(errorText(reason)));
+      if (!runId) {
+        setRun(null);
+        setSteps([]);
+        setTree([]);
+        return;
+      }
+      void Promise.all([loadRun(runId), loadSteps(runId), loadTree(runId)])
+        .then(([nextRun, nextSteps, nextTree]) => {
+          if (stop) return;
+          setRun(nextRun);
+          setSteps(nextSteps);
+          setTree(nextTree);
+          if (nextRun.status === "running" || nextRun.status === "starting") {
+            timer = window.setTimeout(tick, 3000);
+          }
+        })
+        .catch((reason: unknown) => setError(errorText(reason)));
+    };
+    tick();
+    window.addEventListener("hashchange", tick);
+    return () => {
+      stop = true;
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", tick);
+    };
+  }, [bootstrap]);
+
+  useEffect(() => {
+    if (!stepId && steps.length > 0) {
+      const running = steps.find((step) => step.status === "running");
+      setStepId((running ?? steps[0]).step_id);
+    }
+  }, [stepId, steps]);
+
+  useEffect(() => {
+    if (!stepId) return;
+    void loadSource(stepId)
+      .then(setSource)
+      .catch(() => setSource(null));
+  }, [stepId]);
+
+  const step = steps.find((item) => item.step_id === stepId) ?? null;
+  const selected = step?.step_id === source?.step_id ? source : null;
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <label>
+          {chrome.project}
+          <select
+            value={run?.run_id ?? ""}
+            onChange={(event) => {
+              window.location.hash = event.target.value
+                ? `#/runs/${event.target.value}`
+                : "";
+            }}
+          >
+            <option value="">{chrome.newRun}</option>
+            {runs.map((item) => (
+              <option key={item.run_id} value={item.run_id}>
+                {item.run_id} · {item.status_label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={mode === "quicklook" ? "on" : ""}
+          onClick={() => setMode("quicklook")}
+        >
+          {chrome.quicklook}
+        </button>
+        <button
+          type="button"
+          className={mode === "formal" ? "on" : ""}
+          onClick={() => setMode("formal")}
+        >
+          {chrome.formal}
+        </button>
+        <span>
+          {bootstrap?.environment_ok
+            ? chrome.environmentOk
+            : chrome.environmentBad}
+        </span>
+        <button
+          type="button"
+          disabled={!run?.can_cancel}
+          onClick={() => {
+            if (!run) return;
+            void cancelRun(run.run_id)
+              .then((next) => {
+                setRun(next);
+                return loadSteps(next.run_id).then(setSteps);
+              })
+              .catch((reason: unknown) => setError(errorText(reason)));
+          }}
+        >
+          {chrome.cancel}
+        </button>
+      </header>
+      {error ? <p className="log-error">{error}</p> : null}
+      <Group
+        orientation="horizontal"
+        defaultLayout={layout}
+        onLayoutChanged={(next, meta) => {
+          if (meta.isUserInteraction) saveLayout(next);
+        }}
+      >
+        <Panel id="left" defaultSize="22%" minSize="16%">
+          <div className="pane">
+            <div className="tabs">
+              <button
+                type="button"
+                className={left === "steps" ? "on" : ""}
+                onClick={() => setLeft("steps")}
+              >
+                {chrome.steps}
+              </button>
+              <button
+                type="button"
+                className={left === "files" ? "on" : ""}
+                onClick={() => setLeft("files")}
+              >
+                {chrome.files}
+              </button>
+            </div>
+            {left === "steps" ? (
+              <Steps steps={steps} selected={stepId} onSelect={setStepId} />
+            ) : null}
+            {left === "files" ? (
+              <Files
+                entries={tree}
+                onReveal={() => {
+                  if (run) void revealRun(run.run_id);
+                }}
+                onOpen={(rel) => {
+                  if (rel.endsWith(".png") || rel.endsWith(".svg")) {
+                    setFocus(rel);
+                    setRight("images");
+                  }
+                }}
+              />
+            ) : null}
+          </div>
+        </Panel>
+        <Separator className="split" />
+        <Panel id="center" minSize="30%">
+          <div className="pane">
+            {mode === "formal" ? (
+              <p className="hint">{chrome.formalNote}</p>
+            ) : null}
+            {mode === "quicklook" && run ? (
+              <StepDetail run={run} step={step} source={selected} />
+            ) : null}
+            {mode === "quicklook" && !run && bootstrap ? (
+              <StartForm
+                bootstrap={bootstrap}
+                onStarted={(runId) => {
+                  window.location.hash = `#/runs/${runId}`;
+                }}
+              />
+            ) : null}
+          </div>
+        </Panel>
+        <Separator className="split" />
+        <Panel id="right" defaultSize="26%" minSize="16%">
+          <div className="pane">
+            <div className="tabs">
+              <button
+                type="button"
+                className={right === "images" ? "on" : ""}
+                onClick={() => setRight("images")}
+              >
+                {chrome.images}
+              </button>
+              <button
+                type="button"
+                className={right === "assistant" ? "on" : ""}
+                onClick={() => setRight("assistant")}
+              >
+                {chrome.assistant}
+              </button>
+            </div>
+            {right === "images" ? (
+              <Images run={run} focus={focus} onFocus={setFocus} />
+            ) : (
+              <Assistant />
+            )}
+          </div>
+        </Panel>
+      </Group>
+      <footer>
+        {run
+          ? `${run.engine_name} ${run.engine_version} (${run.engine_git}) · ${run.output_root} · ${run.run_id}`
+          : bootstrap
+            ? `${bootstrap.engine_name} ${bootstrap.engine_version} (${bootstrap.engine_git})`
+            : ""}
+      </footer>
+    </div>
+  );
+}
+
+function runIdFromHash(): string {
+  const match = window.location.hash.match(/^#\/runs\/([0-9a-f]{16})$/);
+  return match?.[1] ?? "";
+}

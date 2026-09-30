@@ -117,6 +117,11 @@ class RunStore:
         if pid is not None:
             kill_tree(pid)
 
+    def records(self) -> list[RunRecord]:
+        """Return the runs currently known to this process."""
+        with self._lock:
+            return list(self._runs.values())
+
     def get(self, run_id: str) -> RunRecord | None:
         """Return the record, finishing it first if the process has already exited."""
         with self._lock:

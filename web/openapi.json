@@ -1,0 +1,1344 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stagecraft Studio",
+    "version": "0.0.0"
+  },
+  "paths": {
+    "/api/bootstrap": {
+      "get": {
+        "summary": "Bootstrap",
+        "operationId": "bootstrap_api_bootstrap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bootstrap"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "summary": "Runs",
+        "operationId": "runs_api_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunListItem"
+                  },
+                  "type": "array",
+                  "title": "Response Runs Api Runs Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start",
+        "operationId": "start_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuicklookForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}": {
+      "get": {
+        "summary": "Run",
+        "operationId": "run_api_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/steps": {
+      "get": {
+        "summary": "Steps",
+        "operationId": "steps_api_runs__run_id__steps_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StepView"
+                  },
+                  "title": "Response Steps Api Runs  Run Id  Steps Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/events": {
+      "get": {
+        "summary": "Events",
+        "operationId": "events_api_runs__run_id__events_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/tree": {
+      "get": {
+        "summary": "Tree",
+        "operationId": "tree_api_runs__run_id__tree_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeEntry"
+                  },
+                  "title": "Response Tree Api Runs  Run Id  Tree Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/file": {
+      "get": {
+        "summary": "File",
+        "operationId": "file_api_runs__run_id__file_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "rel",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilePreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/media": {
+      "get": {
+        "summary": "Media",
+        "operationId": "media_api_runs__run_id__media_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "rel",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/table": {
+      "get": {
+        "summary": "Table",
+        "operationId": "table_api_runs__run_id__table_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "rel",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rel"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/steps/{step_id}/source": {
+      "get": {
+        "summary": "Source",
+        "operationId": "source_api_steps__step_id__source_get",
+        "parameters": [
+          {
+            "name": "step_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Step Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inspect": {
+      "post": {
+        "summary": "Inspect",
+        "operationId": "inspect_api_inspect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuicklookForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/cancel": {
+      "post": {
+        "summary": "Cancel",
+        "operationId": "cancel_api_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/reveal": {
+      "post": {
+        "summary": "Open Folder",
+        "operationId": "open_folder_api_runs__run_id__reveal_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevealResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArtifactView": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "quality_label": {
+            "type": "string",
+            "title": "Quality Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "size",
+          "quality_label"
+        ],
+        "title": "ArtifactView"
+      },
+      "Bootstrap": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "python": {
+            "type": "string",
+            "title": "Python"
+          },
+          "script": {
+            "type": "string",
+            "title": "Script"
+          },
+          "gmt": {
+            "type": "string",
+            "title": "Gmt"
+          },
+          "group_note": {
+            "type": "string",
+            "title": "Group Note"
+          },
+          "engine_name": {
+            "type": "string",
+            "title": "Engine Name"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "engine_git": {
+            "type": "string",
+            "title": "Engine Git"
+          },
+          "environment_ok": {
+            "type": "boolean",
+            "title": "Environment Ok"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "python",
+          "script",
+          "gmt",
+          "group_note",
+          "engine_name",
+          "engine_version",
+          "engine_git",
+          "environment_ok"
+        ],
+        "title": "Bootstrap"
+      },
+      "ColumnView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "ColumnView"
+      },
+      "FilePreview": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "text",
+          "truncated",
+          "note",
+          "size"
+        ],
+        "title": "FilePreview"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImageView": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "step_name": {
+            "type": "string",
+            "title": "Step Name"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonView"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "step_id",
+          "step_name",
+          "passed",
+          "label",
+          "reasons"
+        ],
+        "title": "ImageView"
+      },
+      "InspectView": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnView"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "group_note": {
+            "type": "string",
+            "title": "Group Note"
+          },
+          "input_path": {
+            "type": "string",
+            "title": "Input Path"
+          },
+          "gene": {
+            "type": "string",
+            "title": "Gene"
+          },
+          "out": {
+            "type": "string",
+            "title": "Out"
+          },
+          "local_gmt": {
+            "type": "string",
+            "title": "Local Gmt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "columns",
+          "note",
+          "group_note",
+          "input_path",
+          "gene",
+          "out",
+          "local_gmt"
+        ],
+        "title": "InspectView"
+      },
+      "LogView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "text"
+        ],
+        "title": "LogView"
+      },
+      "ParameterRow": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "source",
+          "source_label"
+        ],
+        "title": "ParameterRow"
+      },
+      "QuicklookForm": {
+        "properties": {
+          "input_path": {
+            "type": "string",
+            "title": "Input Path"
+          },
+          "gene": {
+            "type": "string",
+            "title": "Gene"
+          },
+          "out": {
+            "type": "string",
+            "title": "Out"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group",
+            "default": ""
+          },
+          "case_label": {
+            "type": "string",
+            "title": "Case Label",
+            "default": ""
+          },
+          "control_label": {
+            "type": "string",
+            "title": "Control Label",
+            "default": ""
+          },
+          "batch_column": {
+            "type": "string",
+            "title": "Batch Column",
+            "default": ""
+          },
+          "local_gmt": {
+            "type": "string",
+            "title": "Local Gmt",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "input_path",
+          "gene",
+          "out"
+        ],
+        "title": "QuicklookForm",
+        "description": "Fields the page may submit. The engine program is not one of them."
+      },
+      "ReasonView": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "suggestion": {
+            "type": "string",
+            "title": "Suggestion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "text",
+          "suggestion"
+        ],
+        "title": "ReasonView"
+      },
+      "RevealResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "RevealResult"
+      },
+      "RunListItem": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "heading": {
+            "type": "string",
+            "title": "Heading"
+          },
+          "returncode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returncode"
+          },
+          "enrichment": {
+            "type": "string",
+            "title": "Enrichment"
+          },
+          "stopped_after": {
+            "type": "string",
+            "title": "Stopped After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "task_id",
+          "status",
+          "status_label",
+          "heading",
+          "returncode",
+          "enrichment",
+          "stopped_after"
+        ],
+        "title": "RunListItem"
+      },
+      "RunView": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "heading": {
+            "type": "string",
+            "title": "Heading"
+          },
+          "lede": {
+            "type": "string",
+            "title": "Lede"
+          },
+          "can_cancel": {
+            "type": "boolean",
+            "title": "Can Cancel"
+          },
+          "returncode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returncode"
+          },
+          "enrichment": {
+            "type": "string",
+            "title": "Enrichment"
+          },
+          "enrichment_label": {
+            "type": "string",
+            "title": "Enrichment Label"
+          },
+          "stopped_after": {
+            "type": "string",
+            "title": "Stopped After"
+          },
+          "output_root": {
+            "type": "string",
+            "title": "Output Root"
+          },
+          "engine_name": {
+            "type": "string",
+            "title": "Engine Name"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "engine_git": {
+            "type": "string",
+            "title": "Engine Git"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Command"
+          },
+          "command_line": {
+            "type": "string",
+            "title": "Command Line"
+          },
+          "config_text": {
+            "type": "string",
+            "title": "Config Text"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterRow"
+            },
+            "type": "array",
+            "title": "Parameters"
+          },
+          "logs": {
+            "items": {
+              "$ref": "#/components/schemas/LogView"
+            },
+            "type": "array",
+            "title": "Logs"
+          },
+          "pipeline_outcome": {
+            "type": "string",
+            "title": "Pipeline Outcome"
+          },
+          "pipeline_label": {
+            "type": "string",
+            "title": "Pipeline Label"
+          },
+          "figure_status": {
+            "type": "string",
+            "title": "Figure Status"
+          },
+          "figure_label": {
+            "type": "string",
+            "title": "Figure Label"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageView"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "task_id",
+          "status",
+          "status_label",
+          "heading",
+          "lede",
+          "can_cancel",
+          "returncode",
+          "enrichment",
+          "enrichment_label",
+          "stopped_after",
+          "output_root",
+          "engine_name",
+          "engine_version",
+          "engine_git",
+          "command",
+          "command_line",
+          "config_text",
+          "parameters",
+          "logs",
+          "pipeline_outcome",
+          "pipeline_label",
+          "figure_status",
+          "figure_label",
+          "images"
+        ],
+        "title": "RunView"
+      },
+      "SourceView": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "script_name": {
+            "type": "string",
+            "title": "Script Name"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "engine_git": {
+            "type": "string",
+            "title": "Engine Git"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_id",
+          "name",
+          "script_name",
+          "sha256",
+          "engine_version",
+          "engine_git",
+          "source"
+        ],
+        "title": "SourceView"
+      },
+      "Started": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "Started"
+      },
+      "StepView": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "script_name": {
+            "type": "string",
+            "title": "Script Name"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactView"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_id",
+          "name",
+          "status",
+          "status_label",
+          "script_name",
+          "artifacts"
+        ],
+        "title": "StepView"
+      },
+      "TablePage": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "columns",
+          "rows",
+          "offset",
+          "limit"
+        ],
+        "title": "TablePage"
+      },
+      "TreeEntry": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "kind",
+          "size"
+        ],
+        "title": "TreeEntry"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

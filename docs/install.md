@@ -44,8 +44,13 @@ pnpm install --frozen-lockfile
 - eslint 10.11.0、@eslint/js 10.0.1、typescript-eslint 8.71.0：检查 TypeScript，并禁止 `any`。
 - prettier 3.9.9：任务书指定的前端格式化工具。
 - vitest 5.0.2：任务书指定的前端测试运行器。
-
-M0 不安装 React。界面从 M3 才开始。
+- react 19.3.0、react-dom 19.3.0、@types/react 19.3.0、@types/react-dom 19.3.0：界面规格要求 React。M0 骨架没有现成的 React 版本。
+- vite 8.3.1、@vitejs/plugin-react 6.1.1：打包页面。vitest 5 接受 vite 8。
+- react-resizable-panels 4.14.1：三栏拖动，并把宽度存进 localStorage。
+- shiki 4.4.3：只读高亮步骤源码。不需要编辑器。
+- @tanstack/react-table 9.2.4、@tanstack/react-virtual 3.14.13：规格要求预先钉住，给 E2 的 CSV 查看器。E1 还没有 import。
+- openapi-typescript 7.13.0：从 OpenAPI 生成 `web/src/api/schema.ts`。前端不手写接口类型。
+- happy-dom 20.14.5：vitest 渲染组件时需要 DOM。
 
 ## 提交钩子
 

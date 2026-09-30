@@ -1,0 +1,176 @@
+:root {
+  color: #1e1a16;
+  background: #f3efe6;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar,
+footer {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  background: #fffdf8;
+  border-bottom: 1px solid #e4dacb;
+}
+
+footer {
+  border-bottom: 0;
+  border-top: 1px solid #e4dacb;
+  color: #655e55;
+  font-size: 0.82rem;
+}
+
+.pane {
+  height: 100%;
+  overflow: auto;
+  padding: 0.7rem;
+  background: #fffdf8;
+}
+
+.split {
+  width: 6px;
+  background: #e4dacb;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+}
+
+.tabs button,
+.topbar button,
+.start button,
+.files > button,
+.lightbox button {
+  border: 1px solid #d9cebf;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+button.on,
+.step.selected {
+  background: #0e6b66;
+  color: #f4fffe;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.step,
+.link {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0.35rem 0;
+}
+
+.mark {
+  font-size: 0.78rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #f4e7cf;
+}
+
+.mark-failed,
+.log-error {
+  color: #8a341c;
+  background: #f8e4dc;
+}
+.log-warning {
+  color: #6f4708;
+  background: #f4e7cf;
+}
+.log {
+  max-height: 24rem;
+  overflow: auto;
+  font-family: Consolas, monospace;
+  font-size: 0.82rem;
+}
+.hint,
+.readonly {
+  color: #655e55;
+}
+.status-row {
+  display: flex;
+  gap: 1rem;
+}
+.status-row div {
+  margin: 0;
+}
+.status-row dt {
+  color: #655e55;
+  font-size: 0.78rem;
+}
+.start,
+.stack {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 40rem;
+}
+.start input,
+.start select,
+.topbar select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d9cebf;
+  border-radius: 8px;
+}
+.thumb {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+}
+.thumb img,
+.lightbox img {
+  max-width: 100%;
+  background: #fff;
+}
+.lightbox {
+  border: 1px solid #e4dacb;
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+.lightbox .pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.highlighted pre {
+  overflow: auto;
+}

@@ -22,6 +22,7 @@ alwaysApply: true
 ## 架构
 - 两个引擎：正式分析在 target-gene-scrna-stagecraft（scripts/ 与 stagecraft/），速览在 scrna-target-pipeline。Studio 只以子进程调用，两个引擎之间不互相 import。
 - Studio 是一个 Python 包 stagecraft_studio/ 加一个前端 web/。不新建其他顶层目录。
+- 图片用原生 img。不引入图表库。图都是引擎渲染的 PNG。
 - 本地单用户：单 worker、SQLite、线性阶段失效。不做租约、心跳、幂等键、分布式、插件。
 
 ## 卫生

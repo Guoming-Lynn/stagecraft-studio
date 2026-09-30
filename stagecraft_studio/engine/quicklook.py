@@ -69,6 +69,33 @@ class QuicklookResult(BaseModel):
     tier_path: Path
 
 
+_USER_KEYS = frozenset(
+    {
+        "TARGET_GENE",
+        "INPUT_PATH",
+        "OUTPUT_ROOT",
+        "GROUP_COLUMN",
+        "CASE_LABEL",
+        "CONTROL_LABEL",
+        "BATCH_COLUMN",
+        "LOCAL_GMT",
+    }
+)
+
+
+def parameter_sources(config: dict[str, object]) -> dict[str, str]:
+    """Record where each written config value came from."""
+    sources: dict[str, str] = {}
+    for key in config:
+        if key == "INPUT_FORMAT":
+            sources[key] = "inferred"
+        elif key in _USER_KEYS:
+            sources[key] = "user"
+        else:
+            sources[key] = "default"
+    return sources
+
+
 def engine_config(
     request: QuicklookRequest,
     gmt_path: Path | None,
@@ -130,8 +157,10 @@ def prepare_quicklook(
     require_empty_output(request.output_root)
     request.output_root.mkdir(parents=True, exist_ok=True)
     config_path = request.output_root / "config.json"
-    config_path.write_text(
-        json.dumps(engine_config(request, scope.gmt_path, input_format), indent=2),
+    config = engine_config(request, scope.gmt_path, input_format)
+    config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    (request.output_root / "parameter_sources.json").write_text(
+        json.dumps(parameter_sources(config), indent=2),
         encoding="utf-8",
     )
     tier_path = _write_tier(request.output_root)

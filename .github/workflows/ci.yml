@@ -40,6 +40,8 @@ jobs:
         with:
           version: 12.8.1
       - run: pnpm install --frozen-lockfile
+      - run: pnpm -C web generate:api
+      - run: git diff --exit-code -- web/src/api/schema.ts
       - run: pnpm -C web lint
       - run: pnpm -C web exec prettier --check .
       - run: pnpm -C web typecheck
