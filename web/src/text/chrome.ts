@@ -34,6 +34,8 @@ export const chrome = {
   inputPath: "数据路径",
   output: "输出目录",
   gmt: "本地 GMT",
+  gmtNote:
+    "软件没有附带基因集。留空就停在聚类，不做差异分析，也不做富集。要做这两步，填一个你有权使用的本地 GMT 文件。",
   group: "分组列",
   caseLabel: "case",
   controlLabel: "control",

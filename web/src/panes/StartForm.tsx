@@ -57,6 +57,7 @@ export function StartForm({
         <h1>{chrome.quicklook}</h1>
         <div className="form-callout">
           <p className="hint">{bootstrap.group_note}</p>
+          <p className="hint">{chrome.gmtNote}</p>
           <p className="hint">{bootstrap.demo_source}</p>
         </div>
       </div>

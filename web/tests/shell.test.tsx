@@ -72,6 +72,8 @@ describe("shell", () => {
       />,
     );
     expect(host.textContent).toContain("没有分组时不出 case/control 对比图");
+    expect(host.textContent).toContain("软件没有附带基因集");
+    expect(host.textContent).toContain("留空就停在聚类");
     expect(host.textContent).toContain("运行演示");
     expect(host.textContent).toContain("不是策展数据");
     expect(host.querySelector("[name=python_path]")).toBeNull();
