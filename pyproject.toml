@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stagecraft-studio"
+version = "0.0.0"
+description = "Local single-user shell for the Stagecraft analysis engines."
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "fastapi==0.142.1",
+    "pydantic==2.13.5",
+    "python-multipart==0.0.32",
+    "uvicorn==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx==0.28.1",
+  "mypy==2.3.1",
+  "pre-commit==4.6.2",
+  "pytest==9.1.1",
+  "ruff==0.16.9",
+]
+
+[tool.uv]
+required-version = "==0.9.2"
+
+[tool.hatch.build.targets.wheel]
+packages = ["stagecraft_studio"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["stagecraft_studio", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "T20"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["stagecraft_studio", "scripts/check_hygiene.py", "scripts/hygiene_rules.py"]
+mypy_path = "scripts"
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["stagecraft_studio.domain.*", "stagecraft_studio.rules.*"]
+strict = true
