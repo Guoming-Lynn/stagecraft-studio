@@ -507,6 +507,12 @@ export interface components {
        * @default
        */
       local_gmt: string;
+      /**
+       * Organism
+       * @default human
+       * @enum {string}
+       */
+      organism: "human" | "mouse";
     };
     /** ReasonView */
     ReasonView: {

@@ -28,6 +28,7 @@ class QuicklookForm(BaseModel):
     control_label: str = ""
     batch_column: str = ""
     local_gmt: str = ""
+    organism: Literal["human", "mouse"] = "human"
 
     @model_validator(mode="before")
     @classmethod

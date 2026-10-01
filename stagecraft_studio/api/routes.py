@@ -254,6 +254,7 @@ def _request(form: QuicklookForm) -> QuicklookRequest:
             control_label=form.control_label or None,
             batch_column=form.batch_column or None,
             local_gmt=Path(form.local_gmt) if form.local_gmt else None,
+            organism=form.organism,
         )
     except ValidationError as exc:
         raise HTTPException(

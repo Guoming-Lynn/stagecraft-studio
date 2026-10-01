@@ -23,6 +23,7 @@ export function StartForm({
   const [gene, setGene] = useState("");
   const [out, setOut] = useState("");
   const [gmt, setGmt] = useState(bootstrap.gmt);
+  const [organism, setOrganism] = useState<"human" | "mouse">("human");
   const [group, setGroup] = useState("");
   const [caseLabel, setCaseLabel] = useState("");
   const [controlLabel, setControlLabel] = useState("");
@@ -40,6 +41,7 @@ export function StartForm({
       control_label: controlLabel,
       batch_column: batch,
       local_gmt: gmt,
+      organism,
     };
   }
 
@@ -88,6 +90,18 @@ export function StartForm({
               value={out}
               onChange={(e) => setOut(e.target.value)}
             />
+          </label>
+          <label>
+            {chrome.organism}
+            <select
+              value={organism}
+              onChange={(event) =>
+                setOrganism(event.target.value === "mouse" ? "mouse" : "human")
+              }
+            >
+              <option value="human">{chrome.organismHuman}</option>
+              <option value="mouse">{chrome.organismMouse}</option>
+            </select>
           </label>
           <label>
             {chrome.gmt}

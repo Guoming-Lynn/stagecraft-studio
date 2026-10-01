@@ -15,3 +15,9 @@ def _loopback_host(monkeypatch: pytest.MonkeyPatch) -> None:
         original(self, *args, **kwargs)
 
     monkeypatch.setattr(TestClient, "__init__", init_with_loopback)
+
+
+@pytest.fixture(autouse=True)
+def _offline_gene_sets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the suite off the network. Unset this when a test checks the download."""
+    monkeypatch.setenv("STAGECRAFT_GENE_SETS", "off")

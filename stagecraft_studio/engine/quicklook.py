@@ -11,9 +11,11 @@ import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from stagecraft_studio.engine.gene_sets import library_for_request
 from stagecraft_studio.engine.input_format import detect_input_format
 from stagecraft_studio.engine.quicklook_scope import engine_argv, plan_scope
 from stagecraft_studio.engine.registry import require_task
@@ -41,6 +43,7 @@ class QuicklookRequest(BaseModel):
     control_label: str | None = None
     batch_column: str | None = None
     local_gmt: Path | None = None
+    organism: Literal["human", "mouse"] = "human"
     random_seed: int = Field(default=42, ge=0)
 
     @field_validator("group_column", "case_label", "control_label", "batch_column")
@@ -83,12 +86,16 @@ _USER_KEYS = frozenset(
 )
 
 
-def parameter_sources(config: dict[str, object]) -> dict[str, str]:
+def parameter_sources(
+    config: dict[str, object], *, downloaded_gmt: bool = False
+) -> dict[str, str]:
     """Record where each written config value came from."""
     sources: dict[str, str] = {}
     for key in config:
         if key == "INPUT_FORMAT":
             sources[key] = "inferred"
+        elif key == "LOCAL_GMT" and downloaded_gmt:
+            sources[key] = "default"
         elif key in _USER_KEYS:
             sources[key] = "user"
         else:
@@ -153,14 +160,16 @@ def prepare_quicklook(
     if not python.is_file() or not script.is_file():
         raise FileNotFoundError(python if not python.is_file() else script)
     input_format = detect_input_format(request.input_path)
-    scope = plan_scope(request.local_gmt)
+    chosen = library_for_request(request.local_gmt, request.organism)
+    scope = plan_scope(chosen)
     require_empty_output(request.output_root)
     request.output_root.mkdir(parents=True, exist_ok=True)
     config_path = request.output_root / "config.json"
     config = engine_config(request, scope.gmt_path, input_format)
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    downloaded = request.local_gmt is None and chosen is not None
     (request.output_root / "parameter_sources.json").write_text(
-        json.dumps(parameter_sources(config), indent=2),
+        json.dumps(parameter_sources(config, downloaded_gmt=downloaded), indent=2),
         encoding="utf-8",
     )
     tier_path = _write_tier(request.output_root)

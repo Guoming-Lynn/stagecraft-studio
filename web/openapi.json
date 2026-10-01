@@ -1207,6 +1207,15 @@
             "type": "string",
             "title": "Local Gmt",
             "default": ""
+          },
+          "organism": {
+            "type": "string",
+            "enum": [
+              "human",
+              "mouse"
+            ],
+            "title": "Organism",
+            "default": "human"
           }
         },
         "additionalProperties": false,

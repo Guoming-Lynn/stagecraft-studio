@@ -26,6 +26,7 @@ uv sync --frozen
 - fastapi 0.142.1 与 uvicorn 0.54.0：本地表单和只监听 127.0.0.1 的进程。标准库没有请求校验。
 - python-multipart 0.0.32：FastAPI 解析表单时需要它。
 - httpx 0.28.1（开发依赖）：FastAPI 的测试客户端需要它。
+- 默认基因集用标准库 `urllib` 下载 MSigDB 的 GMT。不把 gseapy 加进 Studio，分析时也不把基因列表发出去。
 - ruff 0.16.9：任务书指定的检查和格式化工具。
 - mypy 2.3.1：任务书指定的类型检查。`domain` 与 `rules` 使用 strict。
 - pytest 9.1.1：任务书指定的测试运行器。
