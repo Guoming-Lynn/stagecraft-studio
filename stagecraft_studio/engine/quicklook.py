@@ -86,9 +86,7 @@ _USER_KEYS = frozenset(
 )
 
 
-def parameter_sources(
-    config: dict[str, object], *, downloaded_gmt: bool = False
-) -> dict[str, str]:
+def parameter_sources(config: dict[str, object], *, downloaded_gmt: bool = False) -> dict[str, str]:
     """Record where each written config value came from."""
     sources: dict[str, str] = {}
     for key in config:

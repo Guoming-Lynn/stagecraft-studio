@@ -38,6 +38,7 @@ def test_default_libraries_are_combined_without_leaving_the_machine(tmp_path: Pa
     assert "HK1,1" not in text
     assert "KEGG" not in text
     assert all("kegg" not in url.casefold() and "enrichr" not in url.casefold() for url in seen)
+
     def offline(_url: str) -> bytes:
         raise OSError("no")
 
