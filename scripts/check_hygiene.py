@@ -32,6 +32,7 @@ SPEC_TOP_LEVEL = frozenset(
 TOOLCHAIN_TOP_LEVEL = frozenset(
     {
         ".gitignore",
+        ".gitattributes",
         ".python-version",
         ".pre-commit-config.yaml",
         ".github",

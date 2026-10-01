@@ -77,9 +77,7 @@ describe("shell", () => {
       />,
     );
     expect(host.textContent).toContain("没有分组时不出 case/control 对比图");
-    expect(host.textContent).toContain(
-      "留空时联网下载人和鼠的 Hallmark、KEGG、GOBP",
-    );
+    expect(host.textContent).toContain("留空时联网下载人和鼠的 Hallmark、GOBP");
     expect(host.textContent).toContain("鼠");
     expect(host.textContent).toContain("运行演示");
     expect(host.textContent).toContain("不是策展数据");
