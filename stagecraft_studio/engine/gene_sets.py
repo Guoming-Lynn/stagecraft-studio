@@ -1,7 +1,7 @@
 """Download the default gene-set libraries. User gene lists are not sent anywhere.
 
-MSigDB 2026.1 has human and mouse Hallmark and GO Biological Process, and human
-KEGG. The mouse release has no KEGG file, so that one library comes from Enrichr.
+MSigDB 2026.1 has human and mouse Hallmark and GO Biological Process.
+KEGG is not included. Import a GMT file when that collection is needed.
 # ponytail: pinned 2026.1 URLs; change these constants when a new release is published.
 """
 
@@ -17,13 +17,10 @@ _RELEASE = "2026.1"
 _MSIGDB = "https://data.broadinstitute.org/gsea-msigdb/msigdb/release"
 _HUMAN = (
     f"{_MSIGDB}/{_RELEASE}.Hs/h.all.v{_RELEASE}.Hs.symbols.gmt",
-    f"{_MSIGDB}/{_RELEASE}.Hs/c2.cp.kegg_medicus.v{_RELEASE}.Hs.symbols.gmt",
-    f"{_MSIGDB}/{_RELEASE}.Hs/c2.cp.kegg_legacy.v{_RELEASE}.Hs.symbols.gmt",
     f"{_MSIGDB}/{_RELEASE}.Hs/c5.go.bp.v{_RELEASE}.Hs.symbols.gmt",
 )
 _MOUSE = (
     f"{_MSIGDB}/{_RELEASE}.Mm/mh.all.v{_RELEASE}.Mm.symbols.gmt",
-    "https://maayanlab.cloud/Enrichr/geneSetLibrary?mode=text&libraryName=KEGG_2019_Mouse",
     f"{_MSIGDB}/{_RELEASE}.Mm/m5.go.bp.v{_RELEASE}.Mm.symbols.gmt",
 )
 LIBRARIES = {"human": _HUMAN, "mouse": _MOUSE}

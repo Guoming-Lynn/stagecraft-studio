@@ -1,4 +1,4 @@
-"""Default Hallmark, KEGG, and GO Biological Process libraries stay on this machine."""
+"""Default Hallmark and GO Biological Process libraries stay on this machine."""
 
 from __future__ import annotations
 
@@ -16,20 +16,24 @@ from tests.fakes import write_fake_engine
 
 
 def test_default_libraries_are_combined_without_leaving_the_machine(tmp_path: Path) -> None:
+    seen: list[str] = []
+
     def fetch(url: str) -> bytes:
-        if "kegg_legacy" in url:
-            return b"KEGG_GLYCOLYSIS\tdesc\tHK1,1\tGAPDH\n"
-        if "Hallmark" in url or "h.all" in url or "mh.all" in url:
+        seen.append(url)
+        if "go.bp" in url:
+            return b"GOBP_WOUND_HEALING\tGO:0009611\tHK1,1\tIFITM3\n"
+        if "h.all" in url or "mh.all" in url:
             return b"HALLMARK_HYPOXIA\thttps://example.test/hypoxia\tIFITM3\tVEGFA\n"
-        return b"GOBP_WOUND_HEALING\tGO:0009611\tIFITM3\n"
+        raise AssertionError(url)
 
     path = ensure_default_gmt("human", fetch=fetch, cache=tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "HALLMARK_HYPOXIA" in text
-    assert "KEGG_GLYCOLYSIS" in text
+    assert "GOBP_WOUND_HEALING" in text
     assert "HK1\t" in text
     assert "HK1,1" not in text
-    assert "GOBP_WOUND_HEALING" in text
+    assert "KEGG" not in text
+    assert all("kegg" not in url.casefold() and "enrichr" not in url.casefold() for url in seen)
     def offline(_url: str) -> bytes:
         raise OSError("no")
 

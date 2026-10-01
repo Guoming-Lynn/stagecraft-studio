@@ -78,7 +78,7 @@
 
 ## 单元 F3 默认基因集
 
-状态：留空时下载人和鼠的 Hallmark、KEGG、GOBP（MSigDB 2026.1）。小鼠发布没有 KEGG 文件，这一份来自 Enrichr 的 `KEGG_2019_Mouse`。自己填的 GMT 优先。基因列表不外发。测试不联网。GitHub CI 仍未跑。
+状态：留空时下载人和鼠的 Hallmark 与 GO Biological Process（MSigDB 2026.1）。KEGG 不下载，由用户导入 GMT。自己填的 GMT 优先。基因列表不外发。测试不联网。GitHub CI 仍未跑。
 
 ## 单元 F4 10x h5
 

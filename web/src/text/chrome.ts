@@ -36,7 +36,7 @@ export const chrome = {
   output: "输出目录",
   gmt: "本地 GMT",
   gmtNote:
-    "留空时联网下载人和鼠的 Hallmark、KEGG、GOBP，只在本机做富集，不把基因列表发出去。其它基因集请自己下载后把 GMT 路径填在这里。",
+    "留空时联网下载人和鼠的 Hallmark、GOBP，只在本机做富集，不把基因列表发出去。KEGG 和其它基因集请自己下载后把 GMT 路径填在这里。",
   organism: "物种",
   organismHuman: "人",
   organismMouse: "鼠",
@@ -64,7 +64,7 @@ export const chrome = {
   inputPlaceholder: "h5ad 或 10x h5 文件，或 10x mtx 目录",
   genePlaceholder: "例如 IFITM3",
   outputPlaceholder: "空目录，或还不存在的目录",
-  gmtPlaceholder: "自己的 GMT。留空则下载默认的 Hallmark、KEGG、GOBP",
+  gmtPlaceholder: "自己的 GMT。留空则下载默认的 Hallmark、GOBP",
   currentStep: "当前步骤",
   parameter: "参数",
   value: "值",
