@@ -2,6 +2,9 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 正式任务目前只有登记和审阅闸门，worker 还没有执行它们。
+- 研究设计按固定字段冻结：`GET /api/protocol/form`、`POST /api/protocol/freeze`。Harmony 必须含 `dataset`，拒绝 `donor_id`、`condition`、`disease`、`cell_type` 和目标基因（`1126592`）。
+- 科学状态由服务端从已保存记录算出。请求不能带 `scientific_status`。校准状态保持 `NOT_ESTABLISHED_FOR_THIS_ANALYSIS`。`associated` 不能被请求抬高（`3e8c85c`）。
 - 根目录加上专有声明：Copyright 2026 GuomingLin. All rights reserved.
 - SQLite 从第一版 Alembic 修订建八张核心表。协议冻结后算 hash。输入或协议变了，旧的 stage run 被 PROTOCOL_HASH_MATCH 阻断。正式 Part 1 任务在启动时确定解释器和脚本目录，入口先拒绝 quicklook 目录。速览的 run_status.json 还没有迁移。
 - 人工 gate 只在服务端执行：分辨率选择、cluster KEEP/DELETE、盲审记录、看过速览就解盲、DELETE 后不能沿用旧 UMAP、上游变更让下游只读。直接调 API 也走这些检查。`docs/rule-coverage.md` 由脚本生成。
@@ -11,7 +14,6 @@
 - 结果页顶部和方法段共用一句主张范围：细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性。
 - 默认基因集下载后先比对固定的 sha256。不一致就拒绝，并且不写缓存。
 - 启动脚本在 `web/src` 或 `pnpm-lock.yaml` 比已构建页面新时重新构建。
-- 去掉空的 `alembic.ini`。`db/` 和 `domain/` 先空着，SQLite 留到 M2。
 - 单元 F8：Playwright 只走一条路径：打开页面、运行演示、看到结果、打开一张图、下载复现包。
 - 盘符路径在 Linux 上也拒绝。源码以 LF 检出，启动脚本仍是 CRLF。
 - M0-A：建立仓库骨架、卫生检查和常驻约束。没有分析功能。
