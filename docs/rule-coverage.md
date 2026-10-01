@@ -20,8 +20,8 @@
 | PER_LIBRARY_QC | 机器校验 | 未落实 | stagecraft_formal/qc.py |  | MAD 与 Scrublet 逐 library 估计。 |
 | LINEAGE_ROUND_LIMIT | 机器校验 | 未落实 |  |  | 两轮后仍混杂则停止该 lineage。 |
 | DESIGN_ESTIMABLE | 机器校验 | 未落实 |  |  | 按冻结模型检查秩和暴露变化。 |
-| CLAIM_SCOPE_ALLOWED | 机器校验 | 未落实 |  |  | 描述性阶段不能获得 donor 推断资格。 |
-| CALIBRATION_STATUS_PRESERVED | 纯说明 | 未落实 |  |  | 校准状态不得因软件跑完而升级。 |
+| CLAIM_SCOPE_ALLOWED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 描述性阶段不能获得 donor 推断资格。associated 只有来源块留一被记录后才可能为 true。 |
+| CALIBRATION_STATUS_PRESERVED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 校准状态不得因软件跑完或请求里写了通过而升级。 |
 | QUICKLOOK_LABELS_PROVISIONAL | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_quicklook_carry_omits_labels_and_resolution | 从速览带入时只保留数据路径、字段映射和目标基因。 |
 | LINEAGE_ROUND_LIMIT | 机器校验 | 已落实 | stagecraft_formal/part3.py | test_two_mixed_rounds_stop_the_lineage | 两轮后仍然混杂就停止这个 lineage。 |
 | QUICKLOOK_CLAIM_SCOPE | 纯说明 | 未落实 | stagecraft_studio/api/copy.py |  | 主张范围只写在 CLAIM_SCOPE。结果页已显示，规则函数还没接。 |

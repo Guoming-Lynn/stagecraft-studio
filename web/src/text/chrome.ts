@@ -3,6 +3,7 @@ export const chrome = {
   quicklook: "速览",
   formal: "正式分析",
   formalNote: "正式分析还没有待审阅的运行。",
+  scientificStatus: "科学状态",
   reviewResolutions: "分辨率",
   reviewClusters: "cluster",
   keep: "KEEP",

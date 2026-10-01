@@ -24,6 +24,7 @@ from stagecraft_studio.rules.gates import (
     require_resolution,
     require_text,
 )
+from stagecraft_studio.rules.scientific_status import scientific_status
 
 
 def evidence_digest(evidence_json: str) -> str:
@@ -147,6 +148,11 @@ def review_center(run: StageRun, target_gene: str) -> dict[str, object]:
         "resolutions": resolutions,
         "clusters": filtered["clusters"],
         "genes": filtered["genes"],
+        "scientific_status": scientific_status(
+            stage_status=run.stage_status,
+            invalidated=run.invalidated,
+            evidence=payload,
+        ),
     }
 
 

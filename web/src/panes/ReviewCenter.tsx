@@ -104,6 +104,17 @@ export function ReviewCenter() {
           ))}
         </select>
       </label>
+      {center ? (
+        <section aria-label={chrome.scientificStatus}>
+          <h2>{chrome.scientificStatus}</h2>
+          <p>{center.scientific_status.scientific_status}</p>
+          <ul>
+            {center.scientific_status.limits.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <div className="review-wall" aria-label={chrome.reviewResolutions}>
         {center?.resolutions.map((tile) => (
           <button

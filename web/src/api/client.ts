@@ -125,6 +125,17 @@ export type ReviewCenter = {
   resolutions: ResolutionTile[];
   clusters: string[];
   genes: { gene: string; expression: number[] }[];
+  scientific_status: {
+    scientific_status: string;
+    calibration_status: string;
+    associated: boolean;
+    claims_limma: boolean;
+    forecast_is_not_a_verdict: boolean;
+    lodo_is_replication: boolean;
+    holdout: string;
+    read_only: boolean;
+    limits: string[];
+  };
 };
 
 export function loadStageRuns(): Promise<StageRunItem[]> {

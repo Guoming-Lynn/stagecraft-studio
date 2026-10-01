@@ -269,6 +269,40 @@ def test_names_are_refused_while_a_cluster_is_deleted(tmp_path: Path) -> None:
     assert response.json()["detail"]["rule_id"] == "REVIEW_CLUSTER_COMPLETE"
 
 
+def test_a_stored_pass_does_not_raise_the_ceiling(tmp_path: Path) -> None:
+    client, run_id, _digest = _client(tmp_path)
+    with session_factory(tmp_path / "studio.sqlite")() as session:
+        run = session.get(StageRun, run_id)
+        assert run is not None
+        evidence = json.loads(run.evidence_json)
+        evidence["verdict"] = {
+            "stopped": "FITTED",
+            "fitted": True,
+            "model": "edger_ql",
+            "claims_limma": True,
+            "associated": True,
+            "holdout": "not_run",
+            "calibration_status": "FROZEN_PASS",
+        }
+        run.evidence_json = json.dumps(evidence)
+        session.commit()
+    center = client.get(f"/api/stage-runs/{run_id}/center")
+    assert center.status_code == 200
+    status = center.json()["scientific_status"]
+    assert status["calibration_status"] == "NOT_ESTABLISHED_FOR_THIS_ANALYSIS"
+    assert status["associated"] is False
+    assert status["claims_limma"] is False
+    assert status["lodo_is_replication"] is False
+    assert status["forecast_is_not_a_verdict"] is True
+    assert "NOT_ESTIMABLE 不表示效应不存在。" in status["limits"]
+    forged = client.post(
+        f"/api/stage-runs/{run_id}/jobs",
+        headers=TOKEN,
+        json={"task_id": "formal_part1_grid", "scientific_status": "FROZEN_PASS"},
+    )
+    assert forged.status_code == 422
+
+
 def test_rule_coverage_matches_the_catalog() -> None:
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(
