@@ -24,15 +24,19 @@ FORMAL_OUTPUT_CONTRACTS: dict[str, tuple[str, ...]] = {
         "grid_record.json",
         "leiden_resolution_overview.png",
     ),
-    "formal_part3_recluster": ("grid_record.json",),
+    "formal_part3_recluster": (
+        "compartment_counts.h5ad",
+        "part3_record.json",
+        "grid_record.json",
+    ),
     "formal_part2_survey": (
         "group_summary.csv",
         "unit_by_group.csv",
         "lodo_detection.csv",
-        "survey_record.json",
+        "part2_record.json",
     ),
     "formal_part2_figures": ("part2_figure_record.json",),
-    "formal_part4_survey": ("part4_survey_record.json",),
+    "formal_part4_survey": ("part4_record.json",),
     "formal_part4_figures": ("part4_figure_record.json",),
     "formal_part5_prepare": (
         "metadata.csv",

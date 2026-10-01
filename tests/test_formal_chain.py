@@ -132,6 +132,21 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         )
         assert extra_fields.status_code == 422
 
+        bad_args = client.post(
+            f"/api/stage-runs/{run_id}/jobs",
+            headers=TOKEN_HEADERS,
+            json={
+                "task_id": "formal_part1_load",
+                "fields": {
+                    "library_id": "bad token with spaces",
+                    "input": str(counts_file),
+                    "format": "h5ad",
+                },
+            },
+        )
+        assert bad_args.status_code == 422
+        assert bad_args.json()["detail"]["rule_id"] == "ARG_VALIDATION_FAILED"
+
         recluster_fields = {
             "input": str(counts_file),
             "barcodes": str(barcodes_file),
@@ -351,10 +366,11 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             artifacts = list(
                 session.scalars(select(Artifact).where(Artifact.job_id == job5_id)).all()
             )
-            assert len(artifacts) == 1
-            assert artifacts[0].artifact_status == "VALID"
-            assert len(artifacts[0].content_hash) == 64
-            assert (stage_dir / artifacts[0].relative_path).is_file()
+            assert len(artifacts) == 3
+            assert all(a.artifact_status == "VALID" for a in artifacts)
+            assert all(len(a.content_hash) == 64 for a in artifacts)
+            for a in artifacts:
+                assert (stage_dir / a.relative_path).is_file()
 
         # 8. Query job list via API
         list_resp = client.get(f"/api/stage-runs/{run_id}/jobs")

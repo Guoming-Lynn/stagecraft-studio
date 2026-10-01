@@ -379,5 +379,17 @@ def test_api_jobs_and_cancellation(tmp_path: Path) -> None:
         cancel_resp = client.post(f"/api/jobs/{job_id}/cancel", headers=TOKEN)
         assert cancel_resp.status_code == 200
         assert cancel_resp.json()["job_status"] == "CANCELLED"
+
+        cancel_conflict = client.post(f"/api/jobs/{job_id}/cancel", headers=TOKEN)
+        assert cancel_conflict.status_code == 409
+
+        with session_factory(db)() as session:
+            audits = list(
+                session.scalars(
+                    select(AuditEvent).where(AuditEvent.action == "formal_job_cancel")
+                ).all()
+            )
+            assert len(audits) >= 1
+            assert audits[0].outcome == "CANCELLED"
     finally:
         worker.stop()

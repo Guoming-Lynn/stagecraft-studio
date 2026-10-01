@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,8 +11,15 @@ from typing import NoReturn
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.db.models import Job, ReviewDecision, RuleResultRow, StageRun
-from stagecraft_studio.db.store import _audit
+from stagecraft_studio.db.models import (
+    Job,
+    ProtocolVersion,
+    ReviewDecision,
+    RuleResultRow,
+    StageRun,
+)
+from stagecraft_studio.db.store import _audit, create_project, open_stage_run
+from stagecraft_studio.engine.formal_args import SPECS
 from stagecraft_studio.engine.registry import UnsupportedTask, require_task
 from stagecraft_studio.rules.gates import (
     PRE_RESOLUTION,
@@ -30,9 +38,7 @@ from stagecraft_studio.rules.scientific_status import scientific_status
 
 
 def evidence_digest(evidence_json: str) -> str:
-    from hashlib import sha256
-
-    return sha256(evidence_json.encode("utf-8")).hexdigest()
+    return hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
 
 
 def submit_resolution(
@@ -112,6 +118,17 @@ def enqueue(
         _block(session, run, "DELETE_RECOMPUTE_REQUIRED")
     if deleted and task_id not in PRE_RESOLUTION and not _recompute_after_review(session, run):
         _block(session, run, "DELETE_RECOMPUTE_REQUIRED")
+    if task_id in SPECS and fields:
+        _, model, _ = SPECS[task_id]
+        check_fields = dict(fields)
+        if "out" not in check_fields:
+            check_fields["out"] = "placeholder_out"
+        if task_id == "formal_stage_report" and "stage" not in check_fields:
+            check_fields["stage"] = "placeholder_stage"
+        try:
+            model.model_validate(check_fields)
+        except Exception:
+            _block(session, run, "ARG_VALIDATION_FAILED", 422)
     from_counts = deleted and task_id == "formal_part1_grid"
     payload = {
         "task_id": task_id,
@@ -178,12 +195,14 @@ def carry_quicklook(
     gene = target_gene.strip()
     if not path_text or not gene or not field_map:
         raise GateRejected("QUICKLOOK_LABELS_PROVISIONAL", 400)
-    carried = {"data_path": path_text, "field_map": dict(field_map), "target_gene": gene}
     source = Path(path_text)
-    from stagecraft_studio.db.models import ProtocolVersion
-    from stagecraft_studio.db.store import create_project, open_stage_run
-
-    project = create_project(session, gene, root_path=str(source.parent.resolve()))
+    root = source.parent.resolve()
+    try:
+        rel_path = source.resolve().relative_to(root).as_posix()
+    except ValueError:
+        rel_path = source.name
+    carried = {"data_path": rel_path, "field_map": dict(field_map), "target_gene": gene}
+    project = create_project(session, gene, root_path=str(root))
     encoded = json.dumps(carried, sort_keys=True)
     protocol = ProtocolVersion(
         project_id=project.id,

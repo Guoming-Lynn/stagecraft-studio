@@ -2,7 +2,13 @@
 
 ## 0.0.0 - 2026-09-30
 
-- 正式任务目前只有登记和审阅闸门，worker 还没有执行它们。
+- 后台单线程 FormalWorker 执行正式分析任务：临时目录隔离、子进程树安全取消、服务重启中断恢复（INTERRUPTED）、流式 sha256 登记 Artifact。
+- 输出契约与真实引擎实际产物对齐：`formal_part2_survey` 对齐 `part2_record.json`，`formal_part4_survey` 对齐 `part4_record.json`，`formal_part3_recluster` 契约要求 `compartment_counts.h5ad`、`part3_record.json`、`grid_record.json`。
+- 取消状态机完善：对处于 COMPLETED/FAILED/CANCELLED/INTERRUPTED 终端状态的任务返回 409 Conflict；成功取消记录 `AuditEvent`。
+- 原子发布与过期产物作废：采用备份重命名 staging 发布；重跑同一任务时将该 stage run 先前生成的 `Artifact` 记录标记为 `SUPERSEDED`。
+- 入队即时校验：在 `POST /api/stage-runs/{run_id}/jobs` 入队时立即依 Pydantic 模型校验参数，非法参数直接返回 422 `ARG_VALIDATION_FAILED` 并记录审计事件。
+- 协议文档内 `data_path` 存储为相对路径，消除绝对路径机器绑定。
+- 真实正式引擎集成测试：`test_formal_real_chain.py` 驱动真实正式引擎环境完成 Part 1 加载、QC、合并、分辨率网格与产物作废验证。
 - 研究设计按固定字段冻结：`GET /api/protocol/form`、`POST /api/protocol/freeze`。Harmony 必须含 `dataset`，拒绝 `donor_id`、`condition`、`disease`、`cell_type` 和目标基因（`1126592`）。
 - 科学状态由服务端从已保存记录算出。请求不能带 `scientific_status`。校准状态保持 `NOT_ESTABLISHED_FOR_THIS_ANALYSIS`。`associated` 不能被请求抬高（`3e8c85c`）。
 - 根目录加上专有声明：Copyright 2026 GuomingLin. All rights reserved.

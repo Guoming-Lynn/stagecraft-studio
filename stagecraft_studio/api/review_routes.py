@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.db.models import Job, ProtocolVersion, StageRun
+from stagecraft_studio.db.models import AuditEvent, Job, ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
     carry_quicklook,
@@ -197,12 +198,33 @@ def build_review_router(
             res = formal_worker.cancel(job_id)
             if res.get("job_status") == "NOT_FOUND":
                 raise HTTPException(status_code=404, detail="没有这个任务")
+            if res.get("job_status") == "CONFLICT":
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"任务状态为 {res.get('current_status')}，不可取消",
+                )
             return res
         with factory() as session:
             job = session.get(Job, job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail="没有这个任务")
+            if job.job_status in {"COMPLETED", "FAILED", "CANCELLED", "INTERRUPTED"}:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"任务状态为 {job.job_status}，不可取消",
+                )
             job.job_status = "CANCELLED"
+            run = session.get(StageRun, job.stage_run_id)
+            if run is not None:
+                session.add(
+                    AuditEvent(
+                        project_id=run.project_id,
+                        action="formal_job_cancel",
+                        outcome="CANCELLED",
+                        detail_json=json.dumps({"job_id": job.id, "task_id": job.task_id}),
+                        created_at=datetime.now(timezone.utc),
+                    )
+                )
             session.commit()
             return {"id": job.id, "job_status": job.job_status}
 
@@ -264,10 +286,13 @@ def build_review_router(
         except FormError as exc:
             raise HTTPException(status_code=400, detail={"rule_id": exc.rule_id}) from exc
         with factory() as session:
-            project = create_project(
-                session, body.target_gene.strip(), root_path=str(source.parent.resolve())
-            )
-            document["data_path"] = str(source)
+            project_root = source.parent.resolve()
+            project = create_project(session, body.target_gene.strip(), root_path=str(project_root))
+            try:
+                rel_data_path = source.resolve().relative_to(project_root).as_posix()
+            except ValueError:
+                rel_data_path = source.name
+            document["data_path"] = rel_data_path
             protocol = freeze_protocol(session, project.id, document)
             run = open_stage_run(
                 session,

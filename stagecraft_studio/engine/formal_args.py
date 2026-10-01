@@ -272,7 +272,7 @@ def formal_argv(
         raise UnsupportedFormalTask(checked)
     script, model, argv_spec = spec
     data = model.model_validate(fields).model_dump()
-    argv = [str(launch.python), str(launch.script(script))]
+    argv = [str(launch.python.resolve()), str(launch.script(script).resolve())]
     for flag, key, kind in argv_spec:
         value = data[key]
         if kind == _SWITCH:

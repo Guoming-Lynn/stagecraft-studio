@@ -17,7 +17,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from stagecraft_studio.db.models import (
@@ -52,11 +52,22 @@ def stream_sha256(path: Path) -> str:
 
 
 def _atomic_publish(src: Path, dest: Path) -> None:
-    """Atomically publish src directory to dest, handling existing destination."""
+    """Publish src directory to dest atomically by staging replacement."""
     dest.parent.mkdir(parents=True, exist_ok=True)
+    backup: Path | None = None
     if dest.exists():
-        shutil.rmtree(dest)
-    os.replace(src, dest)
+        timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
+        backup = dest.parent / f".{dest.name}.old.{timestamp}"
+        dest.rename(backup)
+    try:
+        os.replace(src, dest)
+    except Exception:
+        if backup is not None and backup.exists() and not dest.exists():
+            backup.rename(dest)
+        raise
+    finally:
+        if backup is not None and backup.exists():
+            shutil.rmtree(backup, ignore_errors=True)
 
 
 def _now() -> datetime:
@@ -129,6 +140,33 @@ class FormalWorker:
 
     def cancel(self, job_id: int) -> dict[str, object]:
         """Cancel a running or queued job, killing process and removing tmp directory."""
+        with self._factory() as session:
+            job = session.get(Job, job_id)
+            if job is None:
+                return {"id": job_id, "job_status": "NOT_FOUND"}
+            if job.job_status in {"COMPLETED", "FAILED", "CANCELLED", "INTERRUPTED"}:
+                return {"id": job.id, "job_status": "CONFLICT", "current_status": job.job_status}
+            job.job_status = "CANCELLED"
+            payload = json.loads(job.payload_json) if job.payload_json else {}
+            payload["cancelled_at"] = _now().isoformat()
+            job.payload_json = json.dumps(payload)
+            run = session.get(StageRun, job.stage_run_id)
+            if run is not None:
+                stage_dir = self._resolve_stage_dir(session, run)
+                disk_tmp = stage_dir / ".studio" / "tmp" / str(job_id)
+                if disk_tmp.exists():
+                    shutil.rmtree(disk_tmp, ignore_errors=True)
+                session.add(
+                    AuditEvent(
+                        project_id=run.project_id,
+                        action="formal_job_cancel",
+                        outcome="CANCELLED",
+                        detail_json=json.dumps({"job_id": job.id, "task_id": job.task_id}),
+                        created_at=_now(),
+                    )
+                )
+            session.commit()
+
         with self._lock:
             is_current = self._current_job_id == job_id
             proc = self._current_process if is_current else None
@@ -142,22 +180,7 @@ class FormalWorker:
         if tmp_dir is not None and tmp_dir.exists():
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        with self._factory() as session:
-            job = session.get(Job, job_id)
-            if job is None:
-                return {"id": job_id, "job_status": "NOT_FOUND"}
-            job.job_status = "CANCELLED"
-            payload = json.loads(job.payload_json) if job.payload_json else {}
-            payload["cancelled_at"] = _now().isoformat()
-            job.payload_json = json.dumps(payload)
-            run = session.get(StageRun, job.stage_run_id)
-            if run is not None:
-                stage_dir = self._resolve_stage_dir(session, run)
-                disk_tmp = stage_dir / ".studio" / "tmp" / str(job_id)
-                if disk_tmp.exists():
-                    shutil.rmtree(disk_tmp, ignore_errors=True)
-            session.commit()
-            return {"id": job.id, "job_status": job.job_status}
+        return {"id": job_id, "job_status": "CANCELLED"}
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
@@ -283,7 +306,7 @@ class FormalWorker:
 
         try:
             argv = formal_argv(task_id, fields, work_dir=work_dir, launch=self.launch)
-        except (FormalPathRejected, FormalInputRejected, UnsupportedFormalTask, Exception) as exc:
+        except (FormalPathRejected, FormalInputRejected, UnsupportedFormalTask, ValueError) as exc:
             with self._factory() as session:
                 job = session.get(Job, job_id)
                 if job:
@@ -320,6 +343,20 @@ class FormalWorker:
 
             dest_dir = stage_dir / task_id
             _atomic_publish(tmp_dir, dest_dir)
+
+            prior_job_ids = select(Job.id).where(
+                Job.stage_run_id == job.stage_run_id,
+                Job.task_id == job.task_id,
+                Job.id != job.id,
+            )
+            session.execute(
+                update(Artifact)
+                .where(
+                    Artifact.job_id.in_(prior_job_ids),
+                    Artifact.artifact_status == "VALID",
+                )
+                .values(artifact_status="SUPERSEDED")
+            )
 
             for fpath in sorted(dest_dir.rglob("*")):
                 if fpath.is_file():
