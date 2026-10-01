@@ -90,7 +90,7 @@
 
 ## 单元 F6 启动脚本
 
-状态：`scripts/start-studio.cmd` 只调用 uv 和 pnpm。环境页每一项不通过都带修复说明。GitHub CI 仍未跑。
+状态：`scripts/start-studio.cmd` 只调用 uv 和 pnpm。`@echo off` 之后执行 `chcp 65001`，中文提示按 UTF-8 显示。环境页每一项不通过都带修复说明。GitHub CI 仍未跑。
 
 ## M1 到 M7
 
