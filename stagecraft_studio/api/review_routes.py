@@ -267,6 +267,7 @@ def build_review_router(
             project = create_project(
                 session, body.target_gene.strip(), root_path=str(source.parent.resolve())
             )
+            document["data_path"] = str(source)
             protocol = freeze_protocol(session, project.id, document)
             run = open_stage_run(
                 session,

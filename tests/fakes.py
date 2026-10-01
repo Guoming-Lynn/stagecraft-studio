@@ -105,3 +105,39 @@ def write_fake_inspect(directory: Path) -> Path:
         encoding="utf-8",
     )
     return script
+
+
+def write_fake_formal_scripts(directory: Path) -> Path:
+    from stagecraft_studio.engine.formal_args import SPECS
+    from stagecraft_studio.engine.formal_contract import FORMAL_OUTPUT_CONTRACTS
+
+    directory.mkdir(parents=True, exist_ok=True)
+    for task_id, (script_name, _model, _argv) in SPECS.items():
+        contract_files = list(FORMAL_OUTPUT_CONTRACTS.get(task_id, ()))
+        script_path = directory / script_name
+        if script_name == "stage_report.py":
+            code = (
+                "import argparse\n"
+                "import pathlib\n"
+                "parser = argparse.ArgumentParser()\n"
+                "parser.add_argument('--stage', type=pathlib.Path, required=False)\n"
+                "parser.add_argument('--out', type=pathlib.Path, required=False)\n"
+                "args, _ = parser.parse_known_args()\n"
+                "if args.out:\n"
+                "    args.out.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    args.out.write_text('# Formal Stage Report\\n', encoding='utf-8')\n"
+            )
+        else:
+            code = (
+                "import argparse\n"
+                "import pathlib\n"
+                "parser = argparse.ArgumentParser()\n"
+                "parser.add_argument('--out', type=pathlib.Path, required=False)\n"
+                "args, _ = parser.parse_known_args()\n"
+                "if args.out:\n"
+                "    args.out.mkdir(parents=True, exist_ok=True)\n"
+                f"    for fname in {contract_files!r}:\n"
+                "        (args.out / fname).write_text('contract-file\\n', encoding='utf-8')\n"
+            )
+        script_path.write_text(code, encoding="utf-8")
+    return directory

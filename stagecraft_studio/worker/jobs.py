@@ -206,7 +206,17 @@ class FormalWorker:
                 return
 
             document = json.loads(protocol.document_json) if protocol.document_json else {}
-            data_path = Path(str(document.get("data_path", "")))
+            data_path_str = str(document.get("data_path", "")).strip()
+            data_path = Path(data_path_str) if data_path_str else None
+            project = session.get(Project, run.project_id)
+            if data_path and not data_path.is_absolute() and project and project.root_path:
+                cand = Path(project.root_path) / data_path
+                if cand.is_file():
+                    data_path = cand
+            if data_path is None or not data_path.is_file():
+                self._mark_failed(session, job, "INPUT_FILE_NOT_FOUND")
+                return
+
             try:
                 continue_stage_run(session, run, document, data_path)
             except ProtocolBlocked:
@@ -216,7 +226,6 @@ class FormalWorker:
             job.job_status = "RUNNING"
             session.commit()
             stage_dir = self._resolve_stage_dir(session, run)
-            project = session.get(Project, run.project_id)
             work_dir = (
                 Path(project.root_path).resolve()
                 if (project and project.root_path)
