@@ -28,6 +28,10 @@ def resolve_inside(root: Path, rel: str) -> Path:
     """Resolve rel under root. Absolute paths, drives, and links that escape are refused."""
     if not rel or not rel.strip():
         raise PathRejected(422, "缺少相对路径")
+    # "C:/..." has no drive on Linux, so it would be looked up as a missing relative file.
+    normalized = rel.replace("\\", "/")
+    if len(normalized) >= 2 and normalized[0].isalpha() and normalized[1] == ":":
+        raise PathRejected(403, "路径不能超出这次运行的目录")
     candidate_rel = Path(rel)
     if candidate_rel.drive or candidate_rel.is_absolute() or rel.startswith("\\\\"):
         raise PathRejected(403, "路径不能超出这次运行的目录")
