@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from stagecraft_studio.engine.input_format import UnsupportedInput
 from stagecraft_studio.engine.quicklook import (
     OutputRejected,
     QuicklookRequest,
@@ -179,14 +178,16 @@ def test_nonempty_output_is_rejected(tmp_path: Path) -> None:
     assert not (output / "config.json").exists()
 
 
-def test_tenx_h5_does_not_start(tmp_path: Path) -> None:
+def test_tenx_h5_is_passed_to_the_engine(tmp_path: Path) -> None:
     source = tmp_path / "matrix.h5"
     source.write_bytes(b"x")
     output = tmp_path / "project"
-    with pytest.raises(UnsupportedInput, match="10x h5"):
-        run_quicklook(
-            QuicklookRequest(input_path=source, target_gene="IFITM3", output_root=output),
-            python=Path(sys.executable),
-            script=write_fake_engine(tmp_path),
-        )
-    assert not output.exists()
+    script = write_fake_engine(tmp_path)
+    result = run_quicklook(
+        QuicklookRequest(input_path=source, target_gene="IFITM3", output_root=output),
+        python=Path(sys.executable),
+        script=script,
+    )
+    assert result.returncode == 0
+    config = json.loads((output / "config.json").read_text(encoding="utf-8"))
+    assert config["INPUT_FORMAT"] == "h5"

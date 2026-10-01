@@ -80,6 +80,10 @@
 
 状态：留空时下载人和鼠的 Hallmark、KEGG、GOBP（MSigDB 2026.1）。小鼠发布没有 KEGG 文件，这一份来自 Enrichr 的 `KEGG_2019_Mouse`。自己填的 GMT 优先。基因列表不外发。测试不联网。GitHub CI 仍未跑。
 
+## 单元 F4 10x h5
+
+状态：`.h5` 记为 `h5`，引擎用 `scanpy.read_10x_h5`。测试用合成矩阵。GitHub CI 仍未跑。
+
 ## M1 到 M7
 
 状态：未开始。单元 F 还在做。正式分析和助手没开始。

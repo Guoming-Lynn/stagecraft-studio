@@ -12,6 +12,7 @@ from stagecraft_studio.engine.input_format import UnsupportedInput, detect_input
     ("name", "expected"),
     [
         ("counts.h5ad", "h5ad"),
+        ("filtered_feature_bc_matrix.h5", "h5"),
         ("counts.csv", "csv"),
         ("counts.csv.gz", "csv"),
         ("counts.tsv", "tsv"),
@@ -39,8 +40,8 @@ def test_10x_mtx_directory(tmp_path: Path) -> None:
     assert detect_input_format(genes) == "10x_mtx"
 
 
-def test_10x_h5_is_rejected(tmp_path: Path) -> None:
-    path = tmp_path / "filtered_feature_bc_matrix.h5"
+def test_unknown_suffix_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "counts.loom"
     path.write_bytes(b"x")
-    with pytest.raises(UnsupportedInput, match="10x h5"):
+    with pytest.raises(UnsupportedInput, match="不支持这个输入"):
         detect_input_format(path)

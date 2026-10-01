@@ -22,7 +22,7 @@ _TEXT_FORMATS = {
 _MATRIX_NAMES = frozenset({"matrix.mtx", "matrix.mtx.gz"})
 _FEATURE_NAMES = frozenset({"features.tsv", "features.tsv.gz", "genes.tsv", "genes.tsv.gz"})
 _BARCODE_NAMES = frozenset({"barcodes.tsv", "barcodes.tsv.gz"})
-_SUPPORTED = "请改用 h5ad、10x MTX 目录，或 csv / tsv / txt 矩阵。"
+_SUPPORTED = "请改用 h5ad、10x h5、10x MTX 目录，或 csv / tsv / txt 矩阵。"
 
 
 def detect_input_format(path: Path) -> str:
@@ -39,7 +39,7 @@ def _file_format(path: Path) -> str:
     if suffix == ".h5ad":
         return "h5ad"
     if suffix == ".h5":
-        raise UnsupportedInput(path, f"不支持 10x h5。{_SUPPORTED}")
+        return "h5"
     mapped = _TEXT_FORMATS.get(suffix)
     if mapped is not None:
         return mapped

@@ -60,7 +60,7 @@ export const chrome = {
   basicInputs: "基础输入参数",
   groupSection: "观测矩阵探测与分组",
   runtime: "执行环境",
-  inputPlaceholder: "h5ad 文件，或 10x mtx 目录",
+  inputPlaceholder: "h5ad 或 10x h5 文件，或 10x mtx 目录",
   genePlaceholder: "例如 IFITM3",
   outputPlaceholder: "空目录，或还不存在的目录",
   gmtPlaceholder: "自己的 GMT。留空则下载默认的 Hallmark、KEGG、GOBP",
