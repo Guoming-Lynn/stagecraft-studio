@@ -2,6 +2,7 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 根目录加上专有声明：Copyright 2026 GuomingLin. All rights reserved.
 - 卫生检查允许 `.gitattributes`。默认基因集文案测试按 Hallmark、GOBP 断言，不再要求 KEGG。
 - 结果页显示引擎报告里的 `resolution_note`。前端只展示服务端读到的原文。
 - 结果页顶部和方法段共用一句主张范围：细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性。

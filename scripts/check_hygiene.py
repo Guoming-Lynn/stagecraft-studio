@@ -18,6 +18,7 @@ SPEC_TOP_LEVEL = frozenset(
     {
         "AGENTS.md",
         ".cursor",
+        "LICENSE",
         "README.md",
         "CHANGELOG.md",
         "pyproject.toml",
