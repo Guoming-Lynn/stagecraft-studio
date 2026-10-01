@@ -7,22 +7,27 @@ KEGG is not included. Import a GMT file when that collection is needed.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 _RELEASE = "2026.1"
 _MSIGDB = "https://data.broadinstitute.org/gsea-msigdb/msigdb/release"
-_HUMAN = (
-    f"{_MSIGDB}/{_RELEASE}.Hs/h.all.v{_RELEASE}.Hs.symbols.gmt",
-    f"{_MSIGDB}/{_RELEASE}.Hs/c5.go.bp.v{_RELEASE}.Hs.symbols.gmt",
-)
-_MOUSE = (
-    f"{_MSIGDB}/{_RELEASE}.Mm/mh.all.v{_RELEASE}.Mm.symbols.gmt",
-    f"{_MSIGDB}/{_RELEASE}.Mm/m5.go.bp.v{_RELEASE}.Mm.symbols.gmt",
-)
+_HUMAN_HALLMARK = f"{_MSIGDB}/{_RELEASE}.Hs/h.all.v{_RELEASE}.Hs.symbols.gmt"
+_HUMAN_GOBP = f"{_MSIGDB}/{_RELEASE}.Hs/c5.go.bp.v{_RELEASE}.Hs.symbols.gmt"
+_MOUSE_HALLMARK = f"{_MSIGDB}/{_RELEASE}.Mm/mh.all.v{_RELEASE}.Mm.symbols.gmt"
+_MOUSE_GOBP = f"{_MSIGDB}/{_RELEASE}.Mm/m5.go.bp.v{_RELEASE}.Mm.symbols.gmt"
+_HUMAN = (_HUMAN_HALLMARK, _HUMAN_GOBP)
+_MOUSE = (_MOUSE_HALLMARK, _MOUSE_GOBP)
 LIBRARIES = {"human": _HUMAN, "mouse": _MOUSE}
+_DIGESTS = {
+    _HUMAN_HALLMARK: "eecaf6dad908334ae885406ec72bdc0646d8917588ed7c219fac92fc5363f596",
+    _HUMAN_GOBP: "9be09dd06d6652566eb52eed530d62e6dfecc4365c1e81afd6f0b7f2e86dd4f9",
+    _MOUSE_HALLMARK: "3a21be724a87dc0375955e725ca9688b87a26e7b74b62fba0c62da0967b789f7",
+    _MOUSE_GOBP: "fd720ba92a3131a1596409f4b642a1a5950392fa51b45055b810215082e6f0c1",
+}
 
 
 class GeneSetError(OSError):
@@ -43,6 +48,7 @@ def ensure_default_gmt(
     *,
     fetch: Callable[[str], bytes] | None = None,
     cache: Path | None = None,
+    digests: Mapping[str, str] | None = None,
 ) -> Path:
     """Return one GMT for this species, downloading it once into the cache."""
     urls = LIBRARIES.get(species)
@@ -54,10 +60,13 @@ def ensure_default_gmt(
     if target.is_file() and target.stat().st_size > 0:
         return target
     reader = _fetch if fetch is None else fetch
+    expected = _DIGESTS if digests is None else digests
     try:
         chunks = [reader(url) for url in urls]
     except OSError as exc:
         raise GeneSetError("默认基因集没有下载成功。可以改填一个本地 GMT 文件。") from exc
+    for url, raw in zip(urls, chunks, strict=True):
+        _require_digest(url, raw, expected)
     text = _combine(chunks)
     if not text.strip():
         raise GeneSetError("默认基因集没有下载成功。可以改填一个本地 GMT 文件。")
@@ -80,6 +89,12 @@ def _cache_dir() -> Path:
 def _fetch(url: str) -> bytes:
     with urllib.request.urlopen(url, timeout=120) as response:
         return bytes(response.read())
+
+
+def _require_digest(url: str, raw: bytes, expected: Mapping[str, str]) -> None:
+    digest = hashlib.sha256(raw).hexdigest()
+    if expected.get(url) != digest:
+        raise GeneSetError("默认基因集和固定的校验值不一致。")
 
 
 def _combine(chunks: list[bytes]) -> str:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import time
@@ -10,7 +11,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from stagecraft_studio.api.app import create_app
-from stagecraft_studio.engine.gene_sets import _cache_dir, ensure_default_gmt, library_for_request
+from stagecraft_studio.engine.gene_sets import (
+    LIBRARIES,
+    GeneSetError,
+    _cache_dir,
+    ensure_default_gmt,
+    library_for_request,
+)
 from stagecraft_studio.engine.launch import EngineLaunch
 from stagecraft_studio.engine.quicklook import QuicklookRequest
 from stagecraft_studio.worker.runs import RunStore
@@ -21,15 +28,20 @@ from tests.fakes import write_fake_engine
 def test_default_libraries_are_combined_without_leaving_the_machine(tmp_path: Path) -> None:
     seen: list[str] = []
 
+    hallmark = b"HALLMARK_HYPOXIA\thttps://example.test/hypoxia\tIFITM3\tVEGFA\n"
+    gobp = b"GOBP_WOUND_HEALING\tGO:0009611\tHK1,1\tIFITM3\n"
+
     def fetch(url: str) -> bytes:
         seen.append(url)
         if "go.bp" in url:
-            return b"GOBP_WOUND_HEALING\tGO:0009611\tHK1,1\tIFITM3\n"
+            return gobp
         if "h.all" in url or "mh.all" in url:
-            return b"HALLMARK_HYPOXIA\thttps://example.test/hypoxia\tIFITM3\tVEGFA\n"
+            return hallmark
         raise AssertionError(url)
 
-    path = ensure_default_gmt("human", fetch=fetch, cache=tmp_path)
+    path = ensure_default_gmt(
+        "human", fetch=fetch, cache=tmp_path, digests=_digests(hallmark, gobp)
+    )
     assert path.name == "human-2026.1.gmt"
     text = path.read_text(encoding="utf-8")
     assert "HALLMARK_HYPOXIA" in text
@@ -57,9 +69,14 @@ def test_empty_gmt_uses_the_downloaded_file(
 ) -> None:
     monkeypatch.delenv("STAGECRAFT_GENE_SETS", raising=False)
     monkeypatch.setenv("STAGECRAFT_GENE_SET_CACHE", str(tmp_path / "cache"))
+    body = b"HALLMARK_HYPOXIA\tdesc\tIFITM3\n"
+    monkeypatch.setattr(
+        "stagecraft_studio.engine.gene_sets._DIGESTS",
+        {url: hashlib.sha256(body).hexdigest() for url in LIBRARIES["mouse"]},
+    )
     monkeypatch.setattr(
         "stagecraft_studio.engine.gene_sets._fetch",
-        lambda _url: b"HALLMARK_HYPOXIA\tdesc\tIFITM3\n",
+        lambda _url: body,
     )
     source = tmp_path / "counts.h5ad"
     source.write_bytes(b"x")
@@ -129,3 +146,20 @@ def test_offline_without_cache_asks_for_a_local_file(
     assert client.get("/api/runs").json() == []
     assert not (tmp_path / "project" / "config.json").exists()
     assert not (tmp_path / "project" / "argv.json").exists()
+
+
+def test_a_changed_download_is_refused(tmp_path: Path) -> None:
+    def fetch(_url: str) -> bytes:
+        return b"HALLMARK_HYPOXIA\tdesc\tIFITM3\n"
+
+    with pytest.raises(GeneSetError, match="校验值"):
+        ensure_default_gmt("human", fetch=fetch, cache=tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def _digests(hallmark: bytes, gobp: bytes) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for url in LIBRARIES["human"]:
+        body = gobp if "go.bp" in url else hallmark
+        found[url] = hashlib.sha256(body).hexdigest()
+    return found
