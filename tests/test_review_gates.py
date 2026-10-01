@@ -21,6 +21,8 @@ from stagecraft_studio.db.store import (
 from stagecraft_studio.domain.protocol import protocol_document
 from stagecraft_studio.engine.launch import EngineLaunch
 
+from tests.audit_rows import rejected_audit
+
 TOKEN = {"origin": "http://127.0.0.1:8765", "x-stagecraft-token": "secret-token"}
 LAUNCH = EngineLaunch(python=Path("python"), script=Path("run_pipeline.py"))
 
@@ -30,10 +32,11 @@ def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
     denied = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_annotate", "reuse_umap": False},
+        json={"task_id": "formal_part2_survey", "reuse_umap": False},
     )
     assert denied.status_code == 409
     assert denied.json()["detail"]["rule_id"] == "RESOLUTION_REVIEW_REQUIRED"
+    assert rejected_audit(tmp_path, "RESOLUTION_REVIEW_REQUIRED")
     missing = client.post(
         f"/api/stage-runs/{run_id}/resolution",
         headers=TOKEN,
@@ -64,7 +67,7 @@ def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
     queued = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_annotate", "reuse_umap": False},
+        json={"task_id": "formal_part2_survey", "reuse_umap": False},
     )
     assert queued.status_code == 201
 
@@ -122,10 +125,11 @@ def test_old_cluster_review_does_not_apply_to_new_ids(tmp_path: Path) -> None:
     again = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_annotate", "reuse_umap": False},
+        json={"task_id": "formal_part2_survey", "reuse_umap": False},
     )
     assert again.status_code == 409
     assert again.json()["detail"]["rule_id"] == "REVIEW_CLUSTER_COMPLETE"
+    assert rejected_audit(tmp_path, "REVIEW_CLUSTER_COMPLETE")
 
 
 def test_delete_cannot_reuse_the_old_umap(tmp_path: Path) -> None:
@@ -147,10 +151,11 @@ def test_delete_cannot_reuse_the_old_umap(tmp_path: Path) -> None:
     )
     assert blocked.status_code == 409
     assert blocked.json()["detail"]["rule_id"] == "DELETE_RECOMPUTE_REQUIRED"
+    assert rejected_audit(tmp_path, "DELETE_RECOMPUTE_REQUIRED")
     early = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_annotate", "reuse_umap": False},
+        json={"task_id": "formal_part2_survey", "reuse_umap": False},
     )
     assert early.status_code == 409
     assert early.json()["detail"]["rule_id"] == "DELETE_RECOMPUTE_REQUIRED"

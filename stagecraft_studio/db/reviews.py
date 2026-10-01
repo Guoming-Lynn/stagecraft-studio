@@ -11,6 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from stagecraft_studio.db.models import Job, ReviewDecision, RuleResultRow, StageRun
+from stagecraft_studio.db.store import _audit
+from stagecraft_studio.engine.registry import UnsupportedTask, require_task
 from stagecraft_studio.rules.gates import (
     PRE_RESOLUTION,
     GateRejected,
@@ -95,6 +97,12 @@ def enqueue(
     reuse_umap: bool,
 ) -> Job:
     _reject_if_closed(run)
+    if not task_id.startswith("formal_"):
+        _block(session, run, "TASK_NOT_FORMAL", 422)
+    try:
+        require_task(task_id)
+    except UnsupportedTask:
+        _block(session, run, "TASK_NOT_REGISTERED", 422)
     if task_id not in PRE_RESOLUTION:
         _require_current_resolution(session, run)
         _require_current_clusters(session, run)
@@ -305,7 +313,7 @@ def _decision(
     return row
 
 
-def _block(session: Session, run: StageRun, rule_id: str) -> NoReturn:
+def _block(session: Session, run: StageRun, rule_id: str, status_code: int = 409) -> NoReturn:
     session.add(
         RuleResultRow(
             stage_run_id=run.id,
@@ -315,8 +323,9 @@ def _block(session: Session, run: StageRun, rule_id: str) -> NoReturn:
             checked_at=_now(),
         )
     )
+    _audit(session, run.project_id, "job_enqueue", "REJECTED", rule_id)
     session.commit()
-    raise GateRejected(rule_id, 409)
+    raise GateRejected(rule_id, status_code)
 
 
 def _reject_if_closed(run: StageRun) -> None:
