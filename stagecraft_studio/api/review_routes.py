@@ -20,7 +20,13 @@ from stagecraft_studio.db.reviews import (
     submit_clusters,
     submit_resolution,
 )
-from stagecraft_studio.db.store import session_factory
+from stagecraft_studio.db.store import (
+    create_project,
+    freeze_protocol,
+    open_stage_run,
+    session_factory,
+)
+from stagecraft_studio.domain.protocol_form import FormError, document_from_form, form_fields
 from stagecraft_studio.rules.gates import GateRejected
 
 
@@ -66,6 +72,24 @@ class CarryBody(BaseModel):
     data_path: str
     field_map: dict[str, str]
     target_gene: str
+
+
+class LibraryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    library_id: str
+    dataset: str
+
+
+class FreezeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_gene: str
+    species: str
+    harmony_keys: list[str]
+    loose_min_genes: int = 200
+    data_path: str
+    libraries: list[LibraryBody]
 
 
 def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter:
@@ -163,6 +187,43 @@ def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter
             changed = invalidate_downstream(session, run_id)
             session.commit()
         return {"invalidated": changed}
+
+    @router.get("/api/protocol/form")
+    def protocol_form() -> dict[str, object]:
+        return {"fields": form_fields()}
+
+    @router.post("/api/protocol/freeze", status_code=201)
+    def protocol_freeze(request: Request, body: FreezeBody) -> dict[str, object]:
+        _mutation(request, token, origin)
+        source = Path(body.data_path)
+        if not source.is_file():
+            raise HTTPException(status_code=400, detail={"rule_id": "PROTOCOL_FORM"})
+        try:
+            document = document_from_form(
+                target_gene=body.target_gene,
+                species=body.species,
+                harmony_keys=body.harmony_keys,
+                loose_min_genes=body.loose_min_genes,
+                libraries=[row.model_dump() for row in body.libraries],
+            )
+        except FormError as exc:
+            raise HTTPException(status_code=400, detail={"rule_id": exc.rule_id}) from exc
+        with factory() as session:
+            project = create_project(session, body.target_gene.strip())
+            protocol = freeze_protocol(session, project.id, document)
+            run = open_stage_run(
+                session,
+                project_id=project.id,
+                protocol=protocol,
+                input_path=source,
+            )
+            session.commit()
+            return {
+                "project_id": project.id,
+                "protocol_id": protocol.id,
+                "content_hash": protocol.content_hash,
+                "stage_run_id": run.id,
+            }
 
     return router
 

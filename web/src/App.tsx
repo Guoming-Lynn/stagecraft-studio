@@ -26,8 +26,8 @@ import { Compare } from "./panes/Compare";
 import { Environment } from "./panes/Environment";
 import { Files } from "./panes/Files";
 import { FileView } from "./panes/FileView";
+import { FormalDesk } from "./panes/FormalDesk";
 import { Images } from "./panes/Images";
-import { ReviewCenter } from "./panes/ReviewCenter";
 import { StartForm } from "./panes/StartForm";
 import { StepDetail } from "./panes/StepDetail";
 import { Steps } from "./panes/Steps";
@@ -185,7 +185,7 @@ export function App() {
         <Separator className="split" />
         <Panel id="center" minSize="30%">
           <div className="pane">
-            {mode === "formal" ? <ReviewCenter /> : null}
+            {mode === "formal" ? <FormalDesk /> : null}
             {mode === "environment" ? <Environment /> : null}
             {mode === "compare" ? <Compare runs={runs} /> : null}
             {mode === "quicklook" && run && fileRel ? (

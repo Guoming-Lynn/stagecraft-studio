@@ -146,6 +146,33 @@ export function loadReviewCenter(runId: number): Promise<ReviewCenter> {
   return send(`/api/stage-runs/${runId}/center`);
 }
 
+export type ProtocolField = {
+  name: string;
+  kind: string;
+  reason: string;
+  freeze_impact: string;
+  default?: unknown;
+  forbidden?: string[];
+};
+
+export function loadProtocolForm(): Promise<{ fields: ProtocolField[] }> {
+  return send("/api/protocol/form");
+}
+
+export function freezeProtocol(body: {
+  target_gene: string;
+  species: string;
+  harmony_keys: string[];
+  loose_min_genes: number;
+  data_path: string;
+  libraries: { library_id: string; dataset: string }[];
+}): Promise<{ content_hash: string; stage_run_id: number }> {
+  return send("/api/protocol/freeze", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function submitResolution(
   runId: number,
   body: Record<string, string>,

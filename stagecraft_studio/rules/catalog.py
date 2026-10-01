@@ -176,6 +176,14 @@ ROWS: tuple[CoverageRow, ...] = (
         "",
         "主张范围只写在 CLAIM_SCOPE。结果页已显示，规则函数还没接。",
     ),
+    CoverageRow(
+        "HARMONY_KEYS_ALLOWED",
+        "机器校验",
+        "已落实",
+        "stagecraft_studio/domain/protocol_form.py",
+        "test_donor_is_not_a_harmony_key",
+        "Harmony 必须含 dataset，拒绝 donor、condition、disease、cell_type 和目标基因。",
+    ),
 )
 
 

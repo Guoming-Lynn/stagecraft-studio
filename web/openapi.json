@@ -1059,6 +1059,66 @@
           }
         }
       }
+    },
+    "/api/protocol/form": {
+      "get": {
+        "summary": "Protocol Form",
+        "operationId": "protocol_form_api_protocol_form_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Protocol Form Api Protocol Form Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/protocol/freeze": {
+      "post": {
+        "summary": "Protocol Freeze",
+        "operationId": "protocol_freeze_api_protocol_freeze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreezeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Protocol Freeze Api Protocol Freeze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1457,6 +1517,51 @@
         ],
         "title": "FilePreview"
       },
+      "FreezeBody": {
+        "properties": {
+          "target_gene": {
+            "type": "string",
+            "title": "Target Gene"
+          },
+          "species": {
+            "type": "string",
+            "title": "Species"
+          },
+          "harmony_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Harmony Keys"
+          },
+          "loose_min_genes": {
+            "type": "integer",
+            "title": "Loose Min Genes",
+            "default": 200
+          },
+          "data_path": {
+            "type": "string",
+            "title": "Data Path"
+          },
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBody"
+            },
+            "type": "array",
+            "title": "Libraries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_gene",
+          "species",
+          "harmony_keys",
+          "data_path",
+          "libraries"
+        ],
+        "title": "FreezeBody"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1575,6 +1680,25 @@
           "task_id"
         ],
         "title": "JobBody"
+      },
+      "LibraryBody": {
+        "properties": {
+          "library_id": {
+            "type": "string",
+            "title": "Library Id"
+          },
+          "dataset": {
+            "type": "string",
+            "title": "Dataset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "library_id",
+          "dataset"
+        ],
+        "title": "LibraryBody"
       },
       "LogView": {
         "properties": {
