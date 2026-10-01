@@ -134,6 +134,7 @@ class RunView(BaseModel):
     pipeline_label: str
     figure_status: str
     figure_label: str
+    resolution_note: str
     methods_text: str
     images: list[ImageView]
     portfolio: PortfolioView | None = None

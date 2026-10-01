@@ -50,6 +50,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
     status_file = _read(root / "run_status.json")
     pipeline = _read(root / "99_logs" / "pipeline_status.json")
     quality = _read(root / "99_logs" / "figure_quality_dataset_report.json")
+    clustering = _read(root / "99_logs" / "02_global_report.json")
     enrichment = record.enrichment or _text(status_file, "enrichment")
     stopped_after = record.stopped_after or _text(status_file, "stopped_after")
     figure_status, figure_label = _figure_status(quality)
@@ -81,6 +82,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
         pipeline_label=_outcome(pipeline),
         figure_status=figure_status,
         figure_label=figure_label,
+        resolution_note=_text(clustering, "resolution_note"),
         methods_text=methods_paragraph(
             gene=_param(parameters, "TARGET_GENE"),
             seed=_param(parameters, "RANDOM_SEED"),

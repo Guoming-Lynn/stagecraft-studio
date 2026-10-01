@@ -90,6 +90,7 @@ describe("shell", () => {
       <StepDetail run={run()} step={step("done", "完成")} source={null} />,
     );
     expect(host.textContent).toContain("速览已跑到聚类");
+    expect(host.textContent).toContain("分辨率由启发式自动选择");
     expect(host.textContent).toContain("已完成");
     expect(host.textContent).toContain("分析已完成");
     expect(host.textContent).toContain("未通过");
@@ -183,6 +184,7 @@ function run(): RunView {
     pipeline_label: "分析已完成",
     figure_status: "reject",
     figure_label: "未通过",
+    resolution_note: "分辨率由启发式自动选择",
     methods_text:
       "本段按固定模板写成，没有调用模型。分析在细胞水平进行，结果是探索性的，标签是临时的。",
     images: [

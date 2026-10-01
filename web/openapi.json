@@ -1502,6 +1502,10 @@
             "type": "string",
             "title": "Figure Label"
           },
+          "resolution_note": {
+            "type": "string",
+            "title": "Resolution Note"
+          },
           "methods_text": {
             "type": "string",
             "title": "Methods Text"
@@ -1550,6 +1554,7 @@
           "pipeline_label",
           "figure_status",
           "figure_label",
+          "resolution_note",
           "methods_text",
           "images"
         ],

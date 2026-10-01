@@ -623,6 +623,8 @@ export interface components {
       figure_status: string;
       /** Figure Label */
       figure_label: string;
+      /** Resolution Note */
+      resolution_note: string;
       /** Methods Text */
       methods_text: string;
       /** Images */

@@ -31,6 +31,9 @@ export function StepDetail({
           <span className={`mark mark-${run.status}`}>{run.status_label}</span>
         </div>
         <p className="hint">{run.lede}</p>
+        {run.resolution_note ? (
+          <p className="hint">{run.resolution_note}</p>
+        ) : null}
         <div className="current-step-chip">
           <span className="chip-label">{chrome.currentStep}</span>
           <strong>

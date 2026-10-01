@@ -65,6 +65,15 @@ def test_running_page_becomes_succeeded(tmp_path: Path) -> None:
     finished = _until_code(client, url, 0)
     assert finished["status_label"] == "已完成"
     assert finished["heading"] == "速览已跑到聚类"
+    assert finished["resolution_note"] == ""
+
+
+def test_resolution_note_is_read_from_the_phase02_report(tmp_path: Path) -> None:
+    source = tmp_path / "counts.h5ad"
+    source.write_bytes(b"x")
+    script = write_fake_engine(tmp_path, report="pass", resolution_note="from-the-engine-report")
+    body = _finished(tmp_path / "noted", source, script, 0)
+    assert body["resolution_note"] == "from-the-engine-report"
 
 
 def test_second_quicklook_is_rejected_while_one_is_running(tmp_path: Path) -> None:
@@ -94,6 +103,7 @@ def test_finished_page_keeps_pass_reject_and_rejected_input_apart(tmp_path: Path
     assert passed["status_label"] == "已完成"
     assert passed["pipeline_label"] == "分析已完成"
     assert passed["figure_label"] == "通过"
+    assert passed["resolution_note"] == "分辨率由启发式自动选择"
     assert passed["figure_label"] != "未通过"
     joined = json.dumps(passed, ensure_ascii=False)
     assert "该面板没有细胞数超过 100 的类别" not in joined

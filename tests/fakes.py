@@ -12,6 +12,7 @@ def write_fake_engine(
     logs: bool = False,
     sleep_seconds: float = 0,
     report: str | None = None,
+    resolution_note: str | None = None,
 ) -> Path:
     log_lines = ""
     if logs:
@@ -36,7 +37,7 @@ def write_fake_engine(
         "(out / 'argv.json').write_text(json.dumps(args), encoding='utf-8')\n"
         "(out / 'argv0.txt').write_text(sys.executable, encoding='utf-8')\n"
         + log_lines
-        + _report_lines(report)
+        + _report_lines(report, resolution_note)
         + (f"import time\ntime.sleep({sleep_seconds})\n" if sleep_seconds else "")
         + f"raise SystemExit({exit_code})\n",
         encoding="utf-8",
@@ -44,9 +45,13 @@ def write_fake_engine(
     return script
 
 
-def _report_lines(kind: str | None) -> str:
-    if kind is None:
+def _report_lines(kind: str | None, resolution_note: str | None = None) -> str:
+    if kind not in {None, "pass", "reject", "rejected_input"}:
         return ""
+    if kind is None and resolution_note is None:
+        return ""
+    quality = ""
+    outcome = ""
     if kind == "pass":
         quality = '{"status": "pass", "bad_figures": []}'
         outcome = "completed_analysis"
@@ -59,16 +64,23 @@ def _report_lines(kind: str | None) -> str:
     elif kind == "rejected_input":
         quality = '{"status": "pass", "bad_figures": []}'
         outcome = "rejected_input"
-    else:
-        return ""
-    return (
-        "folder = out / '99_logs'\n"
-        "folder.mkdir(parents=True, exist_ok=True)\n"
-        f"(folder / 'pipeline_status.json').write_text("
-        f"json.dumps({{'outcome': '{outcome}'}}), encoding='utf-8')\n"
-        f"(folder / 'figure_quality_dataset_report.json').write_text("
-        f"'{quality}', encoding='utf-8')\n"
-    )
+    note = resolution_note
+    if note is None and kind is not None:
+        note = "分辨率由启发式自动选择"
+    lines = "folder = out / '99_logs'\nfolder.mkdir(parents=True, exist_ok=True)\n"
+    if kind is not None:
+        lines += (
+            f"(folder / 'pipeline_status.json').write_text("
+            f"json.dumps({{'outcome': '{outcome}'}}), encoding='utf-8')\n"
+            f"(folder / 'figure_quality_dataset_report.json').write_text("
+            f"'{quality}', encoding='utf-8')\n"
+        )
+    if note is not None:
+        lines += (
+            "(folder / '02_global_report.json').write_text("
+            f"json.dumps({{'resolution_note': {note!r}}}), encoding='utf-8')\n"
+        )
+    return lines
 
 
 def write_fake_inspect(directory: Path) -> Path:
