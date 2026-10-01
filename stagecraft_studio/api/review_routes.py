@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.db.models import ProtocolVersion, StageRun
+from stagecraft_studio.db.models import Job, ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
     carry_quicklook,
@@ -28,6 +29,9 @@ from stagecraft_studio.db.store import (
 )
 from stagecraft_studio.domain.protocol_form import FormError, document_from_form, form_fields
 from stagecraft_studio.rules.gates import GateRejected
+
+if TYPE_CHECKING:
+    from stagecraft_studio.worker.jobs import FormalWorker
 
 
 class ResolutionBody(BaseModel):
@@ -64,6 +68,7 @@ class JobBody(BaseModel):
 
     task_id: str
     reuse_umap: bool = False
+    fields: dict[str, object] = Field(default_factory=dict)
 
 
 class CarryBody(BaseModel):
@@ -92,7 +97,13 @@ class FreezeBody(BaseModel):
     libraries: list[LibraryBody]
 
 
-def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter:
+def build_review_router(
+    *,
+    token: str,
+    origin: str,
+    database: Path,
+    formal_worker: FormalWorker | None = None,
+) -> APIRouter:
     router = APIRouter()
     factory = session_factory(database)
 
@@ -144,12 +155,56 @@ def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter
         with factory() as session:
             run = _run(session, run_id)
             try:
-                job = enqueue(session, run, task_id=body.task_id, reuse_umap=body.reuse_umap)
+                job = enqueue(
+                    session,
+                    run,
+                    task_id=body.task_id,
+                    reuse_umap=body.reuse_umap,
+                    fields=body.fields,
+                )
                 session.commit()
             except GateRejected as exc:
                 _raise(exc)
             payload = json.loads(job.payload_json)
-            return {"id": job.id, "task_id": job.task_id, **payload}
+            result = {"id": job.id, "task_id": job.task_id, **payload}
+        if formal_worker is not None:
+            formal_worker.wake()
+        return result
+
+    @router.get("/api/stage-runs/{run_id}/jobs")
+    def stage_run_jobs(run_id: int) -> list[dict[str, object]]:
+        with factory() as session:
+            _run(session, run_id)
+            rows = session.scalars(
+                select(Job).where(Job.stage_run_id == run_id).order_by(Job.id.asc())
+            ).all()
+            return [
+                {
+                    "id": row.id,
+                    "stage_run_id": row.stage_run_id,
+                    "task_id": row.task_id,
+                    "job_status": row.job_status,
+                    "payload": json.loads(row.payload_json),
+                    "created_at": row.created_at.isoformat(),
+                }
+                for row in rows
+            ]
+
+    @router.post("/api/jobs/{job_id}/cancel")
+    def cancel_job(request: Request, job_id: int) -> dict[str, object]:
+        _mutation(request, token, origin)
+        if formal_worker is not None:
+            res = formal_worker.cancel(job_id)
+            if res.get("job_status") == "NOT_FOUND":
+                raise HTTPException(status_code=404, detail="没有这个任务")
+            return res
+        with factory() as session:
+            job = session.get(Job, job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail="没有这个任务")
+            job.job_status = "CANCELLED"
+            session.commit()
+            return {"id": job.id, "job_status": job.job_status}
 
     @router.get("/api/stage-runs")
     def stage_runs() -> list[dict[str, object]]:
@@ -209,7 +264,9 @@ def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter
         except FormError as exc:
             raise HTTPException(status_code=400, detail={"rule_id": exc.rule_id}) from exc
         with factory() as session:
-            project = create_project(session, body.target_gene.strip())
+            project = create_project(
+                session, body.target_gene.strip(), root_path=str(source.parent.resolve())
+            )
             protocol = freeze_protocol(session, project.id, document)
             run = open_stage_run(
                 session,

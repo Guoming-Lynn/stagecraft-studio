@@ -94,7 +94,8 @@ def enqueue(
     run: StageRun,
     *,
     task_id: str,
-    reuse_umap: bool,
+    reuse_umap: bool = False,
+    fields: dict[str, object] | None = None,
 ) -> Job:
     _reject_if_closed(run)
     if not task_id.startswith("formal_"):
@@ -116,6 +117,7 @@ def enqueue(
         "task_id": task_id,
         "from_counts": from_counts,
         "reuse_umap": False if from_counts else reuse_umap,
+        "fields": fields or {},
     }
     job = Job(
         stage_run_id=run.id,
@@ -177,10 +179,11 @@ def carry_quicklook(
     if not path_text or not gene or not field_map:
         raise GateRejected("QUICKLOOK_LABELS_PROVISIONAL", 400)
     carried = {"data_path": path_text, "field_map": dict(field_map), "target_gene": gene}
+    source = Path(path_text)
     from stagecraft_studio.db.models import ProtocolVersion
     from stagecraft_studio.db.store import create_project, open_stage_run
 
-    project = create_project(session, gene)
+    project = create_project(session, gene, root_path=str(source.parent.resolve()))
     encoded = json.dumps(carried, sort_keys=True)
     protocol = ProtocolVersion(
         project_id=project.id,
@@ -191,7 +194,6 @@ def carry_quicklook(
     )
     session.add(protocol)
     session.flush()
-    source = Path(path_text)
     run = open_stage_run(session, project_id=project.id, protocol=protocol, input_path=source)
     run.quicklook_seen = _saw_quicklook(source)
     session.flush()
@@ -227,6 +229,12 @@ def invalidate_downstream(session: Session, run_id: int) -> list[int]:
         current.stage_status = "INVALIDATED"
         changed.append(current.id)
         stack.extend(children.get(current.id, []))
+    all_runs = [run_id, *changed]
+    queued_jobs = session.scalars(
+        select(Job).where(Job.stage_run_id.in_(all_runs), Job.job_status == "QUEUED")
+    ).all()
+    for qj in queued_jobs:
+        qj.job_status = "CANCELLED"
     return changed
 
 

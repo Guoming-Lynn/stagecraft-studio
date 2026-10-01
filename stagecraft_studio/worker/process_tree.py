@@ -5,13 +5,15 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+from pathlib import Path
 
 
-def spawn(command: list[str]) -> subprocess.Popen[bytes]:
+def spawn(command: list[str], cwd: Path | str | None = None) -> subprocess.Popen[bytes]:
     """Start a command array. On Linux the process leads its own group."""
+    cwd_str = str(cwd) if cwd is not None else None
     if os.name == "nt":
-        return subprocess.Popen(command)
-    return subprocess.Popen(command, start_new_session=True)
+        return subprocess.Popen(command, cwd=cwd_str)
+    return subprocess.Popen(command, cwd=cwd_str, start_new_session=True)
 
 
 def kill_tree(pid: int) -> None:

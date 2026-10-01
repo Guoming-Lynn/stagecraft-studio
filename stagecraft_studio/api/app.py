@@ -16,7 +16,9 @@ from stagecraft_studio.api.review_routes import build_review_router
 from stagecraft_studio.api.routes import build_router
 from stagecraft_studio.api.steps import engine_identity
 from stagecraft_studio.db.migrate import upgrade_database
-from stagecraft_studio.engine.launch import EngineLaunch, resolve_engine_launch
+from stagecraft_studio.engine.formal_launch import FormalLaunch, resolve_formal_launch
+from stagecraft_studio.engine.launch import EngineConfigError, EngineLaunch, resolve_engine_launch
+from stagecraft_studio.worker.jobs import FormalWorker
 from stagecraft_studio.worker.runs import RunStore
 
 
@@ -28,8 +30,37 @@ def create_app(
     state_path: Path | None = None,
     include_ui: bool = True,
     database: Path | None = None,
+    formal_launch: FormalLaunch | None = None,
+    formal_worker: FormalWorker | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="Stagecraft Studio", version="0.0.0")
+    db_path = database
+    if db_path is None:
+        db_path = Path(tempfile.mkdtemp(prefix="stagecraft-db-")) / "studio.sqlite"
+    upgrade_database(db_path)
+
+    worker = formal_worker
+    if worker is None:
+        f_launch = formal_launch
+        if f_launch is None:
+            try:
+                f_launch = resolve_formal_launch()
+            except EngineConfigError:
+                f_launch = None
+        if f_launch is not None:
+            worker = FormalWorker(database=db_path, launch=f_launch)
+            worker.recover()
+            worker.start()
+
+    from collections.abc import AsyncIterator
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        yield
+        if worker is not None:
+            worker.stop()
+
+    app = FastAPI(title="Stagecraft Studio", version="0.0.0", lifespan=_lifespan)
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost"],
@@ -40,10 +71,9 @@ def create_app(
     store = RunStore(state_path)
     store.recover()
     identity = engine_identity(launch.script)
-    if database is None:
-        database = Path(tempfile.mkdtemp(prefix="stagecraft-db-")) / "studio.sqlite"
-    upgrade_database(database)
-    app.state.database = database
+    app.state.database = db_path
+    app.state.formal_worker = worker
+
     app.include_router(
         build_router(
             token=token,
@@ -53,7 +83,14 @@ def create_app(
             identity=identity,
         )
     )
-    app.include_router(build_review_router(token=token, origin=allowed_origin, database=database))
+    app.include_router(
+        build_review_router(
+            token=token,
+            origin=allowed_origin,
+            database=db_path,
+            formal_worker=worker,
+        )
+    )
     if include_ui:
         _mount_ui(app)
     return app

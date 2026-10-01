@@ -33,8 +33,8 @@ def session_factory(database: Path) -> sessionmaker[Session]:
     return sessionmaker(bind=engine)
 
 
-def create_project(session: Session, name: str) -> Project:
-    row = Project(name=name, created_at=_now())
+def create_project(session: Session, name: str, root_path: str = "") -> Project:
+    row = Project(name=name, root_path=root_path, created_at=_now())
     session.add(row)
     session.flush()
     return row
