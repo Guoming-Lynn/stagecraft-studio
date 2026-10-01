@@ -10,6 +10,10 @@
 - 本地单用户：一个 worker、SQLite、线性阶段失效。这些从 M2 才开始写。
 - 本仓库当前有速览任务 `quicklook_run` 和 `quicklook_inspect`。正式分析执行器还没有。
 
+## SQLite
+
+M2 的 SQLite 推迟，目录先空着。`stagecraft_studio/db/` 和 `stagecraft_studio/domain/` 仍按任务书 §9.3 留着。`alembic.ini` 已去掉，因为还没有 `db/migrations`。
+
 ## 首版数据规模
 
 状态：按此施工。维护者要求先做雏形，不把这一步再停成待确认。数字仍可改，也还不是压测结论。
