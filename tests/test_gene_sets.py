@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 
 import pytest
-from stagecraft_studio.engine.gene_sets import ensure_default_gmt, library_for_request
+from fastapi.testclient import TestClient
+from stagecraft_studio.api.app import create_app
+from stagecraft_studio.engine.gene_sets import _cache_dir, ensure_default_gmt, library_for_request
 from stagecraft_studio.engine.launch import EngineLaunch
 from stagecraft_studio.engine.quicklook import QuicklookRequest
 from stagecraft_studio.worker.runs import RunStore
@@ -27,6 +30,7 @@ def test_default_libraries_are_combined_without_leaving_the_machine(tmp_path: Pa
         raise AssertionError(url)
 
     path = ensure_default_gmt("human", fetch=fetch, cache=tmp_path)
+    assert path.name == "human-2026.1.gmt"
     text = path.read_text(encoding="utf-8")
     assert "HALLMARK_HYPOXIA" in text
     assert "GOBP_WOUND_HEALING" in text
@@ -75,9 +79,52 @@ def test_empty_gmt_uses_the_downloaded_file(
     while not argv_path.is_file() and time.monotonic() < deadline:
         time.sleep(0.05)
     config = json.loads((tmp_path / "project" / "config.json").read_text(encoding="utf-8"))
-    assert config["LOCAL_GMT"].endswith("mouse.gmt")
+    assert config["LOCAL_GMT"].endswith("mouse-2026.1.gmt")
     argv = json.loads((tmp_path / "project" / "argv.json").read_text(encoding="utf-8"))
     assert "--stop-after" not in argv
     sources_path = tmp_path / "project" / "parameter_sources.json"
     sources = json.loads(sources_path.read_text(encoding="utf-8"))
     assert sources["LOCAL_GMT"] == "default"
+
+
+def test_versioned_cache_lives_in_the_user_data_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("STAGECRAFT_GENE_SET_CACHE", raising=False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    assert _cache_dir() == tmp_path / "local" / "stagecraft-studio" / "gene-sets"
+
+
+def test_offline_without_cache_asks_for_a_local_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("STAGECRAFT_GENE_SETS", raising=False)
+    monkeypatch.setenv("STAGECRAFT_GENE_SET_CACHE", str(tmp_path / "empty-cache"))
+
+    def offline(_url: str) -> bytes:
+        raise OSError("offline")
+
+    monkeypatch.setattr("stagecraft_studio.engine.gene_sets._fetch", offline)
+    source = tmp_path / "counts.h5ad"
+    source.write_bytes(b"x")
+    script = write_fake_engine(tmp_path)
+    client = TestClient(
+        create_app(
+            "secret-token",
+            port=8765,
+            launch=EngineLaunch(python=Path(sys.executable), script=script),
+            state_path=tmp_path / "runs.json",
+        )
+    )
+    response = client.post(
+        "/api/runs",
+        headers={"origin": "http://127.0.0.1:8765", "x-stagecraft-token": "secret-token"},
+        json={"input_path": str(source), "gene": "IFITM3", "out": str(tmp_path / "project")},
+    )
+    assert response.status_code == 400
+    detail = str(response.json()["detail"])
+    assert "默认基因集没有下载成功" in detail
+    assert "本地 GMT" in detail
+    assert client.get("/api/runs").json() == []
+    assert not (tmp_path / "project" / "config.json").exists()
+    assert not (tmp_path / "project" / "argv.json").exists()

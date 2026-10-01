@@ -78,7 +78,7 @@
 
 ## 单元 F3 默认基因集
 
-状态：留空时下载人和鼠的 Hallmark 与 GO Biological Process（MSigDB 2026.1）。KEGG 不下载，由用户导入 GMT。自己填的 GMT 优先。基因列表不外发。测试不联网。GitHub CI 仍未跑。
+状态：留空时下载人和鼠的 Hallmark 与 GO Biological Process（MSigDB 2026.1）。KEGG 不下载，由用户导入 GMT。缓存文件是 `%LOCALAPPDATA%\stagecraft-studio\gene-sets\{species}-2026.1.gmt`。离线且没有缓存时，页面提示改填本地 GMT，不留下失败的运行。自己填的 GMT 优先。基因列表不外发。测试不联网。GitHub CI 仍未跑。
 
 ## 单元 F4 10x h5
 

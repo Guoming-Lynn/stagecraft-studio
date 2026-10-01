@@ -8,7 +8,6 @@ KEGG is not included. Import a GMT file when that collection is needed.
 from __future__ import annotations
 
 import os
-import tempfile
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
@@ -51,7 +50,7 @@ def ensure_default_gmt(
         raise GeneSetError("物种只能是人或鼠。")
     folder = cache if cache is not None else _cache_dir()
     folder.mkdir(parents=True, exist_ok=True)
-    target = folder / f"{species}.gmt"
+    target = folder / f"{species}-{_RELEASE}.gmt"
     if target.is_file() and target.stat().st_size > 0:
         return target
     reader = _fetch if fetch is None else fetch
@@ -62,7 +61,7 @@ def ensure_default_gmt(
     text = _combine(chunks)
     if not text.strip():
         raise GeneSetError("默认基因集没有下载成功。可以改填一个本地 GMT 文件。")
-    temporary = folder / f".{species}.gmt.partial"
+    temporary = folder / f".{species}-{_RELEASE}.gmt.partial"
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(target)
     return target
@@ -72,7 +71,10 @@ def _cache_dir() -> Path:
     override = os.environ.get("STAGECRAFT_GENE_SET_CACHE")
     if override:
         return Path(override)
-    return Path(tempfile.gettempdir()) / "stagecraft-studio" / "gene-sets"
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        return Path(local) / "stagecraft-studio" / "gene-sets"
+    return Path.home() / ".local" / "share" / "stagecraft-studio" / "gene-sets"
 
 
 def _fetch(url: str) -> bytes:
