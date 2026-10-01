@@ -52,7 +52,12 @@ describe("shell", () => {
 
   it("shows figure reasons from the payload", () => {
     const host = mount(
-      <Images run={run()} focus="" onFocus={() => undefined} />,
+      <Images
+        run={run()}
+        focus=""
+        onFocus={() => undefined}
+        onTable={() => undefined}
+      />,
     );
     expect(host.textContent).toContain("不通过");
     expect(host.textContent).toContain("该面板没有细胞数超过 100 的类别");
@@ -198,5 +203,6 @@ function run(): RunView {
         ],
       },
     ],
+    portfolio: null,
   };
 }

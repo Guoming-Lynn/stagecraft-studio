@@ -93,6 +93,22 @@ class ImageView(BaseModel):
     reasons: list[ReasonView]
 
 
+class PortfolioTile(BaseModel):
+    rel: str
+    table: str
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+class PortfolioView(BaseModel):
+    image: str
+    width: int
+    height: int
+    tiles: list[PortfolioTile]
+
+
 class RunView(BaseModel):
     run_id: str
     task_id: str
@@ -120,6 +136,7 @@ class RunView(BaseModel):
     figure_label: str
     methods_text: str
     images: list[ImageView]
+    portfolio: PortfolioView | None = None
 
 
 class RunListItem(BaseModel):

@@ -25,6 +25,7 @@ export const chrome = {
   noRun: "还没有运行",
   noLog: "这次还没有日志。",
   noImage: "这次还没有图。",
+  portfolio: "汇总图",
   compare: "并排对比",
   download: "下载原图",
   close: "关闭",

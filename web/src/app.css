@@ -584,6 +584,21 @@ button.on,
 }
 
 /* Thumbnails & Gallery */
+.board {
+  position: relative;
+}
+.board img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.board-tile {
+  position: absolute;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
 .images section {
   margin-bottom: 1.25rem;
 }

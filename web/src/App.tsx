@@ -236,7 +236,15 @@ export function App() {
               </button>
             </div>
             {right === "images" ? (
-              <Images run={run} focus={focus} onFocus={setFocus} />
+              <Images
+                run={run}
+                focus={focus}
+                onFocus={setFocus}
+                onTable={(rel) => {
+                  setFileRel(rel);
+                  setLeft("files");
+                }}
+              />
             ) : (
               <Assistant />
             )}

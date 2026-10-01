@@ -471,6 +471,32 @@ export interface components {
       /** Source Label */
       source_label: string;
     };
+    /** PortfolioTile */
+    PortfolioTile: {
+      /** Rel */
+      rel: string;
+      /** Table */
+      table: string;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** Width */
+      width: number;
+      /** Height */
+      height: number;
+    };
+    /** PortfolioView */
+    PortfolioView: {
+      /** Image */
+      image: string;
+      /** Width */
+      width: number;
+      /** Height */
+      height: number;
+      /** Tiles */
+      tiles: components["schemas"]["PortfolioTile"][];
+    };
     /**
      * QuicklookForm
      * @description Fields the page may submit. The engine program is not one of them.
@@ -601,6 +627,7 @@ export interface components {
       methods_text: string;
       /** Images */
       images: components["schemas"]["ImageView"][];
+      portfolio?: components["schemas"]["PortfolioView"] | null;
     };
     /** SourceView */
     SourceView: {

@@ -1169,6 +1169,75 @@
         ],
         "title": "ParameterRow"
       },
+      "PortfolioTile": {
+        "properties": {
+          "rel": {
+            "type": "string",
+            "title": "Rel"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rel",
+          "table",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "PortfolioTile"
+      },
+      "PortfolioView": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioTile"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image",
+          "width",
+          "height",
+          "tiles"
+        ],
+        "title": "PortfolioView"
+      },
       "QuicklookForm": {
         "properties": {
           "input_path": {
@@ -1443,6 +1512,16 @@
             },
             "type": "array",
             "title": "Images"
+          },
+          "portfolio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortfolioView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

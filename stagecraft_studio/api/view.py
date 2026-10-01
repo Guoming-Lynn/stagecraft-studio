@@ -33,6 +33,7 @@ from stagecraft_studio.api.models import (
     RunView,
     StepView,
 )
+from stagecraft_studio.api.portfolio import read_portfolio
 from stagecraft_studio.api.steps import (
     STEP_SPECS,
     EngineIdentity,
@@ -90,6 +91,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
             enrichment_label=enrichment_label,
         ),
         images=_images(root, bad, quality is not None and figure_status == "pass"),
+        portfolio=read_portfolio(root),
     )
 
 
