@@ -52,6 +52,7 @@ pnpm install --frozen-lockfile
 - @tanstack/react-table 9.2.4、@tanstack/react-virtual 3.14.13：规格要求预先钉住，给 E2 的 CSV 查看器。E1 还没有 import。
 - openapi-typescript 7.13.0：从 OpenAPI 生成 `web/src/api/schema.ts`。前端不手写接口类型。
 - happy-dom 20.14.5：vitest 渲染组件时需要 DOM。
+- @playwright/test 1.63.0：浏览器验收。标准库和 vitest 打不开真实页面，也不能点按钮、下载 zip。
 
 ## 提交钩子
 

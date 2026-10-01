@@ -38,4 +38,5 @@ pnpm -C web lint
 pnpm -C web exec prettier --check .
 pnpm -C web typecheck
 pnpm -C web test
+pnpm -C web e2e
 ```

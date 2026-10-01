@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 import tempfile
 from pathlib import Path
@@ -75,7 +76,12 @@ def serve(
     import uvicorn
 
     launch = resolve_engine_launch(python, script)
-    state = Path(tempfile.gettempdir()) / "stagecraft-studio" / "quicklook_runs.json"
+    override = os.environ.get("STAGECRAFT_RUN_STATE", "").strip()
+    state = (
+        Path(override)
+        if override
+        else Path(tempfile.gettempdir()) / "stagecraft-studio" / "quicklook_runs.json"
+    )
     uvicorn.run(
         create_app(secrets.token_hex(16), port=port, launch=launch, state_path=state),
         host="127.0.0.1",
