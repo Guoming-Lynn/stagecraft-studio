@@ -121,14 +121,6 @@ ROWS: tuple[CoverageRow, ...] = (
         "MAD 与 Scrublet 逐 library 估计。",
     ),
     CoverageRow(
-        "LINEAGE_ROUND_LIMIT",
-        "机器校验",
-        "未落实",
-        "",
-        "",
-        "两轮后仍混杂则停止该 lineage。",
-    ),
-    CoverageRow(
         "DESIGN_ESTIMABLE",
         "机器校验",
         "未落实",

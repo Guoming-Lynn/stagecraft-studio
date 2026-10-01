@@ -18,7 +18,6 @@
 | DONOR_MAPPING_REQUIRED | 机器校验 | 未落实 |  |  | 缺失身份对应关系时阻断 donor 推断。 |
 | DOUBLET_FAILURE_EXPLICIT | 机器校验 | 未落实 | stagecraft_formal/qc.py |  | Scrublet 失败不能当成全是 singlet。规则在正式引擎，Studio 规则表还没接。 |
 | PER_LIBRARY_QC | 机器校验 | 未落实 | stagecraft_formal/qc.py |  | MAD 与 Scrublet 逐 library 估计。 |
-| LINEAGE_ROUND_LIMIT | 机器校验 | 未落实 |  |  | 两轮后仍混杂则停止该 lineage。 |
 | DESIGN_ESTIMABLE | 机器校验 | 未落实 |  |  | 按冻结模型检查秩和暴露变化。 |
 | CLAIM_SCOPE_ALLOWED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 描述性阶段不能获得 donor 推断资格。associated 只有来源块留一被记录后才可能为 true。 |
 | CALIBRATION_STATUS_PRESERVED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 校准状态不得因软件跑完或请求里写了通过而升级。 |
