@@ -84,6 +84,8 @@ def serve(
     import uvicorn
 
     launch = resolve_engine_launch(python, script)
+    db_override = os.environ.get("STAGECRAFT_DATABASE", "").strip()
+    database = Path(db_override) if db_override else None
     override = os.environ.get("STAGECRAFT_RUN_STATE", "").strip()
     state = (
         Path(override)
@@ -91,7 +93,13 @@ def serve(
         else Path(tempfile.gettempdir()) / "stagecraft-studio" / "quicklook_runs.json"
     )
     uvicorn.run(
-        create_app(secrets.token_hex(16), port=port, launch=launch, state_path=state),
+        create_app(
+            secrets.token_hex(16),
+            port=port,
+            launch=launch,
+            state_path=state,
+            database=database,
+        ),
         host="127.0.0.1",
         port=port,
     )

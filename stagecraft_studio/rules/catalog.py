@@ -155,10 +155,18 @@ ROWS: tuple[CoverageRow, ...] = (
     CoverageRow(
         "QUICKLOOK_LABELS_PROVISIONAL",
         "机器校验",
-        "未落实",
-        "",
-        "",
-        "从速览带入时不带标签和分辨率。",
+        "已落实",
+        "stagecraft_studio/db/reviews.py",
+        "test_quicklook_carry_omits_labels_and_resolution",
+        "从速览带入时只保留数据路径、字段映射和目标基因。",
+    ),
+    CoverageRow(
+        "LINEAGE_ROUND_LIMIT",
+        "机器校验",
+        "已落实",
+        "stagecraft_formal/part3.py",
+        "test_two_mixed_rounds_stop_the_lineage",
+        "两轮后仍然混杂就停止这个 lineage。",
     ),
     CoverageRow(
         "QUICKLOOK_CLAIM_SCOPE",

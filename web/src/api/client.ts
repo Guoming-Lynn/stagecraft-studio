@@ -110,6 +110,51 @@ export function revealRun(runId: string): Promise<RevealResult> {
   return send(`/api/runs/${runId}/reveal`, { method: "POST", body: "{}" });
 }
 
+export type StageRunItem = { id: number; stage_status: string };
+export type ResolutionTile = {
+  resolution: string;
+  n_clusters: number;
+  min_cluster_size: number;
+  max_cluster_size: number;
+};
+export type ReviewCenter = {
+  id: number;
+  stage_status: string;
+  quicklook_seen: boolean;
+  evidence_hash: string;
+  resolutions: ResolutionTile[];
+  clusters: string[];
+  genes: { gene: string; expression: number[] }[];
+};
+
+export function loadStageRuns(): Promise<StageRunItem[]> {
+  return send("/api/stage-runs");
+}
+
+export function loadReviewCenter(runId: number): Promise<ReviewCenter> {
+  return send(`/api/stage-runs/${runId}/center`);
+}
+
+export function submitResolution(
+  runId: number,
+  body: Record<string, string>,
+): Promise<unknown> {
+  return send(`/api/stage-runs/${runId}/resolution`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function submitClusters(
+  runId: number,
+  body: { blinding: string; rows: Record<string, string>[] },
+): Promise<unknown> {
+  return send(`/api/stage-runs/${runId}/clusters`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function errorText(error: unknown): string {
   if (!(error instanceof Error)) return "请求失败";
   try {
@@ -121,6 +166,13 @@ export function errorText(error: unknown): string {
     ) {
       const detail = payload.detail;
       if (typeof detail === "string") return detail;
+      if (
+        typeof detail === "object" &&
+        detail !== null &&
+        "rule_id" in detail
+      ) {
+        return String(detail.rule_id);
+      }
     }
   } catch {
     return error.message;

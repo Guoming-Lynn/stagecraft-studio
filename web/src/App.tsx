@@ -27,6 +27,7 @@ import { Environment } from "./panes/Environment";
 import { Files } from "./panes/Files";
 import { FileView } from "./panes/FileView";
 import { Images } from "./panes/Images";
+import { ReviewCenter } from "./panes/ReviewCenter";
 import { StartForm } from "./panes/StartForm";
 import { StepDetail } from "./panes/StepDetail";
 import { Steps } from "./panes/Steps";
@@ -184,9 +185,7 @@ export function App() {
         <Separator className="split" />
         <Panel id="center" minSize="30%">
           <div className="pane">
-            {mode === "formal" ? (
-              <p className="hint">{chrome.formalNote}</p>
-            ) : null}
+            {mode === "formal" ? <ReviewCenter /> : null}
             {mode === "environment" ? <Environment /> : null}
             {mode === "compare" ? <Compare runs={runs} /> : null}
             {mode === "quicklook" && run && fileRel ? (

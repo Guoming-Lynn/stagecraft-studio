@@ -7,13 +7,16 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from stagecraft_studio.db.models import ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
+    carry_quicklook,
     enqueue,
     invalidate_downstream,
+    review_center,
     submit_clusters,
     submit_resolution,
 )
@@ -40,6 +43,7 @@ class ClusterRowBody(BaseModel):
     rationale: str
     reviewer: str
     decided_on: str
+    name: str = ""
 
 
 class ClusterBody(BaseModel):
@@ -54,6 +58,14 @@ class JobBody(BaseModel):
 
     task_id: str
     reuse_umap: bool = False
+
+
+class CarryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_path: str
+    field_map: dict[str, str]
+    target_gene: str
 
 
 def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter:
@@ -114,6 +126,34 @@ def build_review_router(*, token: str, origin: str, database: Path) -> APIRouter
                 _raise(exc)
             payload = json.loads(job.payload_json)
             return {"id": job.id, "task_id": job.task_id, **payload}
+
+    @router.get("/api/stage-runs")
+    def stage_runs() -> list[dict[str, object]]:
+        with factory() as session:
+            rows = session.scalars(select(StageRun)).all()
+        return [{"id": row.id, "stage_status": row.stage_status} for row in rows]
+
+    @router.get("/api/stage-runs/{run_id}/center")
+    def center(run_id: int) -> dict[str, object]:
+        with factory() as session:
+            run = _run(session, run_id)
+            protocol = session.get(ProtocolVersion, run.protocol_id)
+            document = json.loads(protocol.document_json) if protocol is not None else {}
+            target = document.get("target_gene") if isinstance(document, dict) else ""
+            if not isinstance(target, str):
+                target = ""
+            return review_center(run, target)
+
+    @router.post("/api/projects/from-quicklook", status_code=201)
+    def from_quicklook(request: Request, body: CarryBody) -> dict[str, object]:
+        _mutation(request, token, origin)
+        with factory() as session:
+            try:
+                carried = carry_quicklook(session, **body.model_dump())
+                session.commit()
+            except GateRejected as exc:
+                _raise(exc)
+            return carried
 
     @router.post("/api/stage-runs/{run_id}/invalidate")
     def invalidate(request: Request, run_id: int) -> dict[str, list[int]]:

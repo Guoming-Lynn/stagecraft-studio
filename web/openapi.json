@@ -910,6 +910,110 @@
         }
       }
     },
+    "/api/stage-runs": {
+      "get": {
+        "summary": "Stage Runs",
+        "operationId": "stage_runs_api_stage_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Stage Runs Api Stage Runs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/center": {
+      "get": {
+        "summary": "Center",
+        "operationId": "center_api_stage_runs__run_id__center_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Center Api Stage Runs  Run Id  Center Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/from-quicklook": {
+      "post": {
+        "summary": "From Quicklook",
+        "operationId": "from_quicklook_api_projects_from_quicklook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response From Quicklook Api Projects From Quicklook Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stage-runs/{run_id}/invalidate": {
       "post": {
         "summary": "Invalidate",
@@ -1050,6 +1154,33 @@
         ],
         "title": "Bootstrap"
       },
+      "CarryBody": {
+        "properties": {
+          "data_path": {
+            "type": "string",
+            "title": "Data Path"
+          },
+          "field_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Field Map"
+          },
+          "target_gene": {
+            "type": "string",
+            "title": "Target Gene"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_path",
+          "field_map",
+          "target_gene"
+        ],
+        "title": "CarryBody"
+      },
       "ClusterBody": {
         "properties": {
           "blinding": {
@@ -1093,6 +1224,11 @@
           "decided_on": {
             "type": "string",
             "title": "Decided On"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
           }
         },
         "additionalProperties": false,

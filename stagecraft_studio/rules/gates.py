@@ -88,6 +88,7 @@ def require_cluster_rows(rows: list[dict[str, str]], leiden_ids: list[str]) -> l
         rationale = require_text(row.get("rationale", ""), "REVIEW_CLUSTER_COMPLETE")
         reviewer = require_text(row.get("reviewer", ""), "REVIEW_CLUSTER_COMPLETE")
         decided_on = require_date(row.get("decided_on", ""), "REVIEW_CLUSTER_COMPLETE")
+        name = row.get("name", "").strip()
         cleaned.append(
             {
                 "cluster": cluster,
@@ -95,10 +96,15 @@ def require_cluster_rows(rows: list[dict[str, str]], leiden_ids: list[str]) -> l
                 "rationale": rationale,
                 "reviewer": reviewer,
                 "decided_on": decided_on,
+                "name": name,
             }
         )
         seen.append(cluster)
     if set(seen) != set(leiden_ids) or len(seen) != len(leiden_ids):
+        raise GateRejected("REVIEW_CLUSTER_COMPLETE", 400)
+    named = any(row["name"] for row in cleaned)
+    deleted = any(row["decision"] == "DELETE" for row in cleaned)
+    if named and deleted:
         raise GateRejected("REVIEW_CLUSTER_COMPLETE", 400)
     return cleaned
 

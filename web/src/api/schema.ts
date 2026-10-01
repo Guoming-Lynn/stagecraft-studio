@@ -362,6 +362,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/stage-runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stage Runs */
+    get: operations["stage_runs_api_stage_runs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/center": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Center */
+    get: operations["center_api_stage_runs__run_id__center_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/from-quicklook": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** From Quicklook */
+    post: operations["from_quicklook_api_projects_from_quicklook_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/stage-runs/{run_id}/invalidate": {
     parameters: {
       query?: never;
@@ -420,6 +471,17 @@ export interface components {
       /** Demo Source */
       demo_source: string;
     };
+    /** CarryBody */
+    CarryBody: {
+      /** Data Path */
+      data_path: string;
+      /** Field Map */
+      field_map: {
+        [key: string]: string;
+      };
+      /** Target Gene */
+      target_gene: string;
+    };
     /** ClusterBody */
     ClusterBody: {
       /** Blinding */
@@ -439,6 +501,11 @@ export interface components {
       reviewer: string;
       /** Decided On */
       decided_on: string;
+      /**
+       * Name
+       * @default
+       */
+      name: string;
     };
     /** ColumnView */
     ColumnView: {
@@ -1496,6 +1563,96 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["JobBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  stage_runs_api_stage_runs_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          }[];
+        };
+      };
+    };
+  };
+  center_api_stage_runs__run_id__center_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  from_quicklook_api_projects_from_quicklook_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CarryBody"];
       };
     };
     responses: {

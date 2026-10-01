@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import NoReturn
 
 from sqlalchemy import select
@@ -117,6 +118,75 @@ def enqueue(
     session.add(job)
     session.flush()
     return job
+
+
+def review_center(run: StageRun, target_gene: str) -> dict[str, object]:
+    payload = json.loads(run.evidence_json) if run.evidence_json else {}
+    if not isinstance(payload, dict):
+        payload = {}
+    overview = payload.get("overview")
+    resolutions: list[dict[str, object]] = []
+    if isinstance(overview, list):
+        for item in overview:
+            if not isinstance(item, dict):
+                continue
+            resolutions.append(
+                {
+                    "resolution": item.get("resolution"),
+                    "n_clusters": item.get("n_clusters"),
+                    "min_cluster_size": item.get("min_cluster_size"),
+                    "max_cluster_size": item.get("max_cluster_size"),
+                }
+            )
+    filtered = filter_annotation_evidence(payload, target_gene)
+    return {
+        "id": run.id,
+        "stage_status": run.stage_status,
+        "quicklook_seen": run.quicklook_seen,
+        "evidence_hash": evidence_digest(run.evidence_json),
+        "resolutions": resolutions,
+        "clusters": filtered["clusters"],
+        "genes": filtered["genes"],
+    }
+
+
+def carry_quicklook(
+    session: Session,
+    *,
+    data_path: str,
+    field_map: dict[str, str],
+    target_gene: str,
+) -> dict[str, object]:
+    """Copy only the path, the field map, and the gene out of a quicklook."""
+    path_text = data_path.strip()
+    gene = target_gene.strip()
+    if not path_text or not gene or not field_map:
+        raise GateRejected("QUICKLOOK_LABELS_PROVISIONAL", 400)
+    carried = {"data_path": path_text, "field_map": dict(field_map), "target_gene": gene}
+    from stagecraft_studio.db.models import ProtocolVersion
+    from stagecraft_studio.db.store import create_project, open_stage_run
+
+    project = create_project(session, gene)
+    encoded = json.dumps(carried, sort_keys=True)
+    protocol = ProtocolVersion(
+        project_id=project.id,
+        document_json=encoded,
+        content_hash=evidence_digest(encoded),
+        status="carried",
+        frozen_at=_now(),
+    )
+    session.add(protocol)
+    session.flush()
+    source = Path(path_text)
+    run = open_stage_run(session, project_id=project.id, protocol=protocol, input_path=source)
+    run.quicklook_seen = _saw_quicklook(source)
+    session.flush()
+    return {
+        "project_id": project.id,
+        "stage_run_id": run.id,
+        "quicklook_seen": run.quicklook_seen,
+        "carried": carried,
+    }
 
 
 def annotation_evidence(run: StageRun, target_gene: str) -> dict[str, object]:
@@ -257,3 +327,17 @@ def _leiden_ids(run: StageRun) -> list[str]:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _saw_quicklook(path: Path) -> bool:
+    cursor = path.resolve()
+    if cursor.is_file():
+        cursor = cursor.parent
+    while True:
+        tier = cursor / "analysis_tier.json"
+        if tier.is_file():
+            payload = json.loads(tier.read_text(encoding="utf-8"))
+            return isinstance(payload, dict) and payload.get("analysis_tier") == "quicklook"
+        if cursor.parent == cursor:
+            return False
+        cursor = cursor.parent

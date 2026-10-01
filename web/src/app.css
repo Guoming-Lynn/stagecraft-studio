@@ -1355,6 +1355,24 @@ table tr:hover td {
 }
 
 /* Assistant Card */
+.review-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-wall button {
+  display: flex;
+  flex-direction: column;
+  min-width: 88px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .assistant-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);

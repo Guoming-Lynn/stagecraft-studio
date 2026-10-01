@@ -22,5 +22,6 @@
 | DESIGN_ESTIMABLE | 机器校验 | 未落实 |  |  | 按冻结模型检查秩和暴露变化。 |
 | CLAIM_SCOPE_ALLOWED | 机器校验 | 未落实 |  |  | 描述性阶段不能获得 donor 推断资格。 |
 | CALIBRATION_STATUS_PRESERVED | 纯说明 | 未落实 |  |  | 校准状态不得因软件跑完而升级。 |
-| QUICKLOOK_LABELS_PROVISIONAL | 机器校验 | 未落实 |  |  | 从速览带入时不带标签和分辨率。 |
+| QUICKLOOK_LABELS_PROVISIONAL | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_quicklook_carry_omits_labels_and_resolution | 从速览带入时只保留数据路径、字段映射和目标基因。 |
+| LINEAGE_ROUND_LIMIT | 机器校验 | 已落实 | stagecraft_formal/part3.py | test_two_mixed_rounds_stop_the_lineage | 两轮后仍然混杂就停止这个 lineage。 |
 | QUICKLOOK_CLAIM_SCOPE | 纯说明 | 未落实 | stagecraft_studio/api/copy.py |  | 主张范围只写在 CLAIM_SCOPE。结果页已显示，规则函数还没接。 |
