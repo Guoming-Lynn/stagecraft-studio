@@ -92,6 +92,10 @@
 
 状态：`scripts/start-studio.cmd` 只调用 uv 和 pnpm。`@echo off` 之后执行 `chcp 65001`，中文提示按 UTF-8 显示。环境页每一项不通过都带修复说明。GitHub CI 仍未跑。
 
+## 单元 F7 真实数据
+
+状态：GSE159677 已从页面跑完，图质量通过。AS/PA 分组是推断的，未经作者元数据核实。这次运行不能当作 case/control 方向已经核实的证据。说明在输出目录 `00_metadata/group_assignment.txt`。GitHub CI 仍未跑。
+
 ## M1 到 M7
 
 状态：未开始。单元 F 还在做。正式分析和助手没开始。
