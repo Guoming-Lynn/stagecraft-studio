@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from stagecraft_studio.api.copy import MISSING, PHASES
+from stagecraft_studio.api.copy import CLAIM_SCOPE, MISSING, PHASES
 
 
 def methods_paragraph(
@@ -21,7 +21,7 @@ def methods_paragraph(
     seed_text = seed or MISSING
     return (
         "本段按固定模板写成，没有调用模型。"
-        "这次速览是细胞水平、探索性、临时标签。"
+        f"{CLAIM_SCOPE}。临时标签。"
         f"目标基因是 {gene_text}，随机种子是 {seed_text}。"
         f"引擎是 {engine_name} {engine_version}（{engine_git}）。"
         f"本次跑到{phase}。富集状态是{enrichment_label}。"

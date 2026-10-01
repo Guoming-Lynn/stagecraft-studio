@@ -11,6 +11,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from stagecraft_studio.api.app import create_app
+from stagecraft_studio.api.copy import CLAIM_SCOPE
 from stagecraft_studio.engine.cli import main
 from stagecraft_studio.engine.launch import EngineConfigError, EngineLaunch, resolve_engine_launch
 
@@ -90,6 +91,8 @@ def test_form_runs_quicklook_before_enrichment(tmp_path: Path) -> None:
     assert payload["status_label"] == "已完成"
     assert payload["heading"] == "速览已跑到聚类"
     assert "quicklook" in payload["lede"]
+    assert CLAIM_SCOPE in payload["lede"]
+    assert CLAIM_SCOPE in payload["methods_text"]
     assert payload["enrichment_label"] == "未运行，等本地基因集"
     assert payload["figure_label"] == "未找到"
     assert payload["logs"][0]["text"].endswith("LOG-TAIL-OK")

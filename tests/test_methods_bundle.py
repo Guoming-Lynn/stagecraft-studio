@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from stagecraft_studio.api.app import create_app
 from stagecraft_studio.api.bundle import build_bundle
 from stagecraft_studio.api.compare import compare_runs
+from stagecraft_studio.api.copy import CLAIM_SCOPE
 from stagecraft_studio.api.methods import methods_paragraph
 from stagecraft_studio.api.steps import EngineIdentity
 from stagecraft_studio.engine.launch import EngineLaunch
@@ -44,8 +45,7 @@ def test_methods_paragraph_repeats_and_stays_cell_level() -> None:
         stopped_after="phase03",
         enrichment_label="未运行，等本地基因集",
     )
-    assert "细胞水平" in text
-    assert "探索性" in text
+    assert CLAIM_SCOPE in text
     assert "临时标签" in text
     assert "IFITM3" in text
     assert "42" in text

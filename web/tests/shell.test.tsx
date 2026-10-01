@@ -102,7 +102,9 @@ describe("shell", () => {
       parameters?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
     );
     expect(host.textContent).toContain("用户填写");
-    expect(host.textContent).toContain("细胞水平");
+    expect(host.textContent).toContain(
+      "细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性",
+    );
     expect(host.textContent).toContain("下载复现包");
   });
 
@@ -158,7 +160,7 @@ function run(): RunView {
     status: "succeeded",
     status_label: "已完成",
     heading: "速览已跑到聚类",
-    lede: "产物标记为 quicklook。它不能当作正式分析的输入。",
+    lede: "产物标记为 quicklook。它不能当作正式分析的输入。细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性。",
     can_cancel: false,
     returncode: 0,
     enrichment: "not_run_until_local_gmt",
@@ -186,7 +188,7 @@ function run(): RunView {
     figure_label: "未通过",
     resolution_note: "分辨率由启发式自动选择",
     methods_text:
-      "本段按固定模板写成，没有调用模型。分析在细胞水平进行，结果是探索性的，标签是临时的。",
+      "本段按固定模板写成，没有调用模型。细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性。目标基因是 IFITM3，随机种子是 42。",
     images: [
       {
         rel: "04_figures/volcano.png",
