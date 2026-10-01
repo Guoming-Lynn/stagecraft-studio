@@ -214,6 +214,61 @@ def test_annotation_evidence_hides_the_target_gene_and_groups(tmp_path: Path) ->
     assert "STAT1" not in json.dumps(body)
 
 
+def test_quicklook_carry_omits_labels_and_resolution(tmp_path: Path) -> None:
+    folder = tmp_path / "quick"
+    folder.mkdir()
+    source = folder / "counts.h5ad"
+    source.write_bytes(b"counts")
+    (folder / "analysis_tier.json").write_text(
+        json.dumps({"analysis_tier": "quicklook", "labels": ["macrophage"], "resolution": "0.4"}),
+        encoding="utf-8",
+    )
+    database = tmp_path / "studio.sqlite"
+    upgrade_database(database)
+    client = TestClient(create_app("secret-token", port=8765, launch=LAUNCH, database=database))
+    rejected = client.post(
+        "/api/projects/from-quicklook",
+        headers=TOKEN,
+        json={
+            "data_path": str(source),
+            "field_map": {"sample": "library_id"},
+            "target_gene": "STAT1",
+            "resolution": "0.4",
+            "labels": ["macrophage"],
+        },
+    )
+    assert rejected.status_code == 422
+    accepted = client.post(
+        "/api/projects/from-quicklook",
+        headers=TOKEN,
+        json={
+            "data_path": str(source),
+            "field_map": {"sample": "library_id"},
+            "target_gene": "STAT1",
+        },
+    )
+    assert accepted.status_code == 201
+    body = accepted.json()
+    assert set(body["carried"]) == {"data_path", "field_map", "target_gene"}
+    assert body["quicklook_seen"] is True
+    assert "resolution" not in body["carried"]
+    assert "labels" not in body["carried"]
+
+
+def test_names_are_refused_while_a_cluster_is_deleted(tmp_path: Path) -> None:
+    client, run_id, _digest = _client(tmp_path)
+    named = _row("0", "KEEP")
+    named["name"] = "monocyte"
+    deleted = _row("1", "DELETE")
+    response = client.post(
+        f"/api/stage-runs/{run_id}/clusters",
+        headers=TOKEN,
+        json={"blinding": "NOT_APPLICABLE", "rows": [named, deleted]},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"]["rule_id"] == "REVIEW_CLUSTER_COMPLETE"
+
+
 def test_rule_coverage_matches_the_catalog() -> None:
     root = Path(__file__).resolve().parents[1]
     completed = subprocess.run(
