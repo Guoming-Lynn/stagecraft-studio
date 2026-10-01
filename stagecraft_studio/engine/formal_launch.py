@@ -14,6 +14,13 @@ _SCRIPTS = (
     "part1_qc.py",
     "part1_merge.py",
     "part1_resolution_grid.py",
+    "part2_figures.py",
+    "part2_survey.py",
+    "part3_recluster.py",
+    "part4_figures.py",
+    "part4_survey.py",
+    "part5_prepare.py",
+    "stage_report.py",
 )
 
 

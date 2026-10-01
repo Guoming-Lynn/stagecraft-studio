@@ -10,6 +10,13 @@ REGISTERED_TASKS = frozenset(
         "formal_part1_qc",
         "formal_part1_merge",
         "formal_part1_grid",
+        "formal_part2_survey",
+        "formal_part2_figures",
+        "formal_part3_recluster",
+        "formal_part4_survey",
+        "formal_part4_figures",
+        "formal_part5_prepare",
+        "formal_stage_report",
     }
 )
 
