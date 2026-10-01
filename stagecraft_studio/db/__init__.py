@@ -1,1 +1,1 @@
-"""Database package. The first Alembic revision begins in M2."""
+"""SQLite models and the Alembic environment."""

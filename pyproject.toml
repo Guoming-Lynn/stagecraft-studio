@@ -10,9 +10,11 @@ readme = "README.md"
 license = { text = "Copyright 2026 GuomingLin. All rights reserved." }
 requires-python = ">=3.10,<3.12"
 dependencies = [
+    "alembic==1.16.5",
     "fastapi==0.142.1",
     "pydantic==2.13.5",
     "python-multipart==0.0.32",
+    "sqlalchemy==2.0.44",
     "uvicorn==0.54.0",
 ]
 

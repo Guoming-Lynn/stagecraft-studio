@@ -22,6 +22,7 @@ SPEC_TOP_LEVEL = frozenset(
         "README.md",
         "CHANGELOG.md",
         "pyproject.toml",
+        "alembic.ini",
         "stagecraft_studio",
         "web",
         "tests",

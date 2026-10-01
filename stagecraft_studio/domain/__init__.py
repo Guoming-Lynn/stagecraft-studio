@@ -1,1 +1,1 @@
-"""State machine package. Transitions begin in M2."""
+"""Protocol hash and other server-side gates."""

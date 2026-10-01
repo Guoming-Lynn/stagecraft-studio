@@ -3,6 +3,7 @@
 ## 0.0.0 - 2026-09-30
 
 - 根目录加上专有声明：Copyright 2026 GuomingLin. All rights reserved.
+- SQLite 从第一版 Alembic 修订建八张核心表。协议冻结后算 hash。输入或协议变了，旧的 stage run 被 PROTOCOL_HASH_MATCH 阻断。正式 Part 1 任务在启动时确定解释器和脚本目录，入口先拒绝 quicklook 目录。速览的 run_status.json 还没有迁移。
 - 卫生检查允许 `.gitattributes`。默认基因集文案测试按 Hallmark、GOBP 断言，不再要求 KEGG。
 - 结果页显示引擎报告里的 `resolution_note`。前端只展示服务端读到的原文。
 - 结果页顶部和方法段共用一句主张范围：细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性。

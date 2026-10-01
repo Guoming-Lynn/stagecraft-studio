@@ -5,14 +5,14 @@
 ## 已由任务书定下的边界
 
 - Studio 以子进程调用两个引擎，不 import 对方仓库的 `scripts`。
-- 正式分析引擎在 `target-gene-scrna-stagecraft` 的 `scripts/` 与 `stagecraft/`。
-- 速览引擎在 `scrna-target-pipeline`。
-- 本地单用户：一个 worker、SQLite、线性阶段失效。这些从 M2 才开始写。
-- 本仓库当前有速览任务 `quicklook_run` 和 `quicklook_inspect`。正式分析执行器还没有。
+- 正式分析引擎在 `D:\stagecraft-formal-engine`。skill 仓库只保留规格。
+- 速览引擎在 `D:\scrna-target-engine`。
+- 本地单用户：一个 worker、SQLite、线性阶段失效。SQLite 从 M4 G4 开始。
+- 本仓库有速览任务，以及 `formal_part1_load`、`formal_part1_qc`、`formal_part1_merge`、`formal_part1_grid`。
 
 ## SQLite
 
-M2 的 SQLite 推迟，目录先空着。`stagecraft_studio/db/` 和 `stagecraft_studio/domain/` 仍按任务书 §9.3 留着。`alembic.ini` 已去掉，因为还没有 `db/migrations`。
+M4 G4 起用 SQLite 和 Alembic。第一版修订建立 Project、ProtocolVersion、StageRun、Job、ReviewDecision、Artifact、RuleResult、AuditEvent。速览的 `run_status.json` 和 `state_path` 还没有迁进来。
 
 ## 首版数据规模
 
