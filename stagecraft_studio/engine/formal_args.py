@@ -119,6 +119,7 @@ class PrepareArgs(_Args):
     part4_flag: OptionalToken = ""
     model: _Model | Literal[""] = ""
     single_source_declared: bool = False
+    block_fallback_declared: bool = False
 
 
 class ReportArgs(_Args):
@@ -248,6 +249,7 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
             ("--part4-flag", "part4_flag", _OPTIONAL),
             ("--model", "model", _OPTIONAL),
             ("--single-source-declared", "single_source_declared", _SWITCH),
+            ("--block-fallback-declared", "block_fallback_declared", _SWITCH),
         ),
     ),
     "formal_stage_report": _spec(

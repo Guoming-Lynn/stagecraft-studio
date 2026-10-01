@@ -111,6 +111,14 @@ def test_quicklook_task_is_not_a_formal_command(tmp_path: Path) -> None:
         formal_argv("quicklook_run", {}, work_dir=tmp_path, launch=launch)
 
 
+def test_part5_block_fallback_declared_flag(tmp_path: Path) -> None:
+    launch = resolve_formal_launch(*_engine(tmp_path))
+    fields = _fields(tmp_path, "formal_part5_prepare")
+    fields["block_fallback_declared"] = True
+    argv = formal_argv("formal_part5_prepare", fields, work_dir=tmp_path, launch=launch)
+    assert "--block-fallback-declared" in argv
+
+
 def _fields(root: Path, task_id: str) -> dict[str, object]:
     data = root / "counts.h5ad"
     data.write_bytes(b"formal")

@@ -2,6 +2,7 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 正式 Part 5 参数补充 `--block-fallback-declared` 开关支持（D1）：在 `PrepareArgs` 与任务规范中增加 `block_fallback_declared` 开关，供协议预先声明接受单供体单行时的无 block 回退。
 - 后台单线程 FormalWorker 执行正式分析任务：临时目录隔离、子进程树安全取消、服务重启中断恢复（INTERRUPTED）、流式 sha256 登记 Artifact。
 - 输出契约与真实引擎实际产物对齐：`formal_part2_survey` 对齐 `part2_record.json`，`formal_part4_survey` 对齐 `part4_record.json`，`formal_part3_recluster` 契约要求 `compartment_counts.h5ad`、`part3_record.json`、`grid_record.json`。
 - 取消状态机完善：对处于 COMPLETED/FAILED/CANCELLED/INTERRUPTED 终端状态的任务返回 409 Conflict；成功取消记录 `AuditEvent`。
