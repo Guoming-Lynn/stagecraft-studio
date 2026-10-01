@@ -30,13 +30,14 @@ pushd "%ENGINE%"
 uv sync --frozen
 if errorlevel 1 goto fail
 popd
-if not exist "web\dist\index.html" (
-  echo 构建页面...
-  pnpm install --frozen-lockfile
-  if errorlevel 1 goto fail
-  pnpm -C web build
-  if errorlevel 1 goto fail
-)
+uv run python -m stagecraft_studio.web_freshness
+if not errorlevel 1 goto page_ready
+echo 构建页面...
+pnpm install --frozen-lockfile
+if errorlevel 1 goto fail
+pnpm -C web build
+if errorlevel 1 goto fail
+:page_ready
 set "PY=%ENGINE%\.venv\Scripts\python.exe"
 set "SCRIPT=%ENGINE%\scripts\run_pipeline.py"
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8765/"
