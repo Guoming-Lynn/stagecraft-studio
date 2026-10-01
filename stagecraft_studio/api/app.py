@@ -12,8 +12,10 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from stagecraft_studio.api.review_routes import build_review_router
 from stagecraft_studio.api.routes import build_router
 from stagecraft_studio.api.steps import engine_identity
+from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.engine.launch import EngineLaunch, resolve_engine_launch
 from stagecraft_studio.worker.runs import RunStore
 
@@ -25,6 +27,7 @@ def create_app(
     launch: EngineLaunch,
     state_path: Path | None = None,
     include_ui: bool = True,
+    database: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Stagecraft Studio", version="0.0.0")
     app.add_middleware(
@@ -37,6 +40,10 @@ def create_app(
     store = RunStore(state_path)
     store.recover()
     identity = engine_identity(launch.script)
+    if database is None:
+        database = Path(tempfile.mkdtemp(prefix="stagecraft-db-")) / "studio.sqlite"
+    upgrade_database(database)
+    app.state.database = database
     app.include_router(
         build_router(
             token=token,
@@ -46,6 +53,7 @@ def create_app(
             identity=identity,
         )
     )
+    app.include_router(build_review_router(token=token, origin=allowed_origin, database=database))
     if include_ui:
         _mount_ui(app)
     return app

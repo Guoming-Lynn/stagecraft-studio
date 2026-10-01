@@ -294,6 +294,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/stage-runs/{run_id}/resolution": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Resolution */
+    post: operations["resolution_api_stage_runs__run_id__resolution_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/clusters": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Clusters */
+    post: operations["clusters_api_stage_runs__run_id__clusters_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/review-evidence": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Review Evidence */
+    get: operations["review_evidence_api_stage_runs__run_id__review_evidence_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/jobs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Jobs */
+    post: operations["jobs_api_stage_runs__run_id__jobs_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/invalidate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Invalidate */
+    post: operations["invalidate_api_stage_runs__run_id__invalidate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -334,6 +419,26 @@ export interface components {
       environment_ok: boolean;
       /** Demo Source */
       demo_source: string;
+    };
+    /** ClusterBody */
+    ClusterBody: {
+      /** Blinding */
+      blinding: string;
+      /** Rows */
+      rows: components["schemas"]["ClusterRowBody"][];
+    };
+    /** ClusterRowBody */
+    ClusterRowBody: {
+      /** Cluster */
+      cluster: string;
+      /** Decision */
+      decision: string;
+      /** Rationale */
+      rationale: string;
+      /** Reviewer */
+      reviewer: string;
+      /** Decided On */
+      decided_on: string;
     };
     /** ColumnView */
     ColumnView: {
@@ -453,6 +558,16 @@ export interface components {
       /** Local Gmt */
       local_gmt: string;
     };
+    /** JobBody */
+    JobBody: {
+      /** Task Id */
+      task_id: string;
+      /**
+       * Reuse Umap
+       * @default false
+       */
+      reuse_umap: boolean;
+    };
     /** LogView */
     LogView: {
       /** Name */
@@ -548,6 +663,21 @@ export interface components {
       text: string;
       /** Suggestion */
       suggestion: string;
+    };
+    /** ResolutionBody */
+    ResolutionBody: {
+      /** Reviewer */
+      reviewer: string;
+      /** Decided On */
+      decided_on: string;
+      /** Rationale */
+      rationale: string;
+      /** Evidence Hash */
+      evidence_hash: string;
+      /** Resolution */
+      resolution: string;
+      /** Blinding */
+      blinding: string;
     };
     /** RevealResult */
     RevealResult: {
@@ -1234,6 +1364,183 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RevealResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  resolution_api_stage_runs__run_id__resolution_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  clusters_api_stage_runs__run_id__clusters_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClusterBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: number;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  review_evidence_api_stage_runs__run_id__review_evidence_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  jobs_api_stage_runs__run_id__jobs_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JobBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  invalidate_api_stage_runs__run_id__invalidate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: number[];
+          };
         };
       };
       /** @description Validation Error */

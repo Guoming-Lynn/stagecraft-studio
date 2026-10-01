@@ -713,6 +713,248 @@
           }
         }
       }
+    },
+    "/api/stage-runs/{run_id}/resolution": {
+      "post": {
+        "summary": "Resolution",
+        "operationId": "resolution_api_stage_runs__run_id__resolution_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolutionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Resolution Api Stage Runs  Run Id  Resolution Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/clusters": {
+      "post": {
+        "summary": "Clusters",
+        "operationId": "clusters_api_stage_runs__run_id__clusters_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClusterBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Clusters Api Stage Runs  Run Id  Clusters Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/review-evidence": {
+      "get": {
+        "summary": "Review Evidence",
+        "operationId": "review_evidence_api_stage_runs__run_id__review_evidence_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Review Evidence Api Stage Runs  Run Id  Review Evidence Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/jobs": {
+      "post": {
+        "summary": "Jobs",
+        "operationId": "jobs_api_stage_runs__run_id__jobs_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Jobs Api Stage Runs  Run Id  Jobs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/invalidate": {
+      "post": {
+        "summary": "Invalidate",
+        "operationId": "invalidate_api_stage_runs__run_id__invalidate_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "title": "Response Invalidate Api Stage Runs  Run Id  Invalidate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -807,6 +1049,62 @@
           "demo_source"
         ],
         "title": "Bootstrap"
+      },
+      "ClusterBody": {
+        "properties": {
+          "blinding": {
+            "type": "string",
+            "title": "Blinding"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ClusterRowBody"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "blinding",
+          "rows"
+        ],
+        "title": "ClusterBody"
+      },
+      "ClusterRowBody": {
+        "properties": {
+          "cluster": {
+            "type": "string",
+            "title": "Cluster"
+          },
+          "decision": {
+            "type": "string",
+            "title": "Decision"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_on": {
+            "type": "string",
+            "title": "Decided On"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cluster",
+          "decision",
+          "rationale",
+          "reviewer",
+          "decided_on"
+        ],
+        "title": "ClusterRowBody"
       },
       "ColumnView": {
         "properties": {
@@ -1123,6 +1421,25 @@
         ],
         "title": "InspectView"
       },
+      "JobBody": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "reuse_umap": {
+            "type": "boolean",
+            "title": "Reuse Umap",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "JobBody"
+      },
       "LogView": {
         "properties": {
           "name": {
@@ -1319,6 +1636,45 @@
           "suggestion"
         ],
         "title": "ReasonView"
+      },
+      "ResolutionBody": {
+        "properties": {
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_on": {
+            "type": "string",
+            "title": "Decided On"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "evidence_hash": {
+            "type": "string",
+            "title": "Evidence Hash"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "Resolution"
+          },
+          "blinding": {
+            "type": "string",
+            "title": "Blinding"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reviewer",
+          "decided_on",
+          "rationale",
+          "evidence_hash",
+          "resolution",
+          "blinding"
+        ],
+        "title": "ResolutionBody"
       },
       "RevealResult": {
         "properties": {

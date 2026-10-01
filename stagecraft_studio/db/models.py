@@ -41,6 +41,11 @@ class StageRun(Base):
     rule_version: Mapped[str] = mapped_column(String(64))
     stage_status: Mapped[str] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    evidence_json: Mapped[str] = mapped_column(Text, default="")
+    leiden_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    quicklook_seen: Mapped[bool] = mapped_column(default=False)
+    upstream_id: Mapped[int | None] = mapped_column(ForeignKey("stage_run.id"), default=None)
+    invalidated: Mapped[bool] = mapped_column(default=False)
 
 
 class Job(Base):
@@ -50,6 +55,7 @@ class Job(Base):
     stage_run_id: Mapped[int] = mapped_column(ForeignKey("stage_run.id"))
     task_id: Mapped[str] = mapped_column(String(64))
     job_status: Mapped[str] = mapped_column(String(32))
+    payload_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
