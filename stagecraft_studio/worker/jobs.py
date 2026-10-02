@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -89,6 +90,7 @@ class FormalWorker:
         self._current_job_id: int | None = None
         self._current_process: subprocess.Popen[bytes] | None = None
         self._current_tmp_dir: Path | None = None
+        self._before_publish_hook: Callable[[int], None] | None = None
 
     def start(self) -> None:
         """Start the background worker thread."""
@@ -141,7 +143,7 @@ class FormalWorker:
 
     def cancel(self, job_id: int) -> dict[str, object]:
         """Cancel a running or queued job, killing process and removing tmp directory."""
-        with self._factory() as session:
+        with self._lock, self._factory() as session:
             job = session.get(Job, job_id)
             if job is None:
                 return {"id": job_id, "job_status": "NOT_FOUND"}
@@ -168,18 +170,17 @@ class FormalWorker:
                 )
             session.commit()
 
-        with self._lock:
             is_current = self._current_job_id == job_id
             proc = self._current_process if is_current else None
             tmp_dir = self._current_tmp_dir if is_current else None
 
-        if proc is not None and proc.pid:
-            kill_tree(proc.pid)
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                proc.wait(timeout=3.0)
+            if proc is not None and proc.pid:
+                kill_tree(proc.pid)
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    proc.wait(timeout=3.0)
 
-        if tmp_dir is not None and tmp_dir.exists():
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+            if tmp_dir is not None and tmp_dir.exists():
+                shutil.rmtree(tmp_dir, ignore_errors=True)
 
         return {"id": job_id, "job_status": "CANCELLED"}
 
@@ -327,7 +328,10 @@ class FormalWorker:
 
         exit_code = proc.wait()
 
-        with self._factory() as session:
+        if self._before_publish_hook is not None:
+            self._before_publish_hook(job_id)
+
+        with self._lock, self._factory() as session:
             job = session.get(Job, job_id)
             if job is None or job.job_status == "CANCELLED":
                 return

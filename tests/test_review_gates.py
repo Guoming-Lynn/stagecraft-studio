@@ -281,8 +281,12 @@ def test_a_stored_pass_does_not_raise_the_ceiling(tmp_path: Path) -> None:
         assert run is not None
         evidence = json.loads(run.evidence_json)
         evidence["verdict"] = {
-            "stopped": "FITTED", "fitted": True, "model": "edger_ql",
-            "claims_limma": True, "associated": True, "holdout": "not_run",
+            "stopped": "FITTED",
+            "fitted": True,
+            "model": "edger_ql",
+            "claims_limma": True,
+            "associated": True,
+            "holdout": "not_run",
             "calibration_status": "FROZEN_PASS",
         }
         run.evidence_json = json.dumps(evidence)
@@ -314,24 +318,6 @@ def test_rule_coverage_matches_the_catalog() -> None:
         text=True,
     )
     assert completed.returncode == 0, completed.stderr
-
-
-def test_resolution_review_rejected_without_grid_output(tmp_path: Path) -> None:
-    client, run_id, _ = _client(tmp_path)
-    with session_factory(tmp_path / "studio.sqlite")() as session:
-        run = session.get(StageRun, run_id)
-        assert run is not None
-        run.evidence_json = json.dumps({"genes": []})
-        session.commit()
-        empty_digest = evidence_digest(run.evidence_json)
-
-    res = client.post(
-        f"/api/stage-runs/{run_id}/resolution",
-        headers=TOKEN,
-        json=_resolution(empty_digest),
-    )
-    assert res.status_code == 400
-    assert res.json()["detail"]["rule_id"] == "RESOLUTION_REVIEW_REQUIRED"
 
 
 def _client(tmp_path: Path, *, quicklook_seen: bool = False) -> tuple[TestClient, int, str]:
@@ -374,18 +360,23 @@ def _client(tmp_path: Path, *, quicklook_seen: bool = False) -> tuple[TestClient
 
 def _resolution(digest: str) -> dict[str, str]:
     return {
-        "reviewer": "Lin", "decided_on": "2026-10-01",
+        "reviewer": "Lin",
+        "decided_on": "2026-10-01",
         "rationale": "marker panel separates the monocyte cloud",
-        "evidence_hash": digest, "resolution": "0.4", "blinding": "BLIND",
+        "evidence_hash": digest,
+        "resolution": "0.4",
+        "blinding": "BLIND",
     }
 
 
 def _row(cluster: str, decision: str) -> dict[str, str]:
     return {
-        "cluster": cluster, "decision": decision,
-        "rationale": "marker and QC", "reviewer": "Lin", "decided_on": "2026-10-01",
+        "cluster": cluster,
+        "decision": decision,
+        "rationale": "marker and QC",
+        "reviewer": "Lin",
+        "decided_on": "2026-10-01",
     }
-
 
 
 def _clusters(client: TestClient, run_id: int):

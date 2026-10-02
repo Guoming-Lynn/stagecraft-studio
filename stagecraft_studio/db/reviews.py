@@ -80,11 +80,12 @@ def submit_resolution(
     if isinstance(clusters_map, dict) and chosen in clusters_map:
         cluster_ids = [str(x) for x in clusters_map[chosen]]
     else:
-        matched = [it for it in overview if isinstance(it, dict) and str(it.get("resolution")) == chosen]
+        matched = [
+            it for it in overview if isinstance(it, dict) and str(it.get("resolution")) == chosen
+        ]
         if not matched:
             raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
         cluster_ids = [str(i) for i in range(int(matched[0].get("n_clusters", 0)))]
-
 
     run.leiden_ids_json = json.dumps(cluster_ids)
     recorded, reason = exposure_blinding(require_blinding(blinding), run.quicklook_seen)
