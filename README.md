@@ -33,6 +33,8 @@ uv run ruff format --check .
 uv run mypy
 uv run pytest
 uv run python scripts/check_hygiene.py
+uv run python scripts/export_rule_coverage.py --check
+uv run python scripts/export_openapi.py --check
 pnpm install --frozen-lockfile
 pnpm -C web lint
 pnpm -C web exec prettier --check .
@@ -40,3 +42,15 @@ pnpm -C web typecheck
 pnpm -C web test
 pnpm -C web e2e
 ```
+
+### 真实正式引擎端到端串联测试
+
+正式分析引擎与 Studio 跨进程交互测试（`test_formal_real_chain.py` 与 `test_formal_real_pipeline.py`）需要通过环境变量指定正式引擎解释器及脚本目录：
+
+```text
+set STAGECRAFT_FORMAL_SCRIPTS=D:\stagecraft-formal-engine\scripts
+set STAGECRAFT_FORMAL_PYTHON=D:\stagecraft-formal-engine\.venv\Scripts\python.exe
+uv run pytest tests/test_formal_real_chain.py tests/test_formal_real_pipeline.py
+```
+
+在未建立私有远端 CI 跨仓库集成前，本地提交前必须设置上述环境变量并跑通全量 `uv run pytest`（包括上述真实端到端串联用例）。未设置环境变量时，该两项测试会自动跳过（skipped）。
