@@ -10,12 +10,14 @@ import {
   type StageRunItem,
 } from "../api/client";
 import { chrome } from "../text/chrome";
+import { Part3Review } from "./Part3Review";
 
 type Row = { cluster: string; decision: "KEEP" | "DELETE"; name: string };
 
 export function ReviewCenter() {
   const [runs, setRuns] = useState<StageRunItem[]>([]);
   const [runId, setRunId] = useState<number | null>(null);
+  const [tab, setTab] = useState<"part1" | "part3">("part1");
   const [center, setCenter] = useState<Center | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [resolution, setResolution] = useState("");
@@ -58,39 +60,7 @@ export function ReviewCenter() {
   }
 
   return (
-    <form
-      className="stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!center || runId === null) return;
-        const blinding = center.quicklook_seen
-          ? "UNBLINDED_WITH_REASON"
-          : "BLIND";
-        void submitResolution(runId, {
-          reviewer: "Lin",
-          decided_on: "2026-10-01",
-          rationale,
-          evidence_hash: center.evidence_hash,
-          resolution,
-          blinding,
-        })
-          .then(() =>
-            submitClusters(runId, {
-              blinding,
-              rows: rows.map((row) => ({
-                cluster: row.cluster,
-                decision: row.decision,
-                rationale,
-                reviewer: "Lin",
-                decided_on: "2026-10-01",
-                name: deleted ? "" : row.name,
-              })),
-            }),
-          )
-          .then(() => setMessage(chrome.submitReview))
-          .catch((reason: unknown) => setMessage(errorText(reason)));
-      }}
-    >
+    <div className="stack">
       <label>
         {chrome.formal}
         <select
@@ -104,95 +74,154 @@ export function ReviewCenter() {
           ))}
         </select>
       </label>
-      {center ? (
-        <section aria-label={chrome.scientificStatus}>
-          <h2>{chrome.scientificStatus}</h2>
-          <p>{center.scientific_status.scientific_status}</p>
-          <ul>
-            {center.scientific_status.limits.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <div className="review-wall" aria-label={chrome.reviewResolutions}>
-        {center?.resolutions.map((tile) => (
-          <button
-            key={tile.resolution}
-            type="button"
-            className={resolution === tile.resolution ? "on" : ""}
-            onClick={() => setResolution(tile.resolution)}
-          >
-            {tile.resolution}
-            <span>
-              {tile.n_clusters} · {tile.min_cluster_size}-
-              {tile.max_cluster_size}
-            </span>
-          </button>
-        ))}
+      <div className="tab-row" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "part1"}
+          className={tab === "part1" ? "on" : ""}
+          onClick={() => setTab("part1")}
+        >
+          {chrome.part1ReviewTab}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "part3"}
+          className={tab === "part3" ? "on" : ""}
+          onClick={() => setTab("part3")}
+        >
+          {chrome.part3ReviewTab}
+        </button>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>{chrome.reviewClusters}</th>
-            <th>{chrome.keep}</th>
-            <th>{chrome.name}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.cluster}>
-              <td>{row.cluster}</td>
-              <td>
-                <select
-                  value={row.decision}
-                  onChange={(event) => {
-                    const decision =
-                      event.target.value === "DELETE" ? "DELETE" : "KEEP";
-                    setRows((current) =>
-                      current.map((item) =>
-                        item.cluster === row.cluster
-                          ? { ...item, decision }
-                          : item,
-                      ),
-                    );
-                  }}
-                >
-                  <option value="KEEP">{chrome.keep}</option>
-                  <option value="DELETE">{chrome.delete}</option>
-                </select>
-              </td>
-              <td>
-                <input
-                  value={deleted ? "" : row.name}
-                  disabled={deleted || row.decision === "DELETE"}
-                  onChange={(event) =>
-                    setRows((current) =>
-                      current.map((item) =>
-                        item.cluster === row.cluster
-                          ? { ...item, name: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <label>
-        {chrome.reviewResolutions}
-        <input
-          value={rationale}
-          onChange={(event) => setRationale(event.target.value)}
-        />
-      </label>
-      <p className="hint">
-        {center?.quicklook_seen ? "UNBLINDED_WITH_REASON" : chrome.blinding}
-      </p>
-      <button type="submit">{chrome.submitReview}</button>
-      {message ? <p className="hint">{message}</p> : null}
-    </form>
+
+      {tab === "part3" ? (
+        <Part3Review runId={runId} />
+      ) : (
+        <form
+          className="stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!center || runId === null) return;
+            const blinding = center.quicklook_seen
+              ? "UNBLINDED_WITH_REASON"
+              : "BLIND";
+            void submitResolution(runId, {
+              reviewer: "Lin",
+              decided_on: "2026-10-01",
+              rationale,
+              evidence_hash: center.evidence_hash,
+              resolution,
+              blinding,
+            })
+              .then(() =>
+                submitClusters(runId, {
+                  blinding,
+                  rows: rows.map((row) => ({
+                    cluster: row.cluster,
+                    decision: row.decision,
+                    rationale,
+                    reviewer: "Lin",
+                    decided_on: "2026-10-01",
+                    name: deleted ? "" : row.name,
+                  })),
+                }),
+              )
+              .then(() => setMessage(chrome.submitReview))
+              .catch((reason: unknown) => setMessage(errorText(reason)));
+          }}
+        >
+          {center ? (
+            <section aria-label={chrome.scientificStatus}>
+              <h2>{chrome.scientificStatus}</h2>
+              <p>{center.scientific_status.scientific_status}</p>
+              <ul>
+                {center.scientific_status.limits.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <div className="review-wall" aria-label={chrome.reviewResolutions}>
+            {center?.resolutions.map((tile) => (
+              <button
+                key={tile.resolution}
+                type="button"
+                className={resolution === tile.resolution ? "on" : ""}
+                onClick={() => setResolution(tile.resolution)}
+              >
+                {tile.resolution}
+                <span>
+                  {tile.n_clusters} · {tile.min_cluster_size}-
+                  {tile.max_cluster_size}
+                </span>
+              </button>
+            ))}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>{chrome.reviewClusters}</th>
+                <th>{chrome.keep}</th>
+                <th>{chrome.name}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.cluster}>
+                  <td>{row.cluster}</td>
+                  <td>
+                    <select
+                      value={row.decision}
+                      onChange={(event) => {
+                        const decision =
+                          event.target.value === "DELETE" ? "DELETE" : "KEEP";
+                        setRows((current) =>
+                          current.map((item) =>
+                            item.cluster === row.cluster
+                              ? { ...item, decision }
+                              : item,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="KEEP">{chrome.keep}</option>
+                      <option value="DELETE">{chrome.delete}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      value={deleted ? "" : row.name}
+                      disabled={deleted || row.decision === "DELETE"}
+                      onChange={(event) =>
+                        setRows((current) =>
+                          current.map((item) =>
+                            item.cluster === row.cluster
+                              ? { ...item, name: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <label>
+            {chrome.reviewResolutions}
+            <input
+              value={rationale}
+              onChange={(event) => setRationale(event.target.value)}
+            />
+          </label>
+          <p className="hint">
+            {center?.quicklook_seen ? "UNBLINDED_WITH_REASON" : chrome.blinding}
+          </p>
+          <button type="submit">{chrome.submitReview}</button>
+          {message ? <p className="hint">{message}</p> : null}
+        </form>
+      )}
+    </div>
   );
 }

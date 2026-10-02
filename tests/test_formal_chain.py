@@ -77,10 +77,8 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
 
     try:
         # 1. Direct API call bypassing frontend - security and validation gates
-        assert (
-            client.post("/api/stage-runs/1/jobs", json={"task_id": "formal_part1_load"}).status_code
-            == 401
-        )
+        unauth = client.post("/api/stage-runs/1/jobs", json={"task_id": "formal_part1_load"})
+        assert unauth.status_code == 401
         bad_origin = client.post(
             "/api/stage-runs/1/jobs",
             headers={"origin": "http://evil.com", "x-stagecraft-token": "secret-token"},
@@ -114,16 +112,20 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             headers=TOKEN_HEADERS,
             json={"task_id": "formal_not_exist", "fields": {}},
         )
-        assert bad_task.status_code == 422
-        assert bad_task.json()["detail"]["rule_id"] == "TASK_NOT_REGISTERED"
+        assert (
+            bad_task.status_code == 422
+            and bad_task.json()["detail"]["rule_id"] == "TASK_NOT_REGISTERED"
+        )
 
         non_formal = client.post(
             f"/api/stage-runs/{run_id}/jobs",
             headers=TOKEN_HEADERS,
             json={"task_id": "quicklook_run", "fields": {}},
         )
-        assert non_formal.status_code == 422
-        assert non_formal.json()["detail"]["rule_id"] == "TASK_NOT_FORMAL"
+        assert (
+            non_formal.status_code == 422
+            and non_formal.json()["detail"]["rule_id"] == "TASK_NOT_FORMAL"
+        )
 
         extra_fields = client.post(
             f"/api/stage-runs/{run_id}/jobs",
@@ -190,7 +192,12 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         # 5. Enqueue Part 1 four tasks: load, qc, merge, grid
         job1_id = _post_job(
             "formal_part1_load",
-            {"library_id": "L1", "input": str(counts_file), "format": "h5ad", "out": str(project_root)},
+            {
+                "library_id": "L1",
+                "input": str(counts_file),
+                "format": "h5ad",
+                "out": str(project_root),
+            },
         )
         job2_id = _post_job(
             "formal_part1_qc",
@@ -208,7 +215,12 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         )
         job4_id = _post_job(
             "formal_part1_grid",
-            {"common": str(counts_file), "gene": "STAT1", "config": str(grid_config), "out": str(project_root)},
+            {
+                "common": str(counts_file),
+                "gene": "STAT1",
+                "config": str(grid_config),
+                "out": str(project_root),
+            },
         )
 
         # Wait for Part 1 tasks to execute and complete
@@ -371,16 +383,10 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         assert list_resp.status_code == 200
         jobs_data = list_resp.json()
         assert len(jobs_data) == 6
-        assert [item["id"] for item in jobs_data] == [
-            job1_id,
-            job2_id,
-            job3_id,
-            job4_id,
-            lock_id,
-            job5_id,
-        ]
+        expected_ids = [job1_id, job2_id, job3_id, job4_id, lock_id, job5_id]
+        assert [item["id"] for item in jobs_data] == expected_ids
         assert all(item["job_status"] == "COMPLETED" for item in jobs_data)
-        assert [item["task_id"] for item in jobs_data] == [
+        expected_tasks = [
             "formal_part1_load",
             "formal_part1_qc",
             "formal_part1_merge",
@@ -388,5 +394,6 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             "formal_part1_lock",
             "formal_part3_recluster",
         ]
+        assert [item["task_id"] for item in jobs_data] == expected_tasks
     finally:
         worker.stop()

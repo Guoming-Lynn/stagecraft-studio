@@ -103,6 +103,16 @@ export const chrome = {
   results: "结果",
   checks: "检查",
   gallery: "图库",
+  part1ReviewTab: "全局 Atlas 审阅 (Part 1)",
+  part3ReviewTab: "隔室细分审阅 (Part 3)",
+  part3Stop1Title: "停点 1：分辨率选择",
+  part3Stop2Title: "停点 2：聚类保留/剔除（禁止命名）",
+  part3Stop3Title: "停点 3：亚型命名（无剔除轮次）",
+  part3CleanupRequired: "本轮存在 DELETE 剔除，必须重新计算子轮次后再命名",
+  part3NoNamesAtStop2Warning: "停点 2 严格禁止填写细胞名称",
+  part3TargetGeneInNameWarning: "亚型命名禁止包含目标基因",
+  part3Awaiting: "等待 formal_part3_recluster 产物",
+  part3Completed: "Part 3 审阅已完成",
 } as const;
 
 export function rowCount(total: number): string {

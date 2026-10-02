@@ -135,22 +135,15 @@ def record_job_rules(
                 doublet_detail,
             )
         else:
-            _add_row(
-                session,
-                rows,
-                job.stage_run_id,
-                "PER_LIBRARY_QC",
-                "BLOCK",
-                {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
-            )
-            _add_row(
-                session,
-                rows,
-                job.stage_run_id,
-                "DOUBLET_FAILURE_EXPLICIT",
-                "BLOCK",
-                {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
-            )
+            for rule in ("PER_LIBRARY_QC", "DOUBLET_FAILURE_EXPLICIT"):
+                _add_row(
+                    session,
+                    rows,
+                    job.stage_run_id,
+                    rule,
+                    "BLOCK",
+                    {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
+                )
 
     elif task_id == "formal_part1_merge":
         gene = str(fields.get("gene", ""))
@@ -171,10 +164,9 @@ def record_job_rules(
         ):
             try:
                 with presence_file.open(encoding="utf-8") as pf:
-                    reader = csv.DictReader(pf)
                     gene_rows = [
                         r
-                        for r in reader
+                        for r in csv.DictReader(pf)
                         if r.get("gene", "").strip().casefold() == gene.strip().casefold()
                     ]
                 if gene_rows:
@@ -200,29 +192,23 @@ def record_job_rules(
             except Exception as exc:
                 failure_msg = f"Failed to read gene_presence_by_dataset.csv: {exc}"
 
-        if is_valid:
-            _add_row(
-                session,
-                rows,
-                job.stage_run_id,
-                "TARGET_MEASURED_IN_COMMON_SET",
-                "PASS",
+        _add_row(
+            session,
+            rows,
+            job.stage_run_id,
+            "TARGET_MEASURED_IN_COMMON_SET",
+            "PASS" if is_valid else "BLOCK",
+            (
                 {
                     "gene": gene,
                     "basis": "gene_presence_by_dataset",
                     "measured_in_all_primary_libraries": True,
                     "datasets_checked": datasets_checked,
-                },
-            )
-        else:
-            _add_row(
-                session,
-                rows,
-                job.stage_run_id,
-                "TARGET_MEASURED_IN_COMMON_SET",
-                "BLOCK",
-                {"gene": gene, "reason": failure_msg},
-            )
+                }
+                if is_valid
+                else {"gene": gene, "reason": failure_msg}
+            ),
+        )
 
     elif task_id == "formal_part1_lock":
         lock_file = (dest_dir / "lock_record.json") if dest_dir is not None else None
@@ -347,39 +333,59 @@ def record_job_evidence(
         if gpath.is_file():
             with contextlib.suppress(json.JSONDecodeError, OSError):
                 evidence["grid"] = json.loads(gpath.read_text(encoding="utf-8"))
-        opath = dest_dir / "Leiden_resolution_overview.csv"
-        if opath.is_file():
-            with contextlib.suppress(OSError), opath.open("r", encoding="utf-8") as f:
-                rows = list(csv.DictReader(f))
-                for r in rows:
-                    if "resolution" in r and r["resolution"] is not None:
-                        r["resolution"] = canonical_resolution(r["resolution"])
-                    for k in ("n_clusters", "min_cluster_size", "max_cluster_size"):
-                        if k in r and r[k] is not None:
-                            with contextlib.suppress(ValueError):
-                                r[k] = int(r[k])
-                    if "median_cluster_size" in r and r["median_cluster_size"] is not None:
-                        with contextlib.suppress(ValueError):
-                            r["median_cluster_size"] = float(r["median_cluster_size"])
-                evidence["overview"] = rows
-        cpath = dest_dir / "cluster_by_dataset.csv"
-        if cpath.is_file():
-            with contextlib.suppress(OSError), cpath.open("r", encoding="utf-8") as f:
-                res_map: dict[str, list[str]] = {}
-                for crow in csv.DictReader(f):
-                    raw_res = str(crow.get("resolution", ""))
-                    res_val = canonical_resolution(raw_res) if raw_res else ""
-                    cid = str(crow.get("cluster", ""))
-                    if res_val and cid:
-                        if res_val not in res_map:
-                            res_map[res_val] = []
-                        if cid not in res_map[res_val]:
-                            res_map[res_val].append(cid)
-                evidence["clusters_by_resolution"] = res_map
-                default_res = (
-                    "0.2" if "0.2" in res_map else (next(iter(res_map)) if res_map else None)
-                )
-                if default_res and res_map.get(default_res):
-                    evidence["clusters"] = list(res_map[default_res])
+        overview, res_map = _parse_grid_tables(dest_dir)
+        if overview is not None:
+            evidence["overview"] = overview
+        if res_map is not None:
+            evidence["clusters_by_resolution"] = res_map
+            default_res = "0.2" if "0.2" in res_map else (next(iter(res_map)) if res_map else None)
+            if default_res and res_map.get(default_res):
+                evidence["clusters"] = list(res_map[default_res])
+    elif task_id == "formal_part3_recluster":
+        rpath = dest_dir / "part3_record.json"
+        if rpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["part3"] = json.loads(rpath.read_text(encoding="utf-8"))
+        overview, res_map = _parse_grid_tables(dest_dir)
+        if overview is not None:
+            evidence["part3_overview"] = overview
+        if res_map is not None:
+            evidence["part3_clusters_by_resolution"] = res_map
 
     run.evidence_json = json.dumps(evidence, ensure_ascii=False)
+
+
+def _parse_grid_tables(
+    dest_dir: Path,
+) -> tuple[list[dict[str, object]] | None, dict[str, list[str]] | None]:
+    overview: list[dict[str, object]] | None = None
+    res_map: dict[str, list[str]] | None = None
+    opath = dest_dir / "Leiden_resolution_overview.csv"
+    if opath.is_file():
+        with contextlib.suppress(OSError), opath.open("r", encoding="utf-8") as f:
+            rows: list[dict[str, object]] = []
+            for r in csv.DictReader(f):
+                row: dict[str, object] = dict(r)
+                if row.get("resolution"):
+                    row["resolution"] = canonical_resolution(row["resolution"])
+                for k in ("n_clusters", "min_cluster_size", "max_cluster_size"):
+                    if row.get(k) is not None:
+                        with contextlib.suppress(ValueError):
+                            row[k] = int(str(row[k]))
+                if row.get("median_cluster_size") is not None:
+                    with contextlib.suppress(ValueError):
+                        row["median_cluster_size"] = float(str(row["median_cluster_size"]))
+                rows.append(row)
+            overview = rows
+    cpath = dest_dir / "cluster_by_dataset.csv"
+    if cpath.is_file():
+        with contextlib.suppress(OSError), cpath.open("r", encoding="utf-8") as f:
+            res_map = {}
+            for crow in csv.DictReader(f):
+                res_val = canonical_resolution(crow.get("resolution", ""))
+                cid = str(crow.get("cluster", ""))
+                if res_val and cid:
+                    res_map.setdefault(res_val, [])
+                    if cid not in res_map[res_val]:
+                        res_map[res_val].append(cid)
+    return overview, res_map

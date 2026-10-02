@@ -1330,6 +1330,200 @@
           }
         }
       }
+    },
+    "/api/stage-runs/{run_id}/part3/center": {
+      "get": {
+        "summary": "Part3 Center",
+        "operationId": "part3_center_api_stage_runs__run_id__part3_center_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Part3 Center Api Stage Runs  Run Id  Part3 Center Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/part3/resolution": {
+      "post": {
+        "summary": "Part3 Resolution",
+        "operationId": "part3_resolution_api_stage_runs__run_id__part3_resolution_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Part3ResolutionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Part3 Resolution Api Stage Runs  Run Id  Part3 Resolution Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/part3/clusters": {
+      "post": {
+        "summary": "Part3 Clusters",
+        "operationId": "part3_clusters_api_stage_runs__run_id__part3_clusters_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Part3ClusterBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Part3 Clusters Api Stage Runs  Run Id  Part3 Clusters Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stage-runs/{run_id}/part3/names": {
+      "post": {
+        "summary": "Part3 Names",
+        "operationId": "part3_names_api_stage_runs__run_id__part3_names_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Part3NameBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Part3 Names Api Stage Runs  Run Id  Part3 Names Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1961,6 +2155,162 @@
           "source_label"
         ],
         "title": "ParameterRow"
+      },
+      "Part3ClusterBody": {
+        "properties": {
+          "blinding": {
+            "type": "string",
+            "title": "Blinding"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Part3ClusterRowBody"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "blinding",
+          "rows"
+        ],
+        "title": "Part3ClusterBody"
+      },
+      "Part3ClusterRowBody": {
+        "properties": {
+          "cluster": {
+            "type": "string",
+            "title": "Cluster"
+          },
+          "decision": {
+            "type": "string",
+            "title": "Decision"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_on": {
+            "type": "string",
+            "title": "Decided On"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cluster",
+          "decision",
+          "rationale",
+          "reviewer",
+          "decided_on"
+        ],
+        "title": "Part3ClusterRowBody"
+      },
+      "Part3NameBody": {
+        "properties": {
+          "blinding": {
+            "type": "string",
+            "title": "Blinding"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Part3NameRowBody"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "blinding",
+          "rows"
+        ],
+        "title": "Part3NameBody"
+      },
+      "Part3NameRowBody": {
+        "properties": {
+          "cluster": {
+            "type": "string",
+            "title": "Cluster"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_on": {
+            "type": "string",
+            "title": "Decided On"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cluster",
+          "name",
+          "rationale",
+          "reviewer",
+          "decided_on"
+        ],
+        "title": "Part3NameRowBody"
+      },
+      "Part3ResolutionBody": {
+        "properties": {
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_on": {
+            "type": "string",
+            "title": "Decided On"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "evidence_hash": {
+            "type": "string",
+            "title": "Evidence Hash"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "Resolution"
+          },
+          "blinding": {
+            "type": "string",
+            "title": "Blinding"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reviewer",
+          "decided_on",
+          "rationale",
+          "evidence_hash",
+          "resolution",
+          "blinding"
+        ],
+        "title": "Part3ResolutionBody"
       },
       "PortfolioTile": {
         "properties": {

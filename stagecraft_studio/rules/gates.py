@@ -111,7 +111,17 @@ def require_resolution(value: str) -> str:
     return canon
 
 
-_EXCLUDED_EVIDENCE = frozenset({"part2", "part4", "verdict", "lock"})
+_EXCLUDED_EVIDENCE = frozenset(
+    {
+        "part2",
+        "part3",
+        "part3_overview",
+        "part3_clusters_by_resolution",
+        "part4",
+        "verdict",
+        "lock",
+    }
+)
 
 
 def evidence_digest(evidence_json: str) -> str:
@@ -124,6 +134,21 @@ def evidence_digest(evidence_json: str) -> str:
     except (json.JSONDecodeError, OSError):
         pass
     return hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
+
+
+def part3_evidence_digest(evidence_json: str) -> str:
+    try:
+        data = json.loads(evidence_json)
+        if isinstance(data, dict):
+            part3_data = {
+                "overview": data.get("part3_overview"),
+                "clusters": data.get("part3_clusters_by_resolution"),
+            }
+            payload = json.dumps(part3_data, sort_keys=True, separators=(",", ":"))
+            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    except (json.JSONDecodeError, OSError):
+        pass
+    return hashlib.sha256(b"").hexdigest()
 
 
 def cluster_set_hash(leiden_ids: list[str]) -> str:

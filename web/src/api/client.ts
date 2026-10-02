@@ -193,6 +193,115 @@ export function submitClusters(
   });
 }
 
+export interface Part3CenterView {
+  stage_run_id: number;
+  target_gene: string;
+  resolutions: {
+    resolution: string;
+    n_clusters: number;
+    min_cluster_size: number;
+    max_cluster_size: number;
+  }[];
+  clusters: string[];
+  evidence_hash: string;
+  active_stop_point:
+    | "AWAITING_RECLUSTER"
+    | "STOP1_RESOLUTION"
+    | "STOP2_CLUSTERS"
+    | "CLEANUP_REQUIRED"
+    | "STOP3_NAMES"
+    | "COMPLETED";
+  quicklook_seen: boolean;
+  current_resolution: {
+    resolution: string;
+    reviewer: string;
+    decided_on: string;
+    rationale: string;
+    blinding: string;
+    leiden_ids: string[];
+  } | null;
+  current_clusters: {
+    rows: {
+      cluster: string;
+      decision: "KEEP" | "DELETE";
+      rationale: string;
+      reviewer: string;
+      decided_on: string;
+    }[];
+    blinding: string;
+  } | null;
+  current_names: {
+    rows: {
+      cluster: string;
+      name: string;
+      rationale: string;
+      reviewer: string;
+      decided_on: string;
+    }[];
+    blinding: string;
+  } | null;
+}
+
+export function loadPart3Center(runId: number): Promise<Part3CenterView> {
+  return send(`/api/stage-runs/${runId}/part3/center`);
+}
+
+export function submitPart3Resolution(
+  runId: number,
+  body: {
+    reviewer: string;
+    decided_on: string;
+    rationale: string;
+    evidence_hash: string;
+    resolution: string;
+    blinding: string;
+  },
+): Promise<unknown> {
+  return send(`/api/stage-runs/${runId}/part3/resolution`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function submitPart3Clusters(
+  runId: number,
+  body: {
+    blinding: string;
+    rows: {
+      cluster: string;
+      decision: string;
+      rationale: string;
+      reviewer: string;
+      decided_on: string;
+      name?: string;
+    }[];
+  },
+): Promise<unknown> {
+  return send(`/api/stage-runs/${runId}/part3/clusters`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function submitPart3Names(
+  runId: number,
+  body: {
+    blinding: string;
+    rows: {
+      cluster: string;
+      name: string;
+      rationale: string;
+      reviewer: string;
+      decided_on: string;
+    }[];
+  },
+): Promise<unknown> {
+  return send(`/api/stage-runs/${runId}/part3/names`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export interface StageWorkspaceView {
   id: number;
   stage_status: string;

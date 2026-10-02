@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from stagecraft_studio.api.part3_routes import build_part3_router
 from stagecraft_studio.api.review_routes import build_review_router
 from stagecraft_studio.api.routes import build_router
 from stagecraft_studio.api.steps import engine_identity
@@ -89,6 +90,13 @@ def create_app(
             origin=allowed_origin,
             database=db_path,
             formal_worker=worker,
+        )
+    )
+    app.include_router(
+        build_part3_router(
+            token=token,
+            origin=allowed_origin,
+            database=db_path,
         )
     )
     if include_ui:
