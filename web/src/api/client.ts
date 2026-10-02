@@ -256,6 +256,46 @@ export function loadStageWorkspace(runId: number): Promise<StageWorkspaceView> {
   return send(`/api/stage-runs/${runId}/workspace`);
 }
 
+export interface GalleryFigureItem {
+  id: string;
+  task_id: string;
+  title: string;
+  stage_part: string;
+  panel_id: string;
+  status: "AVAILABLE" | "NOT_ESTIMABLE" | "STOPPED";
+  format_png: string | null;
+  format_svg: string | null;
+  format_pdf: string | null;
+  source_data: string | null;
+  parameters: string | null;
+  caption: string;
+  reasons: string[];
+  content_hash: string;
+}
+
+export interface StageGalleryView {
+  run_id: number;
+  project_id: number;
+  scientific_status: {
+    calibration_status: string;
+    associated: boolean;
+    evidence_ceiling: string;
+    reasons: string[];
+  };
+  figures: GalleryFigureItem[];
+  total_figures: number;
+  available_count: number;
+  not_estimable_count: number;
+}
+
+export function loadStageGallery(runId: number): Promise<StageGalleryView> {
+  return send(`/api/stage-runs/${runId}/gallery`);
+}
+
+export function stageArtifactUrl(runId: number, rel: string): string {
+  return `/api/stage-runs/${runId}/artifacts/raw?rel=${encodeURIComponent(rel)}`;
+}
+
 export function errorText(error: unknown): string {
   if (!(error instanceof Error)) return "请求失败";
   try {

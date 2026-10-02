@@ -352,10 +352,28 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** Stage Run Jobs */
+    get: operations["stage_run_jobs_api_stage_runs__run_id__jobs_get"];
     put?: never;
     /** Jobs */
     post: operations["jobs_api_stage_runs__run_id__jobs_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jobs/{job_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel Job */
+    post: operations["cancel_job_api_jobs__job_id__cancel_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -396,6 +414,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/stage-runs/{run_id}/workspace": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Workspace */
+    get: operations["workspace_api_stage_runs__run_id__workspace_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/gallery": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stage Gallery */
+    get: operations["stage_gallery_api_stage_runs__run_id__gallery_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stage-runs/{run_id}/artifacts/raw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stage Artifact Raw */
+    get: operations["stage_artifact_raw_api_stage_runs__run_id__artifacts_raw_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/projects/from-quicklook": {
     parameters: {
       query?: never;
@@ -424,6 +493,40 @@ export interface paths {
     put?: never;
     /** Invalidate */
     post: operations["invalidate_api_stage_runs__run_id__invalidate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/protocol/form": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Protocol Form */
+    get: operations["protocol_form_api_protocol_form_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/protocol/freeze": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Protocol Freeze */
+    post: operations["protocol_freeze_api_protocol_freeze_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -588,6 +691,24 @@ export interface components {
       /** Size */
       size: number;
     };
+    /** FreezeBody */
+    FreezeBody: {
+      /** Target Gene */
+      target_gene: string;
+      /** Species */
+      species: string;
+      /** Harmony Keys */
+      harmony_keys: string[];
+      /**
+       * Loose Min Genes
+       * @default 200
+       */
+      loose_min_genes: number;
+      /** Data Path */
+      data_path: string;
+      /** Libraries */
+      libraries: components["schemas"]["LibraryBody"][];
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -634,6 +755,17 @@ export interface components {
        * @default false
        */
       reuse_umap: boolean;
+      /** Fields */
+      fields?: {
+        [key: string]: unknown;
+      };
+    };
+    /** LibraryBody */
+    LibraryBody: {
+      /** Library Id */
+      library_id: string;
+      /** Dataset */
+      dataset: string;
     };
     /** LogView */
     LogView: {
@@ -1551,6 +1683,39 @@ export interface operations {
       };
     };
   };
+  stage_run_jobs_api_stage_runs__run_id__jobs_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          }[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   jobs_api_stage_runs__run_id__jobs_post: {
     parameters: {
       query?: never;
@@ -1568,6 +1733,39 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cancel_job_api_jobs__job_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -1643,6 +1841,105 @@ export interface operations {
       };
     };
   };
+  workspace_api_stage_runs__run_id__workspace_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  stage_gallery_api_stage_runs__run_id__gallery_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  stage_artifact_raw_api_stage_runs__run_id__artifacts_raw_get: {
+    parameters: {
+      query: {
+        rel: string;
+      };
+      header?: never;
+      path: {
+        run_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   from_quicklook_api_projects_from_quicklook_post: {
     parameters: {
       query?: never;
@@ -1697,6 +1994,63 @@ export interface operations {
         content: {
           "application/json": {
             [key: string]: number[];
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  protocol_form_api_protocol_form_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  protocol_freeze_api_protocol_freeze_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FreezeBody"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
           };
         };
       };

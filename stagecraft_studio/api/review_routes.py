@@ -8,10 +8,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from stagecraft_studio.api.files import PathRejected, resolve_inside
+from stagecraft_studio.db.gallery import GalleryNotFound, get_stage_gallery, resolve_stage_dir
 from stagecraft_studio.db.models import AuditEvent, Job, ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
@@ -253,6 +256,41 @@ def build_review_router(
                 return get_stage_workspace(session, run_id)
             except WorkspaceNotFound:
                 raise HTTPException(status_code=404, detail="STAGE_RUN_NOT_FOUND") from None
+
+    @router.get("/api/stage-runs/{run_id}/gallery")
+    def stage_gallery(run_id: int) -> dict[str, object]:
+        with factory() as session:
+            try:
+                return get_stage_gallery(session, run_id)
+            except GalleryNotFound:
+                raise HTTPException(status_code=404, detail="STAGE_RUN_NOT_FOUND") from None
+
+    @router.get("/api/stage-runs/{run_id}/artifacts/raw")
+    def stage_artifact_raw(run_id: int, rel: str) -> FileResponse:
+        with factory() as session:
+            run = _run(session, run_id)
+            stage_dir = resolve_stage_dir(session, run)
+        try:
+            path = resolve_inside(stage_dir, rel)
+        except PathRejected as exc:
+            raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        ext = path.suffix.casefold()
+        media_type = "application/octet-stream"
+        if ext == ".png":
+            media_type = "image/png"
+        elif ext == ".svg":
+            media_type = "image/svg+xml"
+        elif ext == ".pdf":
+            media_type = "application/pdf"
+        elif ext in {".csv", ".tsv"}:
+            media_type = "text/csv; charset=utf-8"
+        elif ext == ".json":
+            media_type = "application/json"
+        elif ext in {".txt", ".log", ".md"}:
+            media_type = "text/plain; charset=utf-8"
+        return FileResponse(path, media_type=media_type)
 
     @router.post("/api/projects/from-quicklook", status_code=201)
     def from_quicklook(request: Request, body: CarryBody) -> dict[str, object]:
