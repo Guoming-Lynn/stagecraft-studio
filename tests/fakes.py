@@ -137,7 +137,8 @@ def write_fake_formal_scripts(directory: Path) -> Path:
                 "if args.out:\n"
                 "    args.out.mkdir(parents=True, exist_ok=True)\n"
                 f"    for fname in {contract_files!r}:\n"
-                "        (args.out / fname).write_text('contract-file\\n', encoding='utf-8')\n"
+                "        content = '{}\\n' if fname.endswith('.json') else 'contract-file\\n'\n"
+                "        (args.out / fname).write_text(content, encoding='utf-8')\n"
             )
         script_path.write_text(code, encoding="utf-8")
     return directory

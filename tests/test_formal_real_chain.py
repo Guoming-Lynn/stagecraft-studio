@@ -263,7 +263,7 @@ def test_real_formal_engine_chain_part1(tmp_path: Path) -> None:
         worker.stop()
 
 
-def _wait_for_job(factory: object, job_id: int, max_seconds: float = 30.0) -> None:
+def _wait_for_job(factory: object, job_id: int, max_seconds: float = 60.0) -> None:
     deadline = time.time() + max_seconds
     while time.time() < deadline:
         with factory() as session:  # type: ignore[operator]

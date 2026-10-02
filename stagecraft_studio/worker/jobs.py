@@ -38,6 +38,7 @@ from stagecraft_studio.engine.formal_args import (
 )
 from stagecraft_studio.engine.formal_contract import FORMAL_OUTPUT_CONTRACTS
 from stagecraft_studio.engine.formal_launch import FormalLaunch
+from stagecraft_studio.rules.evaluator import record_job_rules
 from stagecraft_studio.rules.quicklook import FormalInputRejected
 from stagecraft_studio.worker.process_tree import kill_tree, spawn
 
@@ -371,6 +372,7 @@ class FormalWorker:
                         )
                     )
 
+            record_job_rules(session, job, dest_dir=dest_dir)
             job.job_status = "COMPLETED"
             session.commit()
 
@@ -379,4 +381,5 @@ class FormalWorker:
         payload = json.loads(job.payload_json) if job.payload_json else {}
         payload["failure_reason"] = reason
         job.payload_json = json.dumps(payload)
+        record_job_rules(session, job, dest_dir=None, failure_reason=reason)
         session.commit()

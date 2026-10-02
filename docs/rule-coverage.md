@@ -13,12 +13,12 @@
 | BLINDING_EXPOSURE_RECORDED | 机器校验 | 已落实 | stagecraft_studio/rules/gates.py | test_quicklook_exposure_forces_unblinded | 同一项目看过速览目标基因结果时，审阅记为 UNBLINDED_WITH_REASON。 |
 | DELETE_RECOMPUTE_REQUIRED | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_delete_cannot_reuse_the_old_umap | 有 DELETE 时从保留的 counts 重新跑网格，不沿用旧 UMAP。 |
 | LINEAR_INVALIDATION | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_upstream_change_invalidates_downstream | 上游一变，下游 INVALIDATED，旧结果只读。 |
-| INPUT_COUNTS_VALID | 机器校验 | 未落实 |  |  | counts 不合法时在预检阻断。正式引擎已拒绝非整数，Studio 入口还没接。 |
-| TARGET_MEASURED_IN_COMMON_SET | 机器校验 | 未落实 | stagecraft_formal/merge.py |  | 目标基因不在 strict-common 就停止。规则在正式引擎，Studio 规则表还没接。 |
+| INPUT_COUNTS_VALID | 机器校验 | 已落实 | stagecraft_formal/counts.py | test_input_counts_valid_recorded_on_load | counts 不合法时在预检阻断。正式引擎拒绝非整数与负数，Worker 读产物记录规则判定。 |
+| TARGET_MEASURED_IN_COMMON_SET | 机器校验 | 已落实 | stagecraft_formal/merge.py | test_target_measured_in_common_set_recorded_on_merge | 目标基因不在 strict-common 就停止。正式引擎阻止合并，Worker 读产物记录规则判定。 |
 | DONOR_MAPPING_REQUIRED | 机器校验 | 未落实 |  |  | 缺失身份对应关系时阻断 donor 推断。 |
-| DOUBLET_FAILURE_EXPLICIT | 机器校验 | 未落实 | stagecraft_formal/qc.py |  | Scrublet 失败不能当成全是 singlet。规则在正式引擎，Studio 规则表还没接。 |
-| PER_LIBRARY_QC | 机器校验 | 未落实 | stagecraft_formal/qc.py |  | MAD 与 Scrublet 逐 library 估计。 |
-| DESIGN_ESTIMABLE | 机器校验 | 未落实 |  |  | 按冻结模型检查秩和暴露变化。 |
+| DOUBLET_FAILURE_EXPLICIT | 机器校验 | 已落实 | stagecraft_formal/qc.py | test_doublet_failure_explicit_recorded_on_qc | Scrublet 失败不能当成全是 singlet。过小或失败 library 离开主 atlas 并显式记录。 |
+| PER_LIBRARY_QC | 机器校验 | 已落实 | stagecraft_formal/qc.py | test_per_library_qc_recorded_on_qc | MAD 与 Scrublet 逐 library 估计，由 Worker 记录各 library 的 QC 规则判定。 |
+| DESIGN_ESTIMABLE | 机器校验 | 已落实 | stagecraft_formal/eligibility.py | test_design_estimable_recorded_on_prepare | 按冻结模型检查秩、自由度与暴露变化。不合格记 NOT_ESTIMABLE 并由 Worker 记录 BLOCK。 |
 | CLAIM_SCOPE_ALLOWED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 描述性阶段不能获得 donor 推断资格。associated 只有来源块留一被记录后才可能为 true。 |
 | CALIBRATION_STATUS_PRESERVED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 校准状态不得因软件跑完或请求里写了通过而升级。 |
 | QUICKLOOK_LABELS_PROVISIONAL | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_quicklook_carry_omits_labels_and_resolution | 从速览带入时只保留数据路径、字段映射和目标基因。 |
