@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from alembic import command
@@ -14,3 +15,6 @@ def upgrade_database(database: Path) -> None:
     config = Config(str(ROOT / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database.as_posix()}")
     command.upgrade(config, "head")
+    with sqlite3.connect(database) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")

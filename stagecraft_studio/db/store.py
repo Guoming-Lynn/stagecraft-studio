@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from stagecraft_studio.db.models import (
@@ -28,8 +28,17 @@ ENGINE_VERSION = "0.0.0"
 RULE_VERSION = "g4"
 
 
+def _configure_sqlite_pragmas(dbapi_connection: object, _connection_record: object) -> None:
+    if hasattr(dbapi_connection, "cursor"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.close()
+
+
 def session_factory(database: Path) -> sessionmaker[Session]:
     engine = create_engine(f"sqlite:///{database.as_posix()}")
+    event.listen(engine, "connect", _configure_sqlite_pragmas)
     return sessionmaker(bind=engine)
 
 
