@@ -121,6 +121,19 @@ export function ProtocolForm() {
           />
         </div>
       ))}
+      <div className="row" style={{ gap: "8px" }}>
+        <button
+          type="button"
+          onClick={() =>
+            setLibraries((current) => [
+              ...current,
+              { library_id: "", dataset: "" },
+            ])
+          }
+        >
+          + {chrome.library}
+        </button>
+      </div>
       <button type="submit">{chrome.freeze}</button>
       {message ? <p className="hint">{message}</p> : null}
     </form>
