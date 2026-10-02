@@ -2,6 +2,9 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 正式分析图库（P16）：提供图库聚合与原图/数据下载接口（`GET /api/stage-runs/{run_id}/gallery`、`GET /api/stage-runs/{run_id}/artifacts/raw`），支持 PNG、SVG、PDF、Source Data CSV、参数 JSON 预览与下载，如实保留并突出展示 `NOT_ESTIMABLE` 槽位，杜绝为排版美观而隐匿失败项。
+- 阶段工作区（P15）：提供输入、参数、结果、检查、日志 5 个页签（`GET /api/stage-runs/{run_id}/workspace`），连接 Part 2-5 证据入库，前端 `StageWorkspace` 与 `WorkspaceResults` 严格受限在行数上限以内。
+- 规则覆盖落表（P14）：在 FormalWorker 中评估引擎产物规则，登记 `RuleResultRow`（`TARGET_MEASURED_IN_COMMON_SET`、`DOUBLET_FAILURE_EXPLICIT`、`PER_LIBRARY_QC`、`DESIGN_ESTIMABLE`、`INPUT_COUNTS_VALID`），规则目录与覆盖报告对齐并通过 100% 单元测试。
 - 正式 Part 5 参数补充 `--block-fallback-declared` 开关支持（D1）：在 `PrepareArgs` 与任务规范中增加 `block_fallback_declared` 开关，供协议预先声明接受单供体单行时的无 block 回退。
 - 后台单线程 FormalWorker 执行正式分析任务：临时目录隔离、子进程树安全取消、服务重启中断恢复（INTERRUPTED）、流式 sha256 登记 Artifact。
 - 输出契约与真实引擎实际产物对齐：`formal_part2_survey` 对齐 `part2_record.json`，`formal_part4_survey` 对齐 `part4_record.json`，`formal_part3_recluster` 契约要求 `compartment_counts.h5ad`、`part3_record.json`、`grid_record.json`。

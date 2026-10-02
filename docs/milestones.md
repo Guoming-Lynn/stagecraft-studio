@@ -126,25 +126,37 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 状态：已提交 `1126592`。字段来自 `GET /api/protocol/form`。冻结走 `POST /api/protocol/freeze`。Harmony 必须含 `dataset`，拒绝 `donor_id`、`condition`、`disease`、`cell_type` 和目标基因。
 
+## P14 规则覆盖落表
+
+状态：已提交 `9eb24ba`。FormalWorker 中在任务发布后评估引擎输出契约与日志，写入 `RuleResultRow`（覆盖 `INPUT_COUNTS_VALID`、`PER_LIBRARY_QC`、`DOUBLET_FAILURE_EXPLICIT`、`TARGET_MEASURED_IN_COMMON_SET`、`DESIGN_ESTIMABLE` 5 项核心规则）。`catalog.py` 与 `docs/rule-coverage.md` 全部更新并通过单元测试。
+
+## P15 阶段工作区
+
+状态：已提交 `d433d62`。后端实现 `GET /api/stage-runs/{run_id}/workspace`，聚合输入、参数、结果、检查、日志 5 个页签；连接 Part 2-5 证据入库（`StageRun.evidence_json`）；前端拆分 `StageWorkspace.tsx` 与 `WorkspaceResults.tsx`，严格满足 300 行卫生上限。
+
+## P16 正式分析图库
+
+状态：已提交 `61fb4b3`。后端实现 `GET /api/stage-runs/{run_id}/gallery` 与 `GET /api/stage-runs/{run_id}/artifacts/raw`；支持 PNG/SVG 预览、PDF/CSV/JSON 下载；前端实现 `Gallery.tsx` 与 `GalleryCard.tsx`，如实保留并突出展示 `NOT_ESTIMABLE` 槽位，杜绝美观隐匿失败项。
+
 ## M4 验收
 
-| 条款 | 状态 |
-| --- | --- |
-| 人工 gate 跳不过去，直接调 API 也不行 | 通过 |
-| 旧审阅不能用于新聚类 | 通过 |
-| Scrublet 失败路径有测试 | 通过。测试在正式引擎 |
-| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足。正式引擎没有远端 |
-| 从速览开始只带入路径、字段映射和基因 | 通过 |
-| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 未满足 |
+| 条款 | 状态 | 说明 |
+| --- | --- | --- |
+| 人工 gate 跳不过去，直接调 API 也不行 | 通过 | `tests/test_review_gates.py`，请求模型 `extra=forbid`，无令牌 401 |
+| 旧审阅不能用于新聚类 | 通过 | `test_old_cluster_review_does_not_apply_to_new_ids` |
+| Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
+| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎尚无 GitHub 远端（待决定 D2），CI 未在远端真实跑过 |
+| 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
+| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | 引擎侧 `ddea924`、Studio fake 串联 `2fa5dfa`、真实引擎无桩串联 `79343d7` |
 
 ## M5 验收
 
-| 条款 | 状态 |
-| --- | --- |
-| 同一主线在 GUI 里跑通 | 未满足。后台 worker 已支持正式任务执行并通过真实引擎串联测试，完整 GUI 联动待验证 |
-| skill 仓库已有科学回归不退化 | 无证据 |
-| 不可估计和校准限制在界面和报告中保留 | 报告和审阅页有。图库页和阶段工作区没有 |
+| 条款 | 状态 | 说明 |
+| --- | --- | --- |
+| 同一主线在 GUI 里跑通 | 部分满足 | 后台 worker 执行链与 API/GUI 组件均已完备（工作区、图库、审阅、设计），大样本浏览器全流程联动待验证 |
+| skill 仓库已有科学回归不退化 | 通过 | 已确诊环境缺少 MKL DLL 查找路径，加入 PATH 后全量 pytest 125 passed，零退化 |
+| 不可估计和校准限制在界面和报告中保留 | 通过 | 报告、审阅中心、阶段工作区、图库页均完整保留，且通过全部单元测试与 E2E 验证 |
 
 ## 剩余工作
 
-见 skill 仓库本机文件 `docs/STUDIO_AUDIT_FIXLIST.local.md` 的 P7 到 P13。P1 到 P6 是记录和生成文件校验，不改变分析行为。
+M0–M5 已落地，剩余功能：真实单细胞大矩阵在 Studio GUI 全流程走通；M6（可选 AI 助手）、M7（打包与部署）待后续阶段规划。
