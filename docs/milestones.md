@@ -145,18 +145,21 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 | 人工 gate 跳不过去，直接调 API 也不行 | 通过 | `tests/test_review_gates.py`，请求模型 `extra=forbid`，无令牌 401 |
 | 旧审阅不能用于新聚类 | 通过 | `test_old_cluster_review_does_not_apply_to_new_ids` |
 | Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
-| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎尚无 GitHub 远端（待决定 D2），CI 未在远端真实跑过 |
+| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎尚无 GitHub 远端（已决议建新独立公共仓库），CI 尚未在远端真实跑过 |
 | 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
-| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | 引擎侧 `ddea924`、Studio fake 串联 `2fa5dfa`、真实引擎无桩串联 `79343d7` |
+| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 部分满足 | 正式引擎侧完成 Part 1–5 串联；Studio 侧真实引擎集成（`test_formal_real_chain.py`）覆盖 Part 1（加载→QC→合并→网格），Part 2–5 在 Studio 侧已有契约和假脚本串联，待真实引擎环境串通（注：`test_formal_real_chain.py` 因依赖本地正式引擎路径，在 CI 中自动跳过） |
 
 ## M5 验收
 
 | 条款 | 状态 | 说明 |
 | --- | --- | --- |
-| 同一主线在 GUI 里跑通 | 部分满足 | 后台 worker 执行链与 API/GUI 组件均已完备（工作区、图库、审阅、设计），大样本浏览器全流程联动待验证 |
-| skill 仓库已有科学回归不退化 | 通过 | 已确诊环境缺少 MKL DLL 查找路径，加入 PATH 后全量 pytest 125 passed，零退化 |
-| 不可估计和校准限制在界面和报告中保留 | 通过 | 报告、审阅中心、阶段工作区、图库页均完整保留，且通过全部单元测试与 E2E 验证 |
+| 同一主线在 GUI 里跑通 | 部分满足 | 真实引擎在 Studio 侧已覆盖 Part 1，Part 2–5 仅有契约和假脚本测试，尚未用真实引擎端到端串通；大样本浏览器全流程联动待实测 |
+| skill 仓库已有科学回归不退化 | 通过（需 PATH 含 sc_analysis\Library\bin） | Windows 下需将 `D:\miniforge\envs\sc_analysis\Library\bin` 加入 PATH 解决 `libiomp5md.dll` 依赖，加入后全量 pytest 125 passed，零退化 |
+| 不可估计和校准限制在界面和报告中保留 | 部分满足 | 报告、审阅中心、阶段工作区、图库页均保留 NOT_ESTIMABLE 槽位与校准限制；盲审门禁在原图下载（`/artifacts/raw`）与图库（`/gallery`）已由包 B 补齐（审阅前/盲审期过滤目标基因产物，严禁 `.studio/` 内部访问） |
 
 ## 剩余工作
 
-M0–M5 已落地，剩余功能：真实单细胞大矩阵在 Studio GUI 全流程走通；M6（可选 AI 助手）、M7（打包与部署）待后续阶段规划。
+- 正式引擎与 Studio 真实串联向 Part 2–5 推进（目前 Studio 真实引擎测试覆盖至 Part 1）。
+- 大样本真实数据在 Studio GUI 中的全流程端到端核验。
+- M6（可选 AI 助手，只读证据与代码解释，不生成新标签与推断结论）。
+- M7（打包与部署）。

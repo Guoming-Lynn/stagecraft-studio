@@ -61,3 +61,18 @@ pnpm install --frozen-lockfile
 ```text
 uv run pre-commit install
 ```
+
+## Windows 运行环境补充（正式引擎与技能测试）
+
+在 Windows 环境下运行正式引擎或执行技能仓库科学回归测试时，底层科学计算库（如 NumPy/SciPy/Scanpy MKL 依赖）需要 OpenMP 运行时 DLL。如果在执行时报错 `ImportError: DLL load failed while importing _arpack: 找不到指定的模块` 或缺少 `libiomp5md.dll`，需在终端或系统 `PATH` 中前置引入 MKL 动态库路径：
+
+```powershell
+$env:Path = "D:\miniforge\envs\sc_analysis\Library\bin;$env:Path"
+```
+
+若需执行真实引擎端到端串联测试（`tests/test_formal_real_chain.py`），可显式配置正式引擎脚本与 Python 解释器路径（CI 默认不配置此环境变量并自动跳过）：
+
+```powershell
+$env:STAGECRAFT_FORMAL_SCRIPTS = "D:\stagecraft-formal-engine\scripts"
+$env:STAGECRAFT_FORMAL_PYTHON = "D:\stagecraft-formal-engine\.venv\Scripts\python.exe"
+```
