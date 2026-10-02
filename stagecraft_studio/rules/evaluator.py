@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.db.models import Job, RuleResultRow
+from stagecraft_studio.db.models import Job, RuleResultRow, StageRun
 
 
 def _now() -> datetime:
@@ -253,3 +254,42 @@ def record_job_rules(
         rows.append(row)
 
     return rows
+
+
+def record_job_evidence(
+    session: Session,
+    job: Job,
+    *,
+    dest_dir: Path | None,
+) -> None:
+    """Store published records from Part 2, Part 4, and Part 5 into StageRun.evidence_json."""
+    if dest_dir is None:
+        return
+    run = session.get(StageRun, job.stage_run_id)
+    if run is None:
+        return
+    evidence = json.loads(run.evidence_json) if run.evidence_json else {}
+    task_id = job.task_id
+
+    if task_id == "formal_part5_prepare":
+        vpath = dest_dir / "verdict.json"
+        if vpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["verdict"] = json.loads(vpath.read_text(encoding="utf-8"))
+    elif task_id == "formal_part4_survey":
+        rpath = dest_dir / "part4_record.json"
+        if rpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["part4"] = json.loads(rpath.read_text(encoding="utf-8"))
+    elif task_id == "formal_part2_survey":
+        rpath = dest_dir / "part2_record.json"
+        if rpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["part2"] = json.loads(rpath.read_text(encoding="utf-8"))
+    elif task_id == "formal_part1_grid":
+        gpath = dest_dir / "grid_record.json"
+        if gpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["grid"] = json.loads(gpath.read_text(encoding="utf-8"))
+
+    run.evidence_json = json.dumps(evidence, ensure_ascii=False)

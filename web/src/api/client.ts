@@ -193,6 +193,69 @@ export function submitClusters(
   });
 }
 
+export interface StageWorkspaceView {
+  id: number;
+  stage_status: string;
+  invalidated: boolean;
+  inputs: {
+    project_id: number | null;
+    project_name: string;
+    root_path: string;
+    protocol_id: number | null;
+    protocol_hash: string;
+    input_hash: string;
+    target_gene: string;
+    species: string;
+    data_path: string;
+    document: Record<string, unknown>;
+  };
+  parameters: {
+    job_id: number;
+    task_id: string;
+    job_status: string;
+    fields: Record<string, unknown>;
+  }[];
+  results: {
+    scientific_status: {
+      scientific_status: string;
+      calibration_status: string;
+      associated: boolean;
+      claims_limma: boolean;
+      forecast_is_not_a_verdict: boolean;
+      lodo_is_replication: boolean;
+      holdout: string;
+      read_only: boolean;
+      limits: string[];
+    };
+    evidence: Record<string, unknown>;
+    artifacts: {
+      id: number;
+      job_id: number;
+      relative_path: string;
+      content_hash: string;
+      artifact_status: string;
+    }[];
+  };
+  checks: {
+    id: number;
+    rule_id: string;
+    rule_status: string;
+    detail: Record<string, unknown>;
+    checked_at: string | null;
+  }[];
+  logs: {
+    id: number;
+    task_id: string;
+    job_status: string;
+    failure_reason: string | null;
+    created_at: string | null;
+  }[];
+}
+
+export function loadStageWorkspace(runId: number): Promise<StageWorkspaceView> {
+  return send(`/api/stage-runs/${runId}/workspace`);
+}
+
 export function errorText(error: unknown): string {
   if (!(error instanceof Error)) return "请求失败";
   try {

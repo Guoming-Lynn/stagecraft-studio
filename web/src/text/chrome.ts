@@ -99,6 +99,10 @@ export const chrome = {
   clusters: "cluster 数",
   notify: "运行结束时通知我",
   notifyOn: "结束时会通知",
+  workspace: "工作区",
+  results: "结果",
+  checks: "检查",
+  gallery: "图库",
 } as const;
 
 export function rowCount(total: number): string {

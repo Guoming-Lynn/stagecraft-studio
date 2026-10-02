@@ -28,6 +28,7 @@ from stagecraft_studio.db.store import (
     open_stage_run,
     session_factory,
 )
+from stagecraft_studio.db.workspace import WorkspaceNotFound, get_stage_workspace
 from stagecraft_studio.domain.protocol_form import FormError, document_from_form, form_fields
 from stagecraft_studio.rules.gates import GateRejected
 
@@ -244,6 +245,14 @@ def build_review_router(
             if not isinstance(target, str):
                 target = ""
             return review_center(run, target)
+
+    @router.get("/api/stage-runs/{run_id}/workspace")
+    def workspace(run_id: int) -> dict[str, object]:
+        with factory() as session:
+            try:
+                return get_stage_workspace(session, run_id)
+            except WorkspaceNotFound:
+                raise HTTPException(status_code=404, detail="STAGE_RUN_NOT_FOUND") from None
 
     @router.post("/api/projects/from-quicklook", status_code=201)
     def from_quicklook(request: Request, body: CarryBody) -> dict[str, object]:
