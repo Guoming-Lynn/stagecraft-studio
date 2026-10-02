@@ -11,6 +11,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from stagecraft_studio.db.models import Job, RuleResultRow, StageRun
+from stagecraft_studio.rules.gates import canonical_resolution
 
 
 def _now() -> datetime:
@@ -341,35 +342,32 @@ def record_job_evidence(
                 evidence["grid"] = json.loads(gpath.read_text(encoding="utf-8"))
         opath = dest_dir / "Leiden_resolution_overview.csv"
         if opath.is_file():
-            with contextlib.suppress(OSError):
-                import csv
-
-                with opath.open("r", encoding="utf-8") as f:
-                    rows = list(csv.DictReader(f))
-                    for r in rows:
-                        for k in ("n_clusters", "min_cluster_size", "max_cluster_size"):
-                            if k in r and r[k] is not None:
-                                with contextlib.suppress(ValueError):
-                                    r[k] = int(r[k])
-                        if "median_cluster_size" in r and r["median_cluster_size"] is not None:
+            with contextlib.suppress(OSError), opath.open("r", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
+                for r in rows:
+                    if "resolution" in r and r["resolution"] is not None:
+                        r["resolution"] = canonical_resolution(r["resolution"])
+                    for k in ("n_clusters", "min_cluster_size", "max_cluster_size"):
+                        if k in r and r[k] is not None:
                             with contextlib.suppress(ValueError):
-                                r["median_cluster_size"] = float(r["median_cluster_size"])
-                    evidence["overview"] = rows
+                                r[k] = int(r[k])
+                    if "median_cluster_size" in r and r["median_cluster_size"] is not None:
+                        with contextlib.suppress(ValueError):
+                            r["median_cluster_size"] = float(r["median_cluster_size"])
+                evidence["overview"] = rows
         cpath = dest_dir / "cluster_by_dataset.csv"
         if cpath.is_file():
-            with contextlib.suppress(OSError):
-                import csv
-
-                with cpath.open("r", encoding="utf-8") as f:
-                    res_map: dict[str, list[str]] = {}
-                    for crow in csv.DictReader(f):
-                        res_val = str(crow.get("resolution", ""))
-                        cid = str(crow.get("cluster", ""))
-                        if res_val and cid:
-                            if res_val not in res_map:
-                                res_map[res_val] = []
-                            if cid not in res_map[res_val]:
-                                res_map[res_val].append(cid)
-                    evidence["clusters_by_resolution"] = res_map
+            with contextlib.suppress(OSError), cpath.open("r", encoding="utf-8") as f:
+                res_map: dict[str, list[str]] = {}
+                for crow in csv.DictReader(f):
+                    raw_res = str(crow.get("resolution", ""))
+                    res_val = canonical_resolution(raw_res) if raw_res else ""
+                    cid = str(crow.get("cluster", ""))
+                    if res_val and cid:
+                        if res_val not in res_map:
+                            res_map[res_val] = []
+                        if cid not in res_map[res_val]:
+                            res_map[res_val].append(cid)
+                evidence["clusters_by_resolution"] = res_map
 
     run.evidence_json = json.dumps(evidence, ensure_ascii=False)

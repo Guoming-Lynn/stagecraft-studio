@@ -11,7 +11,18 @@ from sqlalchemy.orm import Session
 from stagecraft_studio.db.models import Project, ProtocolVersion, ReviewDecision, StageRun
 
 BLINDING_VALUES = frozenset({"BLIND", "UNBLINDED_WITH_REASON", "NOT_APPLICABLE"})
-RESOLUTIONS = frozenset({"0.2", "0.3", "0.4", "0.5", "0.6", "0.8", "1.0", "1.2", "1.5"})
+LEIDEN_RESOLUTIONS: tuple[str, ...] = (
+    "0.2",
+    "0.3",
+    "0.4",
+    "0.5",
+    "0.6",
+    "0.8",
+    "1.0",
+    "1.2",
+    "1.5",
+)
+RESOLUTIONS = frozenset(LEIDEN_RESOLUTIONS)
 DECISIONS = frozenset({"KEEP", "DELETE"})
 PRE_RESOLUTION = frozenset(
     {
@@ -31,6 +42,21 @@ class GateRejected(Exception):
         self.rule_id = rule_id
         self.status_code = status_code
         super().__init__(rule_id)
+
+
+def canonical_resolution(value: object) -> str:
+    """Normalize resolution strings (e.g. '0.20' -> '0.2') to match LEIDEN_RESOLUTIONS."""
+    text = str(value).strip()
+    if text in RESOLUTIONS:
+        return text
+    try:
+        val_f = float(text)
+        for canon in LEIDEN_RESOLUTIONS:
+            if abs(val_f - float(canon)) < 1e-6:
+                return canon
+    except (ValueError, TypeError):
+        pass
+    return text
 
 
 def require_text(value: str, rule_id: str) -> str:
@@ -69,9 +95,25 @@ def exposure_blinding(requested: str, quicklook_seen: bool) -> tuple[str, str]:
 
 
 def require_resolution(value: str) -> str:
-    if value not in RESOLUTIONS:
+    canon = canonical_resolution(value)
+    if canon not in RESOLUTIONS:
         raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
-    return value
+    return canon
+
+
+_EXCLUDED_EVIDENCE = frozenset({"part2", "part4", "verdict"})
+
+
+def evidence_digest(evidence_json: str) -> str:
+    try:
+        data = json.loads(evidence_json)
+        if isinstance(data, dict):
+            clean = {k: v for k, v in data.items() if k not in _EXCLUDED_EVIDENCE}
+            payload = json.dumps(clean, sort_keys=True, separators=(",", ":"))
+            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    except (json.JSONDecodeError, OSError):
+        pass
+    return hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
 
 
 def cluster_set_hash(leiden_ids: list[str]) -> str:

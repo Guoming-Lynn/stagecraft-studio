@@ -273,6 +273,7 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
                 }
             ],
             "clusters": ["0", "1"],
+            "clusters_by_resolution": {"0.4": ["0", "1"]},
             "genes": [{"gene": "STAT1", "expression": [1.5, 0.2]}],
         }
         raw_evidence = json.dumps(evidence)

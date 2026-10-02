@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,7 +24,9 @@ from stagecraft_studio.rules.gates import (
     PRE_RESOLUTION,
     RESOLUTIONS,
     GateRejected,
+    canonical_resolution,
     cluster_set_hash,
+    evidence_digest,
     exposure_blinding,
     filter_annotation_evidence,
     require_blinding,
@@ -36,20 +37,6 @@ from stagecraft_studio.rules.gates import (
     require_text,
 )
 from stagecraft_studio.rules.scientific_status import scientific_status
-
-_EXCLUDED_EVIDENCE = frozenset({"part2", "part4", "verdict"})
-
-
-def evidence_digest(evidence_json: str) -> str:
-    try:
-        data = json.loads(evidence_json)
-        if isinstance(data, dict):
-            clean = {k: v for k, v in data.items() if k not in _EXCLUDED_EVIDENCE}
-            payload = json.dumps(clean, sort_keys=True, separators=(",", ":"))
-            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-    except (json.JSONDecodeError, OSError):
-        pass
-    return hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
 
 
 def submit_resolution(
@@ -76,16 +63,26 @@ def submit_resolution(
     if not isinstance(overview, list) or not overview:
         raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
 
+    matched = [
+        it
+        for it in overview
+        if isinstance(it, dict) and canonical_resolution(str(it.get("resolution", ""))) == chosen
+    ]
+    if not matched:
+        raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+
     clusters_map = evidence.get("clusters_by_resolution") if isinstance(evidence, dict) else None
-    if isinstance(clusters_map, dict) and chosen in clusters_map:
-        cluster_ids = [str(x) for x in clusters_map[chosen]]
-    else:
-        matched = [
-            it for it in overview if isinstance(it, dict) and str(it.get("resolution")) == chosen
-        ]
-        if not matched:
-            raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
-        cluster_ids = [str(i) for i in range(int(matched[0].get("n_clusters", 0)))]
+    if not isinstance(clusters_map, dict):
+        raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+    ids = clusters_map.get(chosen)
+    if ids is None:
+        for k, v in clusters_map.items():
+            if canonical_resolution(k) == chosen:
+                ids = v
+                break
+    if not ids:
+        raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+    cluster_ids = [str(x) for x in ids]
 
     run.leiden_ids_json = json.dumps(cluster_ids)
     recorded, reason = exposure_blinding(require_blinding(blinding), run.quicklook_seen)
@@ -185,7 +182,7 @@ def review_center(run: StageRun, target_gene: str) -> dict[str, object]:
     resolutions = (
         [
             {
-                "resolution": it.get("resolution"),
+                "resolution": canonical_resolution(it.get("resolution", "")),
                 "n_clusters": it.get("n_clusters"),
                 "min_cluster_size": it.get("min_cluster_size"),
                 "max_cluster_size": it.get("max_cluster_size"),
@@ -291,7 +288,8 @@ def _require_current_resolution(session: Session, run: StageRun) -> None:
     if decision is None or decision.evidence_hash != current:
         _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
     body = json.loads(decision.body_json)
-    if not isinstance(body, dict) or body.get("resolution") not in RESOLUTIONS:
+    res = canonical_resolution(str(body.get("resolution", ""))) if isinstance(body, dict) else ""
+    if res not in RESOLUTIONS:
         _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
 
 
@@ -355,15 +353,14 @@ def _decision(
 
 
 def _block(session: Session, run: StageRun, rule_id: str, status_code: int = 409) -> NoReturn:
-    session.add(
-        RuleResultRow(
-            stage_run_id=run.id,
-            rule_id=rule_id,
-            rule_status="BLOCK",
-            detail_json=json.dumps({"run_id": run.id}),
-            checked_at=_now(),
-        )
+    row = RuleResultRow(
+        stage_run_id=run.id,
+        rule_id=rule_id,
+        rule_status="BLOCK",
+        detail_json=json.dumps({"run_id": run.id}),
+        checked_at=_now(),
     )
+    session.add(row)
     _audit(session, run.project_id, "job_enqueue", "REJECTED", rule_id)
     session.commit()
     raise GateRejected(rule_id, status_code)

@@ -331,6 +331,10 @@ def _client(tmp_path: Path, *, quicklook_seen: bool = False) -> tuple[TestClient
             {"resolution": "0.4", "n_clusters": 2, "min_cluster_size": 10, "max_cluster_size": 20},
             {"resolution": "0.2", "n_clusters": 2, "min_cluster_size": 10, "max_cluster_size": 20},
         ],
+        "clusters_by_resolution": {
+            "0.4": ["0", "1"],
+            "0.2": ["0", "1"],
+        },
     }
     raw = json.dumps(evidence)
     source = tmp_path / "counts.h5ad"
