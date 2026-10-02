@@ -2,6 +2,7 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 真实正式引擎端到端全流程串联测试（M4/M5）：新增 `tests/test_formal_real_pipeline.py`，不使用假脚本，使用真实引擎脚本完整走完 Part 1（加载→QC→合并→网格）→ 人工门禁（分辨率与聚类审阅）→ Part 3（重聚类）→ Part 2（单细胞概览与图表）→ Part 4（目标基因表达与图表）→ Part 5（准备分析与判定）→ 阶段报告（REPORT.md 校验）→ 工作区与图库 API（5 个页签与原图下载校验）全流程；更新审阅凭证摘要算法，排除下游结果字段对聚类审阅有效性的干扰。
 - 盲审、产物权限与规则依据真实性（Package B）：/gallery 与 /artifacts/raw 服务端在注释审阅未完成或盲审有效时过滤目标基因产物；/artifacts/raw 严禁访问 .studio/ 内部路径（含 tmp），只允许访问已登记且状态为 VALID 的产物；重跑任务时作废先前全部旧产物为 SUPERSEDED；INPUT_COUNTS_VALID 记录真实依据 output_file_present；TARGET_MEASURED_IN_COMMON_SET 真实读取 gene_presence_by_dataset.csv 校验主图谱全覆盖；test_formal_real_chain.py 移除硬编码路径改读环境变量。
 
 - 正式分析图库（P16）：提供图库聚合与原图/数据下载接口（`GET /api/stage-runs/{run_id}/gallery`、`GET /api/stage-runs/{run_id}/artifacts/raw`），支持 PNG、SVG、PDF、Source Data CSV、参数 JSON 预览与下载，如实保留并突出展示 `NOT_ESTIMABLE` 槽位，杜绝为排版美观而隐匿失败项。

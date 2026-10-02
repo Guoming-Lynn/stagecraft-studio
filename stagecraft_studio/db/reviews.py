@@ -36,8 +36,18 @@ from stagecraft_studio.rules.gates import (
 )
 from stagecraft_studio.rules.scientific_status import scientific_status
 
+_EXCLUDED_EVIDENCE = frozenset({"part2", "part4", "verdict"})
+
 
 def evidence_digest(evidence_json: str) -> str:
+    try:
+        data = json.loads(evidence_json)
+        if isinstance(data, dict):
+            clean = {k: v for k, v in data.items() if k not in _EXCLUDED_EVIDENCE}
+            payload = json.dumps(clean, sort_keys=True, separators=(",", ":"))
+            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    except (json.JSONDecodeError, OSError):
+        pass
     return hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
 
 
@@ -322,11 +332,7 @@ def _latest(session: Session, run_id: int, kind: str) -> ReviewDecision | None:
 
 
 def _decision(
-    session: Session,
-    run: StageRun,
-    digest: str,
-    reviewer: str,
-    body: dict[str, object],
+    session: Session, run: StageRun, digest: str, reviewer: str, body: dict[str, object]
 ) -> ReviewDecision:
     row = ReviewDecision(
         stage_run_id=run.id,

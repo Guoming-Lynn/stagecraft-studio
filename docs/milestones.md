@@ -147,19 +147,19 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 | Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
 | 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎尚无 GitHub 远端（已决议建新独立公共仓库），CI 尚未在远端真实跑过 |
 | 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
-| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 部分满足 | 正式引擎侧完成 Part 1–5 串联；Studio 侧真实引擎集成（`test_formal_real_chain.py`）覆盖 Part 1（加载→QC→合并→网格），Part 2–5 在 Studio 侧已有契约和假脚本串联，待真实引擎环境串通（注：`test_formal_real_chain.py` 因依赖本地正式引擎路径，在 CI 中自动跳过） |
+| 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | `tests/test_formal_real_chain.py` 与 `tests/test_formal_real_pipeline.py` 均使用真实正式引擎脚本端到端执行通过（覆盖 Part 1 加载→QC→合并→网格→审阅→Part 3 重聚类及后续，依赖本地正式引擎环境变量，CI 环境未配置时自动 skip） |
 
 ## M5 验收
 
 | 条款 | 状态 | 说明 |
 | --- | --- | --- |
-| 同一主线在 GUI 里跑通 | 部分满足 | 真实引擎在 Studio 侧已覆盖 Part 1，Part 2–5 仅有契约和假脚本测试，尚未用真实引擎端到端串通；大样本浏览器全流程联动待实测 |
+| 同一主线在 GUI 里跑通 | 部分满足 | Studio 后端与真实正式引擎已在 `tests/test_formal_real_pipeline.py` 实现 Part 1–5 全流程真实串联通过（含阶段工作区与图库 API），GUI 端已覆盖单点 E2E 演示与单元测试，浏览器中大样本真实数据全流程联动待实测 |
 | skill 仓库已有科学回归不退化 | 通过（需 PATH 含 sc_analysis\Library\bin） | Windows 下需将 `D:\miniforge\envs\sc_analysis\Library\bin` 加入 PATH 解决 `libiomp5md.dll` 依赖，加入后全量 pytest 125 passed，零退化 |
-| 不可估计和校准限制在界面和报告中保留 | 部分满足 | 报告、审阅中心、阶段工作区、图库页均保留 NOT_ESTIMABLE 槽位与校准限制；盲审门禁在原图下载（`/artifacts/raw`）与图库（`/gallery`）已由包 B 补齐（审阅前/盲审期过滤目标基因产物，严禁 `.studio/` 内部访问） |
+| 不可估计和校准限制在界面和报告中保留 | 通过 | 报告、审阅中心、阶段工作区、图库页均保留 NOT_ESTIMABLE 槽位与校准限制；盲审门禁在原图下载（`/artifacts/raw`）与图库（`/gallery`）已补齐（审阅前/盲审期过滤目标基因产物，严禁 `.studio/` 内部访问），已在 `test_formal_real_pipeline.py` 中端到端核验 |
 
 ## 剩余工作
 
-- 正式引擎与 Studio 真实串联向 Part 2–5 推进（目前 Studio 真实引擎测试覆盖至 Part 1）。
-- 大样本真实数据在 Studio GUI 中的全流程端到端核验。
+- 大样本真实数据在 Studio GUI 中的全流程端到端实测核验。
+- 正式引擎建立独立公共远端仓库并配置跨平台 GitHub Actions CI（Ubuntu / Windows）。
 - M6（可选 AI 助手，只读证据与代码解释，不生成新标签与推断结论）。
 - M7（打包与部署）。
