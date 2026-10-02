@@ -145,7 +145,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 | 人工 gate 跳不过去，直接调 API 也不行 | 通过 | `tests/test_review_gates.py`，请求模型 `extra=forbid`，无令牌 401 |
 | 旧审阅不能用于新聚类 | 通过 | `test_old_cluster_review_does_not_apply_to_new_ids` |
 | Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
-| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎尚无 GitHub 远端（已决议建新独立公共仓库），CI 尚未在远端真实跑过 |
+| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎为私有、闭源仓库，尚无远端，CI 未真实运行（需要私有远端，GitHub Actions 对私有仓库消耗额度，由维护者决定是否启用） |
 | 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
 | 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | `tests/test_formal_real_chain.py` 与 `tests/test_formal_real_pipeline.py` 均使用真实正式引擎脚本端到端执行通过（覆盖 Part 1 加载→QC→合并→网格→审阅→Part 3 重聚类及后续，依赖本地正式引擎环境变量，CI 环境未配置时自动 skip） |
 
@@ -160,6 +160,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 ## 剩余工作
 
 - 大样本真实数据在 Studio GUI 中的全流程端到端实测核验。
-- 正式引擎建立独立公共远端仓库并配置跨平台 GitHub Actions CI（Ubuntu / Windows）。
+- 正式引擎私有远端仓库配置（由维护者创建与推送，GitHub Actions 对私有仓库消耗额度，由维护者决定是否启用）。
+- GPL 依赖与闭源分发的许可风险，M7 打包前必须解决（替换实现或取得合规方案）。涉及：harmonypy（GPL-3.0，用于 Part 1 合并批次校正 formal_part1_merge）、leidenalg（GPL-3.0，用于 Part 1 分辨率网格聚类 formal_part1_grid 与 Part 3 重聚类 formal_part3_recluster）、python-igraph（GPL-2.0-or-later，leidenalg 的底层图计算依赖）。
 - M6（可选 AI 助手，只读证据与代码解释，不生成新标签与推断结论）。
 - M7（打包与部署）。
