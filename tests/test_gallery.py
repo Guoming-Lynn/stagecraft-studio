@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from stagecraft_studio.api.app import create_app
 from stagecraft_studio.db.gallery import GalleryNotFound, get_stage_gallery
 from stagecraft_studio.db.migrate import upgrade_database
-from stagecraft_studio.db.models import Artifact, Job, RuleResultRow
+from stagecraft_studio.db.models import Artifact, Job, ReviewDecision, RuleResultRow
 from stagecraft_studio.db.store import (
     create_project,
     freeze_protocol,
@@ -129,6 +129,24 @@ def test_gallery_with_figures_and_formats(tmp_path: Path):
         )
         session.commit()
 
+        # Before annotation review: blinding is active, KRAS (Part 2) is filtered out
+        blind_data = get_stage_gallery(session, run_id)
+        assert blind_data["total_figures"] == 1
+        assert blind_data["available_count"] == 1
+        assert blind_data["figures"][0]["stage_part"] == "Part 1"
+
+        # Complete unblinded annotation review
+        session.add(
+            ReviewDecision(
+                stage_run_id=run_id,
+                evidence_hash="hash_review",
+                reviewer="Dr. Auditor",
+                body_json=json.dumps({"kind": "clusters", "blinding": "UNBLINDED_WITH_REASON"}),
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        session.commit()
+
         data = get_stage_gallery(session, run_id)
         assert data["total_figures"] == 2
         assert data["available_count"] == 2
@@ -160,6 +178,15 @@ def test_gallery_preserves_not_estimable_slots(tmp_path: Path):
 
         run = session.get(StageRun, run_id)
         assert run is not None
+        session.add(
+            ReviewDecision(
+                stage_run_id=run_id,
+                evidence_hash="hash_rev",
+                reviewer="Dr. Auditor",
+                body_json=json.dumps({"kind": "clusters", "blinding": "UNBLINDED_WITH_REASON"}),
+                created_at=datetime.now(timezone.utc),
+            )
+        )
         run.evidence_json = json.dumps(
             {
                 "verdict": {
@@ -210,6 +237,50 @@ def test_gallery_api_and_raw_artifact_serving(tmp_path: Path):
     img_file = p2_dir / "F02_01_KRAS_umap_counts.png"
     img_file.write_bytes(b"\x89PNG\r\n\x1a\nfake_png_data")
 
+    p1_dir = stage_dir / "formal_part1_grid"
+    p1_dir.mkdir(parents=True, exist_ok=True)
+    p1_file = p1_dir / "leiden_resolution_overview.png"
+    p1_file.write_bytes(b"\x89PNG\r\n\x1a\nfake_grid_png")
+
+    with factory() as session:
+        job1 = Job(
+            stage_run_id=run_id,
+            task_id="formal_part2_figures",
+            job_status="COMPLETED",
+            created_at=datetime.now(timezone.utc),
+        )
+        job2 = Job(
+            stage_run_id=run_id,
+            task_id="formal_part1_grid",
+            job_status="COMPLETED",
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add_all([job1, job2])
+        session.flush()
+        session.add_all(
+            [
+                Artifact(
+                    job_id=job1.id,
+                    relative_path="formal_part2_figures/F02_01_KRAS_umap_counts.png",
+                    content_hash="hash_p2_png",
+                    artifact_status="VALID",
+                ),
+                Artifact(
+                    job_id=job1.id,
+                    relative_path="formal_part2_figures/not_there.png",
+                    content_hash="hash_missing",
+                    artifact_status="VALID",
+                ),
+                Artifact(
+                    job_id=job2.id,
+                    relative_path="formal_part1_grid/leiden_resolution_overview.png",
+                    content_hash="hash_p1_png",
+                    artifact_status="VALID",
+                ),
+            ]
+        )
+        session.commit()
+
     app = create_app(
         token="test-token",
         port=8765,
@@ -219,19 +290,55 @@ def test_gallery_api_and_raw_artifact_serving(tmp_path: Path):
     )
     client = TestClient(app)
 
-    # 1. Gallery view
-    res = client.get(f"/api/stage-runs/{run_id}/gallery")
-    assert res.status_code == 200
-    payload = res.json()
-    assert payload["run_id"] == run_id
-    assert "scientific_status" in payload
-    assert payload["scientific_status"]["calibration_status"] == "NOT_ESTABLISHED_FOR_THIS_ANALYSIS"
+    # 1. Gallery view before review: KRAS figure is filtered out, Part 1 remains
+    res_gallery_blind = client.get(f"/api/stage-runs/{run_id}/gallery")
+    assert res_gallery_blind.status_code == 200
+    payload_blind = res_gallery_blind.json()
+    assert payload_blind["total_figures"] == 1
+    assert payload_blind["figures"][0]["stage_part"] == "Part 1"
 
-    # 2. 404 for missing run
-    res_404 = client.get("/api/stage-runs/99999/gallery")
-    assert res_404.status_code == 404
+    # 2. Before annotation review: target gene raw artifact request returns 403 (blinded)
+    res_blind = client.get(
+        f"/api/stage-runs/{run_id}/artifacts/raw?rel=formal_part2_figures/F02_01_KRAS_umap_counts.png"
+    )
+    assert res_blind.status_code == 403
+    assert res_blind.json()["detail"] == "TARGET_GENE_BLINDED"
 
-    # 3. Serve raw artifact
+    # 3. Non-target-gene raw artifact request returns 200
+    res_grid = client.get(
+        f"/api/stage-runs/{run_id}/artifacts/raw?rel=formal_part1_grid/leiden_resolution_overview.png"
+    )
+    assert res_grid.status_code == 200
+    assert res_grid.content == b"\x89PNG\r\n\x1a\nfake_grid_png"
+
+    # 4. Request for internal .studio/tmp path returns 403
+    res_studio = client.get(f"/api/stage-runs/{run_id}/artifacts/raw?rel=.studio/tmp/secret.png")
+    assert res_studio.status_code == 403
+    assert res_studio.json()["detail"] == "ACCESS_DENIED_STUDIO_INTERNAL"
+
+    # 5. Request for unregistered file returns 403 (ARTIFACT_NOT_VALID)
+    res_unreg = client.get(f"/api/stage-runs/{run_id}/artifacts/raw?rel=unregistered.png")
+    assert res_unreg.status_code == 403
+    assert res_unreg.json()["detail"] == "ARTIFACT_NOT_VALID"
+
+    # 6. Traversal returns 403
+    res_escape = client.get(f"/api/stage-runs/{run_id}/artifacts/raw?rel=../../secret.txt")
+    assert res_escape.status_code == 403
+
+    # 7. Submit unblinded annotation review
+    with factory() as session:
+        session.add(
+            ReviewDecision(
+                stage_run_id=run_id,
+                evidence_hash="hash_rev",
+                reviewer="Dr. Auditor",
+                body_json=json.dumps({"kind": "clusters", "blinding": "UNBLINDED_WITH_REASON"}),
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        session.commit()
+
+    # 8. After unblinded review, target gene figure is accessible (200)
     res_raw = client.get(
         f"/api/stage-runs/{run_id}/artifacts/raw?rel=formal_part2_figures/F02_01_KRAS_umap_counts.png"
     )
@@ -239,15 +346,20 @@ def test_gallery_api_and_raw_artifact_serving(tmp_path: Path):
     assert res_raw.headers["content-type"] == "image/png"
     assert res_raw.content == b"\x89PNG\r\n\x1a\nfake_png_data"
 
-    # 4. Raw artifact 404
+    # 9. Gallery now shows all 3 figures
+    res_gallery_unblind = client.get(f"/api/stage-runs/{run_id}/gallery")
+    assert res_gallery_unblind.status_code == 200
+    assert res_gallery_unblind.json()["total_figures"] == 3
+
+    # 10. Registered file missing from disk returns 404
     res_missing = client.get(
         f"/api/stage-runs/{run_id}/artifacts/raw?rel=formal_part2_figures/not_there.png"
     )
     assert res_missing.status_code == 404
 
-    # 5. Raw artifact 403 on traversal attempt
-    res_escape = client.get(f"/api/stage-runs/{run_id}/artifacts/raw?rel=../../secret.txt")
-    assert res_escape.status_code == 403
+    # 11. 404 for missing run
+    res_404 = client.get("/api/stage-runs/99999/gallery")
+    assert res_404.status_code == 404
 
 
 def test_gallery_not_found_exception(tmp_path: Path):

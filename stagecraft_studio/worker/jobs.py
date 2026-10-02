@@ -348,7 +348,6 @@ class FormalWorker:
             prior_job_ids = select(Job.id).where(
                 Job.stage_run_id == job.stage_run_id,
                 Job.task_id == job.task_id,
-                Job.id != job.id,
             )
             session.execute(
                 update(Artifact)

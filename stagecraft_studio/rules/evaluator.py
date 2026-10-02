@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,7 +42,7 @@ def record_job_rules(
                     {
                         "library_id": lib_id,
                         "format": fmt,
-                        "verified": "integer_counts_verified",
+                        "basis": "output_file_present",
                     },
                     ensure_ascii=False,
                 ),
@@ -163,8 +164,53 @@ def record_job_rules(
 
     elif task_id == "formal_part1_merge":
         gene = str(fields.get("gene", ""))
+        presence_file = (
+            (dest_dir / "gene_presence_by_dataset.csv") if dest_dir is not None else None
+        )
         common_file = (dest_dir / "primary_common.h5ad") if dest_dir is not None else None
-        if common_file is not None and common_file.is_file():
+
+        is_valid = False
+        failure_msg = failure_reason or "TARGET_GENE_NOT_IN_COMMON_SET"
+        datasets_checked: list[str] = []
+
+        if (
+            presence_file is not None
+            and presence_file.is_file()
+            and common_file is not None
+            and common_file.is_file()
+        ):
+            try:
+                with presence_file.open(encoding="utf-8") as pf:
+                    reader = csv.DictReader(pf)
+                    gene_rows = [
+                        r
+                        for r in reader
+                        if r.get("gene", "").strip().casefold() == gene.strip().casefold()
+                    ]
+                if gene_rows:
+                    all_present = True
+                    for r in gene_rows:
+                        p_all = str(r.get("present_in_all", "")).casefold() == "true"
+                        s_common = str(r.get("in_strict_common", "")).casefold() == "true"
+                        try:
+                            n_pres = int(r.get("n_libraries_present", 0))
+                            n_total = int(r.get("n_libraries_in_dataset", 1))
+                        except (ValueError, TypeError):
+                            n_pres, n_total = 0, 1
+                        if not (p_all or s_common or (n_total > 0 and n_pres == n_total)):
+                            all_present = False
+                            break
+                        datasets_checked.append(str(r.get("dataset", "")))
+                    if all_present and len(gene_rows) > 0:
+                        is_valid = True
+                    else:
+                        failure_msg = f"Gene '{gene}' not present in all libraries across datasets"
+                else:
+                    failure_msg = f"Gene '{gene}' not found in gene_presence_by_dataset.csv"
+            except Exception as exc:
+                failure_msg = f"Failed to read gene_presence_by_dataset.csv: {exc}"
+
+        if is_valid:
             row = RuleResultRow(
                 stage_run_id=job.stage_run_id,
                 rule_id="TARGET_MEASURED_IN_COMMON_SET",
@@ -172,7 +218,9 @@ def record_job_rules(
                 detail_json=json.dumps(
                     {
                         "gene": gene,
+                        "basis": "gene_presence_by_dataset",
                         "measured_in_all_primary_libraries": True,
+                        "datasets_checked": datasets_checked,
                     },
                     ensure_ascii=False,
                 ),
@@ -186,7 +234,7 @@ def record_job_rules(
                 detail_json=json.dumps(
                     {
                         "gene": gene,
-                        "reason": failure_reason or "TARGET_GENE_NOT_IN_COMMON_SET",
+                        "reason": failure_msg,
                     },
                     ensure_ascii=False,
                 ),

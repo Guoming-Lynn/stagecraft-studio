@@ -13,8 +13,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.api.files import PathRejected, resolve_inside
-from stagecraft_studio.db.gallery import GalleryNotFound, get_stage_gallery, resolve_stage_dir
+from stagecraft_studio.db.gallery import (
+    ArtifactAccessDenied,
+    GalleryNotFound,
+    get_authorized_raw_artifact,
+    get_stage_gallery,
+)
 from stagecraft_studio.db.models import AuditEvent, Job, ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
@@ -269,13 +273,10 @@ def build_review_router(
     def stage_artifact_raw(run_id: int, rel: str) -> FileResponse:
         with factory() as session:
             run = _run(session, run_id)
-            stage_dir = resolve_stage_dir(session, run)
-        try:
-            path = resolve_inside(stage_dir, rel)
-        except PathRejected as exc:
-            raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail="文件不存在")
+            try:
+                path = get_authorized_raw_artifact(session, run, rel)
+            except ArtifactAccessDenied as exc:
+                raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         ext = path.suffix.casefold()
         media_type = "application/octet-stream"
         if ext == ".png":

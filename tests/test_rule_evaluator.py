@@ -59,7 +59,21 @@ def test_input_counts_valid_recorded_on_load(tmp_path: Path) -> None:
     assert rows[0].rule_status == "PASS"
     detail = json.loads(rows[0].detail_json)
     assert detail["library_id"] == "lib_01"
-    assert detail["verified"] == "integer_counts_verified"
+    assert detail["basis"] == "output_file_present"
+
+    # Counter-example: dest_dir exists but loaded.h5ad is missing -> BLOCK
+    missing_h5ad_dir = tmp_path / "stage_1" / "formal_part1_load_missing"
+    missing_h5ad_dir.mkdir(parents=True, exist_ok=True)
+    job_missing_h5ad = _make_job(
+        session,
+        task_id="formal_part1_load",
+        fields={"library_id": "lib_01", "format": "h5ad"},
+    )
+    rows_missing = record_job_rules(session, job_missing_h5ad, dest_dir=missing_h5ad_dir)
+    session.commit()
+    assert len(rows_missing) == 1
+    assert rows_missing[0].rule_status == "BLOCK"
+    assert "LOAD_FAILED" in rows_missing[0].detail_json
 
     # Also test failure mode
     failed_job = _make_job(
@@ -145,6 +159,12 @@ def test_target_measured_in_common_set_recorded_on_merge(tmp_path: Path) -> None
     dest_dir = tmp_path / "stage_1" / "formal_part1_merge"
     dest_dir.mkdir(parents=True, exist_ok=True)
     (dest_dir / "primary_common.h5ad").write_text("common", encoding="utf-8")
+    presence_csv = (
+        "dataset,gene,n_libraries_in_dataset,n_libraries_present,present_in_any,present_in_all,in_strict_common\n"
+        "D1,CD3D,2,2,True,True,True\n"
+        "D2,CD3D,1,1,True,True,True\n"
+    )
+    (dest_dir / "gene_presence_by_dataset.csv").write_text(presence_csv, encoding="utf-8")
 
     job = _make_job(
         session,
@@ -160,9 +180,46 @@ def test_target_measured_in_common_set_recorded_on_merge(tmp_path: Path) -> None
     assert rows[0].rule_status == "PASS"
     detail = json.loads(rows[0].detail_json)
     assert detail["gene"] == "CD3D"
+    assert detail["basis"] == "gene_presence_by_dataset"
     assert detail["measured_in_all_primary_libraries"] is True
+    assert set(detail["datasets_checked"]) == {"D1", "D2"}
 
-    # Test failure mode
+    # Counter-example 1: gene_presence_by_dataset.csv missing -> BLOCK
+    missing_csv_dir = tmp_path / "stage_1" / "merge_missing_csv"
+    missing_csv_dir.mkdir(parents=True, exist_ok=True)
+    (missing_csv_dir / "primary_common.h5ad").write_text("common", encoding="utf-8")
+    job_no_csv = _make_job(
+        session,
+        task_id="formal_part1_merge",
+        fields={"gene": "CD3D"},
+    )
+    rows_no_csv = record_job_rules(session, job_no_csv, dest_dir=missing_csv_dir)
+    session.commit()
+    assert len(rows_no_csv) == 1
+    assert rows_no_csv[0].rule_status == "BLOCK"
+
+    # Counter-example 2: gene not present in all libraries in one dataset -> BLOCK
+    partial_dir = tmp_path / "stage_1" / "merge_partial"
+    partial_dir.mkdir(parents=True, exist_ok=True)
+    (partial_dir / "primary_common.h5ad").write_text("common", encoding="utf-8")
+    partial_csv = (
+        "dataset,gene,n_libraries_in_dataset,n_libraries_present,present_in_any,present_in_all,in_strict_common\n"
+        "D1,CD3D,2,2,True,True,True\n"
+        "D2,CD3D,2,1,True,False,False\n"
+    )
+    (partial_dir / "gene_presence_by_dataset.csv").write_text(partial_csv, encoding="utf-8")
+    job_partial = _make_job(
+        session,
+        task_id="formal_part1_merge",
+        fields={"gene": "CD3D"},
+    )
+    rows_partial = record_job_rules(session, job_partial, dest_dir=partial_dir)
+    session.commit()
+    assert len(rows_partial) == 1
+    assert rows_partial[0].rule_status == "BLOCK"
+    assert "not present in all libraries" in rows_partial[0].detail_json
+
+    # Test failure mode when engine explicitly fails
     fail_job = _make_job(
         session,
         task_id="formal_part1_merge",

@@ -7,6 +7,7 @@ with the real python interpreter and scripts from stagecraft-formal-engine.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -28,17 +29,15 @@ from stagecraft_studio.worker.jobs import FormalWorker
 
 
 def _find_formal_engine() -> tuple[Path, Path] | None:
-    scripts_dir = Path("D:/stagecraft-formal-engine/scripts")
-    if not scripts_dir.is_dir():
+    scripts_env = os.environ.get("STAGECRAFT_FORMAL_SCRIPTS")
+    python_env = os.environ.get("STAGECRAFT_FORMAL_PYTHON")
+    if not scripts_env or not python_env:
         return None
-    py_candidates = [
-        Path("D:/stagecraft-formal-engine/.venv/Scripts/python.exe"),
-        Path("D:/miniforge/envs/sc_analysis/python.exe"),
-    ]
-    for py in py_candidates:
-        if py.is_file():
-            return py, scripts_dir
-    return None
+    scripts_dir = Path(scripts_env)
+    python_path = Path(python_env)
+    if not scripts_dir.is_dir() or not python_path.is_file():
+        return None
+    return python_path, scripts_dir
 
 
 def _make_synthetic_library(python: Path, path: Path, *, seed: int, prefix: str) -> None:
@@ -68,7 +67,10 @@ def _make_synthetic_library(python: Path, path: Path, *, seed: int, prefix: str)
 def test_real_formal_engine_chain_part1(tmp_path: Path) -> None:
     engine = _find_formal_engine()
     if engine is None:
-        pytest.skip("stagecraft-formal-engine or python interpreter not found")
+        pytest.skip(
+            "STAGECRAFT_FORMAL_SCRIPTS and STAGECRAFT_FORMAL_PYTHON not set or invalid; "
+            "skipping real formal engine test (expected in CI)"
+        )
     python_path, scripts_dir = engine
 
     stage_root = tmp_path / "project"

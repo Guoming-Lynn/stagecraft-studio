@@ -5,6 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from stagecraft_studio.db.models import Project, ProtocolVersion, ReviewDecision, StageRun
+
 BLINDING_VALUES = frozenset({"BLIND", "UNBLINDED_WITH_REASON", "NOT_APPLICABLE"})
 RESOLUTIONS = frozenset({"0.2", "0.3", "0.4", "0.5", "0.6", "0.8", "1.0", "1.2", "1.5"})
 DECISIONS = frozenset({"KEEP", "DELETE"})
@@ -129,3 +134,82 @@ def filter_annotation_evidence(payload: dict[str, object], target_gene: str) -> 
     if isinstance(clusters, list):
         cluster_ids = [item for item in clusters if isinstance(item, str)]
     return {"genes": kept, "clusters": cluster_ids}
+
+
+def get_latest_review(session: Session, run_id: int, kind: str) -> ReviewDecision | None:
+    rows = session.scalars(
+        select(ReviewDecision)
+        .where(ReviewDecision.stage_run_id == run_id)
+        .order_by(ReviewDecision.id.desc())
+    )
+    for row in rows:
+        try:
+            body = json.loads(row.body_json)
+            if isinstance(body, dict) and body.get("kind") == kind:
+                return row
+        except (json.JSONDecodeError, OSError):
+            continue
+    return None
+
+
+def is_blinding_active(session: Session, run: StageRun) -> bool:
+    """True if annotation review is uncompleted or blinding is recorded as BLIND."""
+    decision = get_latest_review(session, run.id, "clusters")
+    if decision is None:
+        return True
+    leiden_ids: list[str] = []
+    if run.leiden_ids_json:
+        try:
+            parsed = json.loads(run.leiden_ids_json)
+            if isinstance(parsed, list):
+                leiden_ids = [str(x) for x in parsed]
+        except (json.JSONDecodeError, OSError):
+            pass
+    if leiden_ids and decision.evidence_hash != cluster_set_hash(leiden_ids):
+        return True
+    try:
+        body = json.loads(decision.body_json)
+        if isinstance(body, dict):
+            return body.get("blinding") == "BLIND"
+    except (json.JSONDecodeError, OSError):
+        pass
+    return True
+
+
+def get_target_gene(session: Session, run: StageRun) -> str:
+    project = session.get(Project, run.project_id)
+    if project and project.name:
+        return project.name
+    protocol = session.get(ProtocolVersion, run.protocol_id)
+    if protocol and protocol.document_json:
+        try:
+            doc = json.loads(protocol.document_json)
+            if isinstance(doc, dict) and "target_gene" in doc:
+                return str(doc["target_gene"])
+        except (json.JSONDecodeError, OSError):
+            pass
+    return ""
+
+
+def is_target_gene_artifact(rel_path: str, target_gene: str = "") -> bool:
+    norm = rel_path.replace("\\", "/").lower()
+    parts = [p for p in norm.split("/") if p]
+    filename = parts[-1] if parts else norm
+    for marker in (
+        "formal_part2",
+        "formal_part4",
+        "formal_part5",
+        "f02_",
+        "f04_",
+        "f05_",
+        "part2_",
+        "part4_",
+        "part5_",
+    ):
+        if any(marker in part for part in parts):
+            return True
+    if target_gene and target_gene.strip():
+        tg = target_gene.strip().lower()
+        if tg in filename or any(tg == part for part in parts):
+            return True
+    return False

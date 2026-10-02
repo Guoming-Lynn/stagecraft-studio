@@ -2,6 +2,8 @@
 
 ## 0.0.0 - 2026-09-30
 
+- 盲审、产物权限与规则依据真实性（Package B）：/gallery 与 /artifacts/raw 服务端在注释审阅未完成或盲审有效时过滤目标基因产物；/artifacts/raw 严禁访问 .studio/ 内部路径（含 tmp），只允许访问已登记且状态为 VALID 的产物；重跑任务时作废先前全部旧产物为 SUPERSEDED；INPUT_COUNTS_VALID 记录真实依据 output_file_present；TARGET_MEASURED_IN_COMMON_SET 真实读取 gene_presence_by_dataset.csv 校验主图谱全覆盖；test_formal_real_chain.py 移除硬编码路径改读环境变量。
+
 - 正式分析图库（P16）：提供图库聚合与原图/数据下载接口（`GET /api/stage-runs/{run_id}/gallery`、`GET /api/stage-runs/{run_id}/artifacts/raw`），支持 PNG、SVG、PDF、Source Data CSV、参数 JSON 预览与下载，如实保留并突出展示 `NOT_ESTIMABLE` 槽位，杜绝为排版美观而隐匿失败项。
 - 阶段工作区（P15）：提供输入、参数、结果、检查、日志 5 个页签（`GET /api/stage-runs/{run_id}/workspace`），连接 Part 2-5 证据入库，前端 `StageWorkspace` 与 `WorkspaceResults` 严格受限在行数上限以内。
 - 规则覆盖落表（P14）：在 FormalWorker 中评估引擎产物规则，登记 `RuleResultRow`（`TARGET_MEASURED_IN_COMMON_SET`、`DOUBLET_FAILURE_EXPLICIT`、`PER_LIBRARY_QC`、`DESIGN_ESTIMABLE`、`INPUT_COUNTS_VALID`），规则目录与覆盖报告对齐并通过 100% 单元测试。

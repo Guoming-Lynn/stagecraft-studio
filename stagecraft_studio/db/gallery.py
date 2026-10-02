@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from stagecraft_studio.api.files import PathRejected, resolve_inside
 from stagecraft_studio.db.models import (
     Artifact,
     Job,
@@ -23,11 +24,25 @@ from stagecraft_studio.db.models import (
     RuleResultRow,
     StageRun,
 )
+from stagecraft_studio.rules.gates import (
+    get_target_gene,
+    is_blinding_active,
+    is_target_gene_artifact,
+)
 from stagecraft_studio.rules.scientific_status import scientific_status
 
 
 class GalleryNotFound(Exception):
     """The requested stage run was not found."""
+
+
+class ArtifactAccessDenied(Exception):
+    """Access to raw artifact was denied."""
+
+    def __init__(self, detail: str = "ACCESS_DENIED", status_code: int = 403) -> None:
+        self.detail = detail
+        self.status_code = status_code
+        super().__init__(detail)
 
 
 class ScientificStatusView(BaseModel):
@@ -204,90 +219,20 @@ def get_stage_gallery(session: Session, run_id: int) -> dict[str, Any]:
             )
         )
 
-    # Preserve NOT_ESTIMABLE items from Part 4 survey/figures
-    part4 = evidence.get("part4")
-    if isinstance(part4, dict):
-        p4_stopped = str(part4.get("stopped", ""))
-        if p4_stopped == "NO_PART4":
-            reason = str(part4.get("reason", "LINEAGE_ROUND_LIMIT"))
-            figure_items.append(
-                GalleryFigureItem(
-                    id=f"not_estimable_part4_{reason}",
-                    task_id="formal_part4_figures",
-                    title=f"Part 4 Identifiability: STOPPED ({reason})",
-                    stage_part="Part 4",
-                    panel_id="F04_STOPPED",
-                    status="NOT_ESTIMABLE",
-                    caption=(
-                        f"Part 4 stopped due to {reason}. Preserved per scientific specification."
-                    ),
-                    reasons=[reason],
-                )
-            )
+    figure_items.extend(_collect_not_estimable(session, run.id, evidence, artifact_by_path))
 
-    # Preserve NOT_ESTIMABLE items from Part 5 verdict
-    verdict = evidence.get("verdict")
-    if isinstance(verdict, dict):
-        v_stopped = str(verdict.get("stopped", ""))
-        v_elig = str(verdict.get("eligibility", ""))
-        arm = str(verdict.get("arm", "default"))
-        if v_stopped == "NOT_ESTIMABLE" or v_elig == "NOT_ESTIMABLE":
-            reasons = [str(r) for r in verdict.get("reasons", [])] or ["NOT_ESTIMABLE"]
-            elig_csv = (
-                "formal_part5_prepare/eligibility.csv"
-                if "formal_part5_prepare/eligibility.csv" in artifact_by_path
-                else None
+    if is_blinding_active(session, run):
+        target_gene = get_target_gene(session, run)
+        figure_items = [
+            f
+            for f in figure_items
+            if not (
+                f.stage_part in {"Part 2", "Part 4", "Part 5"}
+                or is_target_gene_artifact(f.id, target_gene)
+                or (f.format_png and is_target_gene_artifact(f.format_png, target_gene))
+                or (f.format_svg and is_target_gene_artifact(f.format_svg, target_gene))
             )
-            figure_items.append(
-                GalleryFigureItem(
-                    id=f"not_estimable_part5_{arm}",
-                    task_id="formal_part5_prepare",
-                    title=f"Part 5 Model Fit: {arm} (NOT_ESTIMABLE)",
-                    stage_part="Part 5",
-                    panel_id="F05_NOT_ESTIMABLE",
-                    status="NOT_ESTIMABLE",
-                    caption=(
-                        "The donor-level association model is not estimable under frozen protocol "
-                        "criteria (e.g. insufficient exposure range or donor sample size). "
-                        "Preserved without hiding."
-                    ),
-                    reasons=reasons,
-                    source_data=elig_csv,
-                )
-            )
-
-    # Also check RuleResultRow for DESIGN_ESTIMABLE BLOCK
-    rule_blocks = list(
-        session.scalars(
-            select(RuleResultRow).where(
-                RuleResultRow.stage_run_id == run_id,
-                RuleResultRow.rule_id == "DESIGN_ESTIMABLE",
-                RuleResultRow.rule_status == "BLOCK",
-            )
-        ).all()
-    )
-    for r in rule_blocks:
-        try:
-            detail = json.loads(r.detail_json)
-            arm = str(detail.get("arm", "default"))
-            reason = str(detail.get("reason", "DESIGN_NOT_ESTIMABLE"))
-        except (json.JSONDecodeError, OSError):
-            arm = "default"
-            reason = "DESIGN_NOT_ESTIMABLE"
-        target_id = f"not_estimable_part5_{arm}"
-        if not any(f.id == target_id for f in figure_items):
-            figure_items.append(
-                GalleryFigureItem(
-                    id=target_id,
-                    task_id="formal_part5_prepare",
-                    title=f"Part 5 Model Fit: {arm} (NOT_ESTIMABLE)",
-                    stage_part="Part 5",
-                    panel_id="F05_NOT_ESTIMABLE",
-                    status="NOT_ESTIMABLE",
-                    caption="Model design not estimable. Slot preserved.",
-                    reasons=[reason],
-                )
-            )
+        ]
 
     total_count = len(figure_items)
     avail_count = sum(1 for f in figure_items if f.status == "AVAILABLE")
@@ -303,3 +248,129 @@ def get_stage_gallery(session: Session, run_id: int) -> dict[str, Any]:
         not_estimable_count=not_est_count,
     )
     return view.model_dump()
+
+
+def _collect_not_estimable(
+    session: Session,
+    run_id: int,
+    evidence: dict[str, Any],
+    artifact_by_path: dict[str, Artifact],
+) -> list[GalleryFigureItem]:
+    items: list[GalleryFigureItem] = []
+    part4 = evidence.get("part4")
+    if isinstance(part4, dict) and str(part4.get("stopped", "")) == "NO_PART4":
+        reason = str(part4.get("reason", "LINEAGE_ROUND_LIMIT"))
+        items.append(
+            GalleryFigureItem(
+                id=f"not_estimable_part4_{reason}",
+                task_id="formal_part4_figures",
+                title=f"Part 4 Identifiability: STOPPED ({reason})",
+                stage_part="Part 4",
+                panel_id="F04_STOPPED",
+                status="NOT_ESTIMABLE",
+                caption=f"Part 4 stopped due to {reason}. Preserved per scientific specification.",
+                reasons=[reason],
+            )
+        )
+
+    verdict = evidence.get("verdict")
+    if isinstance(verdict, dict):
+        v_stop = str(verdict.get("stopped", ""))
+        v_elig = str(verdict.get("eligibility", ""))
+        arm = str(verdict.get("arm", "default"))
+        if v_stop == "NOT_ESTIMABLE" or v_elig == "NOT_ESTIMABLE":
+            reasons = [str(r) for r in verdict.get("reasons", [])] or ["NOT_ESTIMABLE"]
+            elig_csv = (
+                "formal_part5_prepare/eligibility.csv"
+                if "formal_part5_prepare/eligibility.csv" in artifact_by_path
+                else None
+            )
+            items.append(
+                GalleryFigureItem(
+                    id=f"not_estimable_part5_{arm}",
+                    task_id="formal_part5_prepare",
+                    title=f"Part 5 Model Fit: {arm} (NOT_ESTIMABLE)",
+                    stage_part="Part 5",
+                    panel_id="F05_NOT_ESTIMABLE",
+                    status="NOT_ESTIMABLE",
+                    caption=(
+                        "The donor-level association model is not estimable under "
+                        "frozen protocol criteria."
+                    ),
+                    reasons=reasons,
+                    source_data=elig_csv,
+                )
+            )
+
+    rule_blocks = session.scalars(
+        select(RuleResultRow).where(
+            RuleResultRow.stage_run_id == run_id,
+            RuleResultRow.rule_id == "DESIGN_ESTIMABLE",
+            RuleResultRow.rule_status == "BLOCK",
+        )
+    ).all()
+    for r in rule_blocks:
+        try:
+            detail = json.loads(r.detail_json)
+            arm = str(detail.get("arm", "default"))
+            reason = str(detail.get("reason", "DESIGN_NOT_ESTIMABLE"))
+        except (json.JSONDecodeError, OSError):
+            arm, reason = "default", "DESIGN_NOT_ESTIMABLE"
+        target_id = f"not_estimable_part5_{arm}"
+        if not any(f.id == target_id for f in items):
+            items.append(
+                GalleryFigureItem(
+                    id=target_id,
+                    task_id="formal_part5_prepare",
+                    title=f"Part 5 Model Fit: {arm} (NOT_ESTIMABLE)",
+                    stage_part="Part 5",
+                    panel_id="F05_NOT_ESTIMABLE",
+                    status="NOT_ESTIMABLE",
+                    caption="Model design not estimable. Slot preserved.",
+                    reasons=[reason],
+                )
+            )
+    return items
+
+
+def get_authorized_raw_artifact(session: Session, run: StageRun, rel: str) -> Path:
+    normalized = rel.replace("\\", "/").strip().lstrip("/")
+    parts = [p for p in normalized.split("/") if p]
+    if any(p == ".studio" or p.startswith(".studio") for p in parts) or ".studio" in normalized:
+        raise ArtifactAccessDenied("ACCESS_DENIED_STUDIO_INTERNAL", 403)
+
+    stage_dir = resolve_stage_dir(session, run)
+    try:
+        path = resolve_inside(stage_dir, normalized)
+    except PathRejected as exc:
+        raise ArtifactAccessDenied(exc.detail, exc.status) from exc
+
+    try:
+        rel_clean = path.relative_to(stage_dir.resolve()).as_posix()
+    except ValueError:
+        try:
+            rel_clean = path.relative_to(stage_dir).as_posix()
+        except ValueError:
+            raise ArtifactAccessDenied("PATH_OUTSIDE_STAGE_DIR", 403) from None
+
+    art = session.scalars(
+        select(Artifact)
+        .join(Job, Artifact.job_id == Job.id)
+        .where(
+            Job.stage_run_id == run.id,
+            Artifact.relative_path == rel_clean,
+            Artifact.artifact_status == "VALID",
+        )
+    ).first()
+    if art is None:
+        raise ArtifactAccessDenied("ARTIFACT_NOT_VALID", 403)
+
+    if is_blinding_active(session, run):
+        target_gene = get_target_gene(session, run)
+        if is_target_gene_artifact(rel_clean, target_gene):
+            raise ArtifactAccessDenied("TARGET_GENE_BLINDED", 403)
+
+    if not path.is_file():
+        raise ArtifactAccessDenied("FILE_NOT_FOUND", 404)
+
+    return path
