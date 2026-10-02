@@ -18,6 +18,26 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _add_row(
+    session: Session,
+    rows: list[RuleResultRow],
+    run_id: int,
+    rule_id: str,
+    status: str,
+    detail: dict[str, object],
+) -> RuleResultRow:
+    row = RuleResultRow(
+        stage_run_id=run_id,
+        rule_id=rule_id,
+        rule_status=status,
+        detail_json=json.dumps(detail, ensure_ascii=False),
+        checked_at=_now(),
+    )
+    session.add(row)
+    rows.append(row)
+    return row
+
+
 def record_job_rules(
     session: Session,
     job: Job,
@@ -35,37 +55,23 @@ def record_job_rules(
         lib_id = str(fields.get("library_id", ""))
         fmt = str(fields.get("format", ""))
         if dest_dir is not None and (dest_dir / "loaded.h5ad").is_file():
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="INPUT_COUNTS_VALID",
-                rule_status="PASS",
-                detail_json=json.dumps(
-                    {
-                        "library_id": lib_id,
-                        "format": fmt,
-                        "basis": "output_file_present",
-                    },
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "INPUT_COUNTS_VALID",
+                "PASS",
+                {"library_id": lib_id, "format": fmt, "basis": "output_file_present"},
             )
         else:
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="INPUT_COUNTS_VALID",
-                rule_status="BLOCK",
-                detail_json=json.dumps(
-                    {
-                        "library_id": lib_id,
-                        "format": fmt,
-                        "reason": failure_reason or "LOAD_FAILED",
-                    },
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "INPUT_COUNTS_VALID",
+                "BLOCK",
+                {"library_id": lib_id, "format": fmt, "reason": failure_reason or "LOAD_FAILED"},
             )
-        session.add(row)
-        rows.append(row)
 
     elif task_id == "formal_part1_qc":
         lib_id = str(fields.get("library_id", ""))
@@ -83,23 +89,14 @@ def record_job_rules(
             in_primary = bool(qc_data.get("in_primary_atlas", False))
             n_singlets = qc_data.get("n_singlets")
 
-            # PER_LIBRARY_QC
-            qc_row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="PER_LIBRARY_QC",
-                rule_status="PASS",
-                detail_json=json.dumps(
-                    {
-                        "library_id": lib_id,
-                        "per_library": True,
-                        "mad_bounds": mad_bounds,
-                    },
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "PER_LIBRARY_QC",
+                "PASS",
+                {"library_id": lib_id, "per_library": True, "mad_bounds": mad_bounds},
             )
-            session.add(qc_row)
-            rows.append(qc_row)
 
             # DOUBLET_FAILURE_EXPLICIT
             if scrublet_status == "ok":
@@ -129,39 +126,31 @@ def record_job_rules(
                         "in_primary_atlas": True,
                         "error": "Scrublet failed but library remained in primary atlas",
                     }
-            doublet_row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="DOUBLET_FAILURE_EXPLICIT",
-                rule_status=doublet_status,
-                detail_json=json.dumps(doublet_detail, ensure_ascii=False),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "DOUBLET_FAILURE_EXPLICIT",
+                doublet_status,
+                doublet_detail,
             )
-            session.add(doublet_row)
-            rows.append(doublet_row)
         else:
-            qc_row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="PER_LIBRARY_QC",
-                rule_status="BLOCK",
-                detail_json=json.dumps(
-                    {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "PER_LIBRARY_QC",
+                "BLOCK",
+                {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
             )
-            doublet_row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="DOUBLET_FAILURE_EXPLICIT",
-                rule_status="BLOCK",
-                detail_json=json.dumps(
-                    {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "DOUBLET_FAILURE_EXPLICIT",
+                "BLOCK",
+                {"library_id": lib_id, "reason": failure_reason or "QC_FAILED"},
             )
-            session.add(qc_row)
-            session.add(doublet_row)
-            rows.extend([qc_row, doublet_row])
 
     elif task_id == "formal_part1_merge":
         gene = str(fields.get("gene", ""))
@@ -212,37 +201,49 @@ def record_job_rules(
                 failure_msg = f"Failed to read gene_presence_by_dataset.csv: {exc}"
 
         if is_valid:
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="TARGET_MEASURED_IN_COMMON_SET",
-                rule_status="PASS",
-                detail_json=json.dumps(
-                    {
-                        "gene": gene,
-                        "basis": "gene_presence_by_dataset",
-                        "measured_in_all_primary_libraries": True,
-                        "datasets_checked": datasets_checked,
-                    },
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "TARGET_MEASURED_IN_COMMON_SET",
+                "PASS",
+                {
+                    "gene": gene,
+                    "basis": "gene_presence_by_dataset",
+                    "measured_in_all_primary_libraries": True,
+                    "datasets_checked": datasets_checked,
+                },
             )
         else:
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="TARGET_MEASURED_IN_COMMON_SET",
-                rule_status="BLOCK",
-                detail_json=json.dumps(
-                    {
-                        "gene": gene,
-                        "reason": failure_msg,
-                    },
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "TARGET_MEASURED_IN_COMMON_SET",
+                "BLOCK",
+                {"gene": gene, "reason": failure_msg},
             )
-        session.add(row)
-        rows.append(row)
+
+    elif task_id == "formal_part1_lock":
+        lock_file = (dest_dir / "lock_record.json") if dest_dir is not None else None
+        if lock_file is not None and lock_file.is_file():
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "REVIEW_CLUSTER_COMPLETE",
+                "PASS",
+                {"basis": "lock_record_present", "locked_atlas": True},
+            )
+        else:
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "REVIEW_CLUSTER_COMPLETE",
+                "BLOCK",
+                {"reason": failure_reason or "LOCK_FAILED"},
+            )
 
     elif task_id == "formal_part5_prepare":
         arm = str(fields.get("arm", ""))
@@ -262,45 +263,46 @@ def record_job_rules(
             exposure_sd = verdict.get("exposure_sd")
 
             if eligibility == "NOT_ESTIMABLE":
-                status = "BLOCK"
-                detail = {
-                    "arm": arm,
-                    "eligibility": "NOT_ESTIMABLE",
-                    "reason": reason,
-                    "rdf": rdf,
-                    "design_rank": rank,
-                    "design_columns": cols,
-                }
+                _add_row(
+                    session,
+                    rows,
+                    job.stage_run_id,
+                    "DESIGN_ESTIMABLE",
+                    "BLOCK",
+                    {
+                        "arm": arm,
+                        "eligibility": "NOT_ESTIMABLE",
+                        "reason": reason,
+                        "rdf": rdf,
+                        "design_rank": rank,
+                        "design_columns": cols,
+                    },
+                )
             else:
-                status = "PASS"
-                detail = {
-                    "arm": arm,
-                    "eligibility": eligibility,
-                    "rdf": rdf,
-                    "design_rank": rank,
-                    "design_columns": cols,
-                    "exposure_sd": exposure_sd,
-                }
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="DESIGN_ESTIMABLE",
-                rule_status=status,
-                detail_json=json.dumps(detail, ensure_ascii=False),
-                checked_at=_now(),
-            )
+                _add_row(
+                    session,
+                    rows,
+                    job.stage_run_id,
+                    "DESIGN_ESTIMABLE",
+                    "PASS",
+                    {
+                        "arm": arm,
+                        "eligibility": eligibility,
+                        "rdf": rdf,
+                        "design_rank": rank,
+                        "design_columns": cols,
+                        "exposure_sd": exposure_sd,
+                    },
+                )
         else:
-            row = RuleResultRow(
-                stage_run_id=job.stage_run_id,
-                rule_id="DESIGN_ESTIMABLE",
-                rule_status="BLOCK",
-                detail_json=json.dumps(
-                    {"arm": arm, "reason": failure_reason or "PREPARE_FAILED"},
-                    ensure_ascii=False,
-                ),
-                checked_at=_now(),
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "DESIGN_ESTIMABLE",
+                "BLOCK",
+                {"arm": arm, "reason": failure_reason or "PREPARE_FAILED"},
             )
-        session.add(row)
-        rows.append(row)
 
     return rows
 
@@ -335,6 +337,11 @@ def record_job_evidence(
         if rpath.is_file():
             with contextlib.suppress(json.JSONDecodeError, OSError):
                 evidence["part2"] = json.loads(rpath.read_text(encoding="utf-8"))
+    elif task_id == "formal_part1_lock":
+        lpath = dest_dir / "lock_record.json"
+        if lpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["lock"] = json.loads(lpath.read_text(encoding="utf-8"))
     elif task_id == "formal_part1_grid":
         gpath = dest_dir / "grid_record.json"
         if gpath.is_file():

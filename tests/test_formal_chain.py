@@ -178,66 +178,38 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             )
             assert len(audits) >= 3
 
+        def _post_job(tid: str, f: dict[str, object] | None = None) -> int:
+            r = client.post(
+                f"/api/stage-runs/{run_id}/jobs",
+                headers=TOKEN_HEADERS,
+                json={"task_id": tid, **({"fields": f} if f else {})},
+            )
+            assert r.status_code == 201
+            return int(r.json()["id"])
+
         # 5. Enqueue Part 1 four tasks: load, qc, merge, grid
-        j1 = client.post(
-            f"/api/stage-runs/{run_id}/jobs",
-            headers=TOKEN_HEADERS,
-            json={
-                "task_id": "formal_part1_load",
-                "fields": {
-                    "library_id": "L1",
-                    "input": str(counts_file),
-                    "format": "h5ad",
-                    "out": str(project_root),
-                },
+        job1_id = _post_job(
+            "formal_part1_load",
+            {"library_id": "L1", "input": str(counts_file), "format": "h5ad", "out": str(project_root)},
+        )
+        job2_id = _post_job(
+            "formal_part1_qc",
+            {
+                "library_id": "L1",
+                "source": str(project_root),
+                "loaded": str(counts_file),
+                "config": str(qc_config),
+                "out": str(project_root),
             },
         )
-        assert j1.status_code == 201
-        job1_id = j1.json()["id"]
-
-        j2 = client.post(
-            f"/api/stage-runs/{run_id}/jobs",
-            headers=TOKEN_HEADERS,
-            json={
-                "task_id": "formal_part1_qc",
-                "fields": {
-                    "library_id": "L1",
-                    "source": str(project_root),
-                    "loaded": str(counts_file),
-                    "config": str(qc_config),
-                    "out": str(project_root),
-                },
-            },
+        job3_id = _post_job(
+            "formal_part1_merge",
+            {"manifest": str(manifest), "gene": "STAT1", "out": str(project_root)},
         )
-        assert j2.status_code == 201
-        job2_id = j2.json()["id"]
-
-        j3 = client.post(
-            f"/api/stage-runs/{run_id}/jobs",
-            headers=TOKEN_HEADERS,
-            json={
-                "task_id": "formal_part1_merge",
-                "fields": {"manifest": str(manifest), "gene": "STAT1", "out": str(project_root)},
-            },
+        job4_id = _post_job(
+            "formal_part1_grid",
+            {"common": str(counts_file), "gene": "STAT1", "config": str(grid_config), "out": str(project_root)},
         )
-        assert j3.status_code == 201
-        job3_id = j3.json()["id"]
-
-        j4 = client.post(
-            f"/api/stage-runs/{run_id}/jobs",
-            headers=TOKEN_HEADERS,
-            json={
-                "task_id": "formal_part1_grid",
-                "fields": {
-                    "common": str(counts_file),
-                    "gene": "STAT1",
-                    "config": str(grid_config),
-                    "out": str(project_root),
-                },
-            },
-        )
-        assert j4.status_code == 201
-        job4_id = j4.json()["id"]
 
         # Wait for Part 1 tasks to execute and complete
         part1_ids = [job1_id, job2_id, job3_id, job4_id]
@@ -347,14 +319,35 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         )
         assert clu_resp.status_code == 201
 
-        # 7. Enqueue Part 3 recluster after reviews
-        j5 = client.post(
+        # 6b. Attempting Part 3 recluster directly before locking atlas must be blocked
+        j_premature = client.post(
             f"/api/stage-runs/{run_id}/jobs",
             headers=TOKEN_HEADERS,
             json={"task_id": "formal_part3_recluster", "fields": recluster_fields},
         )
-        assert j5.status_code == 201
-        job5_id = j5.json()["id"]
+        assert j_premature.status_code == 409
+        assert j_premature.json()["detail"]["rule_id"] == "LOCKED_ATLAS_REQUIRED"
+
+        # 6c. Enqueue formal_part1_lock and complete
+        lock_id = _post_job(
+            "formal_part1_lock",
+            {
+                "common": str(counts_file),
+                "grid": str(project_root),
+                "review": str(manifest),
+                "gene": "STAT1",
+                "out": str(project_root),
+            },
+        )
+        _wait_for_jobs(db_path, [lock_id])
+
+        with factory() as session:
+            jl = session.get(Job, lock_id)
+            assert jl is not None
+            assert jl.job_status == "COMPLETED"
+
+        # 7. Enqueue Part 3 recluster after reviews and lock
+        job5_id = _post_job("formal_part3_recluster", recluster_fields)
 
         # Wait for Part 3 job to complete
         _wait_for_jobs(db_path, [job5_id])
@@ -377,14 +370,22 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         list_resp = client.get(f"/api/stage-runs/{run_id}/jobs")
         assert list_resp.status_code == 200
         jobs_data = list_resp.json()
-        assert len(jobs_data) == 5
-        assert [item["id"] for item in jobs_data] == [job1_id, job2_id, job3_id, job4_id, job5_id]
+        assert len(jobs_data) == 6
+        assert [item["id"] for item in jobs_data] == [
+            job1_id,
+            job2_id,
+            job3_id,
+            job4_id,
+            lock_id,
+            job5_id,
+        ]
         assert all(item["job_status"] == "COMPLETED" for item in jobs_data)
         assert [item["task_id"] for item in jobs_data] == [
             "formal_part1_load",
             "formal_part1_qc",
             "formal_part1_merge",
             "formal_part1_grid",
+            "formal_part1_lock",
             "formal_part3_recluster",
         ]
     finally:

@@ -80,6 +80,14 @@ class GridArgs(_Args):
     out: Path
 
 
+class LockArgs(_Args):
+    common: Path
+    grid: Path
+    review: Path
+    gene: Token
+    out: Path
+
+
 class ReclusterArgs(_Args):
     input: Path
     barcodes: Path
@@ -176,6 +184,17 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
             ("--common", "common", _PATH),
             ("--gene", "gene", _VALUE),
             ("--config", "config", _PATH),
+            ("--out", "out", _PATH),
+        ),
+    ),
+    "formal_part1_lock": _spec(
+        "part1_lock.py",
+        LockArgs,
+        (
+            ("--common", "common", _PATH),
+            ("--grid", "grid", _PATH),
+            ("--review", "review", _PATH),
+            ("--gene", "gene", _VALUE),
             ("--out", "out", _PATH),
         ),
     ),

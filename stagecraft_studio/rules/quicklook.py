@@ -42,3 +42,20 @@ def _read_tier(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise FormalInputRejected(path, "QUICKLOOK_TIER_UNREADABLE")
     return payload
+
+
+def saw_quicklook(path: Path) -> bool:
+    cursor = path.resolve()
+    if cursor.is_file():
+        cursor = cursor.parent
+    while True:
+        tier = cursor / TIER_FILENAME
+        if tier.is_file():
+            try:
+                payload = json.loads(tier.read_text(encoding="utf-8"))
+                return isinstance(payload, dict) and payload.get("analysis_tier") == QUICKLOOK_TIER
+            except Exception:
+                return False
+        if cursor.parent == cursor:
+            return False
+        cursor = cursor.parent

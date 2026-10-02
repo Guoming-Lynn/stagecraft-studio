@@ -64,10 +64,18 @@ def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
         == 201
     )
     _clusters(client, run_id)
-    queued = client.post(
+    denied_p2 = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
         json={"task_id": "formal_part2_survey", "reuse_umap": False},
+    )
+    assert denied_p2.status_code == 409
+    assert denied_p2.json()["detail"]["rule_id"] == "LOCKED_ATLAS_REQUIRED"
+
+    queued = client.post(
+        f"/api/stage-runs/{run_id}/jobs",
+        headers=TOKEN,
+        json={"task_id": "formal_part1_lock", "reuse_umap": False},
     )
     assert queued.status_code == 201
 

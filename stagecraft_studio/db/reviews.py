@@ -21,6 +21,7 @@ from stagecraft_studio.db.store import _audit, create_project, open_stage_run
 from stagecraft_studio.engine.formal_args import SPECS
 from stagecraft_studio.engine.registry import UnsupportedTask, require_task
 from stagecraft_studio.rules.gates import (
+    POST_LOCK_TASKS,
     PRE_RESOLUTION,
     RESOLUTIONS,
     GateRejected,
@@ -36,6 +37,7 @@ from stagecraft_studio.rules.gates import (
     require_resolution,
     require_text,
 )
+from stagecraft_studio.rules.quicklook import saw_quicklook
 from stagecraft_studio.rules.scientific_status import scientific_status
 
 
@@ -144,6 +146,8 @@ def enqueue(
         _block(session, run, "DELETE_RECOMPUTE_REQUIRED")
     if deleted and task_id not in PRE_RESOLUTION and not _recompute_after_review(session, run):
         _block(session, run, "DELETE_RECOMPUTE_REQUIRED")
+    if task_id in POST_LOCK_TASKS:
+        _require_locked_atlas(session, run)
     if task_id in SPECS and fields:
         _, model, _ = SPECS[task_id]
         check_fields = dict(fields)
@@ -239,7 +243,7 @@ def carry_quicklook(
     session.add(protocol)
     session.flush()
     run = open_stage_run(session, project_id=project.id, protocol=protocol, input_path=source)
-    run.quicklook_seen = _saw_quicklook(source)
+    run.quicklook_seen = saw_quicklook(source)
     session.flush()
     return {
         "project_id": project.id,
@@ -284,7 +288,7 @@ def invalidate_downstream(session: Session, run_id: int) -> list[int]:
 
 def _require_current_resolution(session: Session, run: StageRun) -> None:
     current = evidence_digest(run.evidence_json)
-    decision = _latest(session, run.id, "resolution")
+    decision = latest_review(session, run.id, "resolution")
     if decision is None or decision.evidence_hash != current:
         _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
     body = json.loads(decision.body_json)
@@ -294,14 +298,14 @@ def _require_current_resolution(session: Session, run: StageRun) -> None:
 
 
 def _require_current_clusters(session: Session, run: StageRun) -> None:
-    decision = _latest(session, run.id, "clusters")
+    decision = latest_review(session, run.id, "clusters")
     current = cluster_set_hash(_leiden_ids(run))
     if decision is None or decision.evidence_hash != current:
         _block(session, run, "REVIEW_CLUSTER_COMPLETE")
 
 
 def _has_delete(session: Session, run: StageRun) -> bool:
-    decision = _latest(session, run.id, "clusters")
+    decision = latest_review(session, run.id, "clusters")
     if decision is None:
         return False
     body = json.loads(decision.body_json)
@@ -312,7 +316,7 @@ def _has_delete(session: Session, run: StageRun) -> bool:
 
 
 def _recompute_after_review(session: Session, run: StageRun) -> bool:
-    review = _latest(session, run.id, "clusters")
+    review = latest_review(session, run.id, "clusters")
     if review is None:
         return False
     jobs = session.scalars(
@@ -324,7 +328,7 @@ def _recompute_after_review(session: Session, run: StageRun) -> bool:
     return False
 
 
-def _latest(session: Session, run_id: int, kind: str) -> ReviewDecision | None:
+def latest_review(session: Session, run_id: int, kind: str) -> ReviewDecision | None:
     rows = session.scalars(
         select(ReviewDecision)
         .where(ReviewDecision.stage_run_id == run_id)
@@ -382,15 +386,13 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _saw_quicklook(path: Path) -> bool:
-    cursor = path.resolve()
-    if cursor.is_file():
-        cursor = cursor.parent
-    while True:
-        tier = cursor / "analysis_tier.json"
-        if tier.is_file():
-            payload = json.loads(tier.read_text(encoding="utf-8"))
-            return isinstance(payload, dict) and payload.get("analysis_tier") == "quicklook"
-        if cursor.parent == cursor:
-            return False
-        cursor = cursor.parent
+def _require_locked_atlas(session: Session, run: StageRun) -> None:
+    completed = session.scalar(
+        select(Job.id).where(
+            Job.stage_run_id == run.id,
+            Job.task_id == "formal_part1_lock",
+            Job.job_status == "COMPLETED",
+        )
+    )
+    if completed is None:
+        _block(session, run, "LOCKED_ATLAS_REQUIRED")

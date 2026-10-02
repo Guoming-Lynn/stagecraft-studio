@@ -223,18 +223,27 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
             == 201
         )
 
-        locked = root / "locked_atlas.h5ad"
-        lcode = (
-            "import anndata as ad, numpy as np, pandas as pd, sys\n"
-            "a = ad.read_h5ad(sys.argv[1])\n"
-            "c = a.layers['counts']\n"
-            "arr = c.toarray() if hasattr(c, 'toarray') else np.asarray(c)\n"
-            "a.layers['normalized'] = np.log1p(arr.astype(float))\n"
-            "a.obsm['X_umap'] = np.random.default_rng(42).standard_normal(size=(a.n_obs, 2))\n"
-            "a.obs['cell_type'] = ['c0' if i % 2 == 0 else 'c1' for i in range(a.n_obs)]\n"
-            "a.write_h5ad(sys.argv[2])\n"
-        )
-        subprocess.run([str(py), "-c", lcode, str(primary), str(locked)], check=True)
+        # Step 5b: formal_part1_lock
+        rev_file = root / "cluster_review.json"
+        rev_data = {
+            "resolution": "0.2",
+            "rows": c_rows,
+        }
+        rev_file.write_text(json.dumps(rev_data), encoding="utf-8")
+        grid_out = stage_dir / "formal_part1_grid"
+        p1_lock = {
+            "common": str(primary),
+            "grid": str(grid_out),
+            "review": str(rev_file),
+            "gene": "STAT1",
+            "out": str(root),
+        }
+        _task(client, factory, run_id, "formal_part1_lock", p1_lock)
+        locked = stage_dir / "formal_part1_lock" / "locked_atlas.h5ad"
+        assert locked.is_file()
+        assert (stage_dir / "formal_part1_lock" / "celltype_colors.yaml").is_file()
+        assert (stage_dir / "formal_part1_lock" / "cluster_mapping.csv").is_file()
+        assert (stage_dir / "formal_part1_lock" / "lock_record.json").is_file()
 
         # Step 6: Part 3
         bc_file = root / "barcodes.txt"
@@ -261,10 +270,7 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
         assert comp_h5ad.is_file()
 
         # Step 7: Part 2
-        colors = root / "colors.json"
-        colors.write_text(
-            json.dumps({"c0": "#1f77b4", "c1": "#ff7f0e", "D1": "#1f77b4"}), encoding="utf-8"
-        )
+        colors = stage_dir / "formal_part1_lock" / "colors.json"
         p2_s = {"input": str(locked), "gene": "STAT1", "group": "cell_type", "out": str(root)}
         _task(client, factory, run_id, "formal_part2_survey", p2_s)
         assert (stage_dir / "formal_part2_survey" / "part2_record.json").is_file()

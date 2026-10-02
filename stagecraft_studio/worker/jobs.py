@@ -8,12 +8,11 @@ only when the child process exits 0 and satisfies the output contract.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
-import os
 import shutil
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +28,7 @@ from stagecraft_studio.db.models import (
     ProtocolVersion,
     StageRun,
 )
+from stagecraft_studio.db.reviews import latest_review
 from stagecraft_studio.db.store import continue_stage_run, session_factory
 from stagecraft_studio.domain.protocol import ProtocolBlocked
 from stagecraft_studio.engine.formal_args import (
@@ -42,34 +42,7 @@ from stagecraft_studio.engine.formal_launch import FormalLaunch
 from stagecraft_studio.rules.evaluator import record_job_evidence, record_job_rules
 from stagecraft_studio.rules.quicklook import FormalInputRejected
 from stagecraft_studio.worker.process_tree import kill_tree, spawn
-
-
-def stream_sha256(path: Path) -> str:
-    """Compute sha256 checksum with streaming chunks."""
-    hasher = hashlib.sha256()
-    with path.open("rb") as f:
-        while chunk := f.read(65536):
-            hasher.update(chunk)
-    return hasher.hexdigest()
-
-
-def _atomic_publish(src: Path, dest: Path) -> None:
-    """Publish src directory to dest atomically by staging replacement."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    backup: Path | None = None
-    if dest.exists():
-        timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
-        backup = dest.parent / f".{dest.name}.old.{timestamp}"
-        dest.rename(backup)
-    try:
-        os.replace(src, dest)
-    except Exception:
-        if backup is not None and backup.exists() and not dest.exists():
-            backup.rename(dest)
-        raise
-    finally:
-        if backup is not None and backup.exists():
-            shutil.rmtree(backup, ignore_errors=True)
+from stagecraft_studio.worker.publish import atomic_publish, stream_sha256
 
 
 def _now() -> datetime:
@@ -180,7 +153,11 @@ class FormalWorker:
                     proc.wait(timeout=3.0)
 
             if tmp_dir is not None and tmp_dir.exists():
-                shutil.rmtree(tmp_dir, ignore_errors=True)
+                for _ in range(10):
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
+                    if not tmp_dir.exists():
+                        break
+                    time.sleep(0.02)
 
         return {"id": job_id, "job_status": "CANCELLED"}
 
@@ -286,6 +263,38 @@ class FormalWorker:
         if task_id == "formal_stage_report":
             fields.setdefault("stage", stage_dir)
             fields["out"] = tmp_dir / "REPORT.md"
+        elif task_id == "formal_part1_lock":
+            fields.setdefault("common", stage_dir / "formal_part1_merge" / "primary_common.h5ad")
+            fields.setdefault("grid", stage_dir / "formal_part1_grid")
+            if "gene" not in fields:
+                with self._factory() as session:
+                    run = session.get(StageRun, job.stage_run_id)
+                    if run:
+                        prot = session.get(ProtocolVersion, run.protocol_id)
+                        if prot and prot.document_json:
+                            doc = json.loads(prot.document_json)
+                            if isinstance(doc, dict) and "target_gene" in doc:
+                                fields["gene"] = doc["target_gene"]
+            if "review" not in fields:
+                with self._factory() as session:
+                    res_dec = latest_review(session, job.stage_run_id, "resolution")
+                    cls_dec = latest_review(session, job.stage_run_id, "clusters")
+                    if res_dec and cls_dec:
+                        res_body = json.loads(res_dec.body_json)
+                        cls_body = json.loads(cls_dec.body_json)
+                        rev_path = tmp_dir / "cluster_review.json"
+                        rev_path.write_text(
+                            json.dumps(
+                                {
+                                    "resolution": res_body.get("resolution"),
+                                    "rows": cls_body.get("rows"),
+                                },
+                                ensure_ascii=False,
+                            ),
+                            encoding="utf-8",
+                        )
+                        fields["review"] = rev_path
+            fields["out"] = tmp_dir
         else:
             fields["out"] = tmp_dir
 
@@ -347,7 +356,7 @@ class FormalWorker:
                 return
 
             dest_dir = stage_dir / task_id
-            _atomic_publish(tmp_dir, dest_dir)
+            atomic_publish(tmp_dir, dest_dir)
 
             prior_job_ids = select(Job.id).where(
                 Job.stage_run_id == job.stage_run_id,

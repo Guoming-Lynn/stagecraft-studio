@@ -23,6 +23,13 @@ FORMAL_OUTPUT_CONTRACTS: dict[str, tuple[str, ...]] = {
         "pca_audit.csv",
         "grid_record.json",
         "leiden_resolution_overview.png",
+        "all_resolutions.h5ad",
+    ),
+    "formal_part1_lock": (
+        "locked_atlas.h5ad",
+        "celltype_colors.yaml",
+        "cluster_mapping.csv",
+        "lock_record.json",
     ),
     "formal_part3_recluster": (
         "compartment_counts.h5ad",
