@@ -23,6 +23,7 @@ from stagecraft_studio.engine.formal_args import SPECS
 from stagecraft_studio.engine.registry import UnsupportedTask, require_task
 from stagecraft_studio.rules.gates import (
     PRE_RESOLUTION,
+    RESOLUTIONS,
     GateRejected,
     cluster_set_hash,
     exposure_blinding,
@@ -70,6 +71,22 @@ def submit_resolution(
     chosen = require_resolution(resolution)
     if digest != evidence_digest(run.evidence_json):
         raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+    evidence = json.loads(run.evidence_json or "{}")
+    overview = evidence.get("overview") if isinstance(evidence, dict) else None
+    if not isinstance(overview, list) or not overview:
+        raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+
+    clusters_map = evidence.get("clusters_by_resolution") if isinstance(evidence, dict) else None
+    if isinstance(clusters_map, dict) and chosen in clusters_map:
+        cluster_ids = [str(x) for x in clusters_map[chosen]]
+    else:
+        matched = [it for it in overview if isinstance(it, dict) and str(it.get("resolution")) == chosen]
+        if not matched:
+            raise GateRejected("RESOLUTION_REVIEW_REQUIRED", 400)
+        cluster_ids = [str(i) for i in range(int(matched[0].get("n_clusters", 0)))]
+
+
+    run.leiden_ids_json = json.dumps(cluster_ids)
     recorded, reason = exposure_blinding(require_blinding(blinding), run.quicklook_seen)
     body: dict[str, object] = {
         "kind": "resolution",
@@ -79,6 +96,7 @@ def submit_resolution(
         "rationale": rationale_text,
         "blinding": recorded,
         "blinding_reason": reason,
+        "leiden_ids": cluster_ids,
     }
     return _decision(session, run, digest, reviewer_text, body)
 
@@ -163,19 +181,20 @@ def review_center(run: StageRun, target_gene: str) -> dict[str, object]:
     if not isinstance(payload, dict):
         payload = {}
     overview = payload.get("overview")
-    resolutions: list[dict[str, object]] = []
-    if isinstance(overview, list):
-        for item in overview:
-            if not isinstance(item, dict):
-                continue
-            resolutions.append(
-                {
-                    "resolution": item.get("resolution"),
-                    "n_clusters": item.get("n_clusters"),
-                    "min_cluster_size": item.get("min_cluster_size"),
-                    "max_cluster_size": item.get("max_cluster_size"),
-                }
-            )
+    resolutions = (
+        [
+            {
+                "resolution": it.get("resolution"),
+                "n_clusters": it.get("n_clusters"),
+                "min_cluster_size": it.get("min_cluster_size"),
+                "max_cluster_size": it.get("max_cluster_size"),
+            }
+            for it in overview
+            if isinstance(it, dict)
+        ]
+        if isinstance(overview, list)
+        else []
+    )
     filtered = filter_annotation_evidence(payload, target_gene)
     return {
         "id": run.id,
@@ -186,9 +205,7 @@ def review_center(run: StageRun, target_gene: str) -> dict[str, object]:
         "clusters": filtered["clusters"],
         "genes": filtered["genes"],
         "scientific_status": scientific_status(
-            stage_status=run.stage_status,
-            invalidated=run.invalidated,
-            evidence=payload,
+            stage_status=run.stage_status, invalidated=run.invalidated, evidence=payload
         ),
     }
 
@@ -273,17 +290,7 @@ def _require_current_resolution(session: Session, run: StageRun) -> None:
     if decision is None or decision.evidence_hash != current:
         _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
     body = json.loads(decision.body_json)
-    if not isinstance(body, dict) or body.get("resolution") not in {
-        "0.2",
-        "0.3",
-        "0.4",
-        "0.5",
-        "0.6",
-        "0.8",
-        "1.0",
-        "1.2",
-        "1.5",
-    }:
+    if not isinstance(body, dict) or body.get("resolution") not in RESOLUTIONS:
         _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
 
 

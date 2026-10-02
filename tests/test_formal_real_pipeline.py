@@ -179,8 +179,6 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
         with factory() as session:
             run_db = session.get(StageRun, run_id)
             assert run_db is not None
-            run_db.leiden_ids_json = json.dumps(["0", "1"])
-            session.commit()
             e_hash = evidence_digest(run_db.evidence_json)
 
         r_body = {
@@ -198,6 +196,13 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
             == 201
         )
 
+        with factory() as session:
+            run_db = session.get(StageRun, run_id)
+            assert run_db is not None
+            real_clusters = json.loads(run_db.leiden_ids_json or "[]")
+            assert len(real_clusters) >= 1
+            assert "0" in real_clusters
+
         c_rows = [
             {
                 "cluster": c,
@@ -207,7 +212,7 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
                 "decided_on": "2026-10-02",
                 "name": f"c{c}",
             }
-            for c in ("0", "1")
+            for c in real_clusters
         ]
         assert (
             client.post(
