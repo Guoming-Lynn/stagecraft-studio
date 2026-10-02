@@ -175,6 +175,13 @@ def filter_annotation_evidence(payload: dict[str, object], target_gene: str) -> 
     cluster_ids: list[str] = []
     if isinstance(clusters, list):
         cluster_ids = [item for item in clusters if isinstance(item, str)]
+    elif "clusters_by_resolution" in payload and isinstance(
+        payload["clusters_by_resolution"], dict
+    ):
+        res_map = payload["clusters_by_resolution"]
+        chosen = "0.2" if "0.2" in res_map else (next(iter(res_map)) if res_map else None)
+        if chosen and isinstance(res_map.get(chosen), list):
+            cluster_ids = [str(x) for x in res_map[chosen]]
     return {"genes": kept, "clusters": cluster_ids}
 
 

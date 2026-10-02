@@ -369,5 +369,10 @@ def record_job_evidence(
                         if cid not in res_map[res_val]:
                             res_map[res_val].append(cid)
                 evidence["clusters_by_resolution"] = res_map
+                default_res = (
+                    "0.2" if "0.2" in res_map else (next(iter(res_map)) if res_map else None)
+                )
+                if default_res and res_map.get(default_res):
+                    evidence["clusters"] = list(res_map[default_res])
 
     run.evidence_json = json.dumps(evidence, ensure_ascii=False)
