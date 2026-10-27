@@ -9,23 +9,19 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from stagecraft_studio.api.app import create_app
-from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.db.models import StageRun
+from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.db.reviews import evidence_digest
-from stagecraft_studio.db.store import (
-    create_project,
-    freeze_protocol,
-    open_stage_run,
-    session_factory,
-)
-from stagecraft_studio.domain.protocol import protocol_document
+from stagecraft_studio.db.store import session_factory
 from stagecraft_studio.engine.launch import EngineLaunch
 
 from tests.audit_rows import rejected_audit
+from tests.review_helpers import TOKEN, client_with_run as _client
+from tests.review_helpers import cluster_row as _row
+from tests.review_helpers import complete_review_tables as _complete_review_tables
+from tests.review_helpers import resolution_body as _resolution
 
-TOKEN = {"origin": "http://127.0.0.1:8765", "x-stagecraft-token": "secret-token"}
 LAUNCH = EngineLaunch(python=Path("python"), script=Path("run_pipeline.py"))
-
 
 def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
     client, run_id, digest = _client(tmp_path)
@@ -63,7 +59,11 @@ def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
         ).status_code
         == 201
     )
-    _clusters(client, run_id)
+    blocked_clusters = _clusters(client, run_id)
+    assert blocked_clusters.status_code == 409
+    assert blocked_clusters.json()["detail"]["rule_id"] == "REVIEW_TABLES_REQUIRED"
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
+    assert _clusters(client, run_id).status_code == 201
     denied_p2 = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
@@ -75,7 +75,7 @@ def test_resolution_is_required_before_a_later_job(tmp_path: Path) -> None:
     queued = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_part1_lock", "reuse_umap": False},
+        json={"task_id": "formal_part1_lock", "fields": {}},
     )
     assert queued.status_code == 201
 
@@ -97,6 +97,7 @@ def test_quicklook_exposure_forces_unblinded(tmp_path: Path) -> None:
         f"/api/stage-runs/{run_id}/resolution", headers=TOKEN, json=_resolution(digest)
     )
     assert response.status_code == 201
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
     with session_factory(tmp_path / "studio.sqlite")() as session:
         run = session.get(StageRun, run_id)
         assert run is not None
@@ -117,6 +118,7 @@ def test_old_cluster_review_does_not_apply_to_new_ids(tmp_path: Path) -> None:
         ).status_code
         == 201
     )
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
     partial = client.post(
         f"/api/stage-runs/{run_id}/clusters",
         headers=TOKEN,
@@ -143,6 +145,7 @@ def test_old_cluster_review_does_not_apply_to_new_ids(tmp_path: Path) -> None:
 def test_delete_cannot_reuse_the_old_umap(tmp_path: Path) -> None:
     client, run_id, digest = _client(tmp_path)
     client.post(f"/api/stage-runs/{run_id}/resolution", headers=TOKEN, json=_resolution(digest))
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
     rows = [_row("0", "KEEP"), _row("1", "DELETE")]
     assert (
         client.post(
@@ -170,7 +173,7 @@ def test_delete_cannot_reuse_the_old_umap(tmp_path: Path) -> None:
     recomputed = client.post(
         f"/api/stage-runs/{run_id}/jobs",
         headers=TOKEN,
-        json={"task_id": "formal_part1_grid", "reuse_umap": False},
+        json={"task_id": "formal_part1_round", "fields": {"round_index": 1}},
     )
     assert recomputed.status_code == 201
     assert recomputed.json()["from_counts"] is True
@@ -268,20 +271,6 @@ def test_quicklook_carry_omits_labels_and_resolution(tmp_path: Path) -> None:
     assert "labels" not in body["carried"]
 
 
-def test_names_are_refused_while_a_cluster_is_deleted(tmp_path: Path) -> None:
-    client, run_id, _digest = _client(tmp_path)
-    named = _row("0", "KEEP")
-    named["name"] = "monocyte"
-    deleted = _row("1", "DELETE")
-    response = client.post(
-        f"/api/stage-runs/{run_id}/clusters",
-        headers=TOKEN,
-        json={"blinding": "NOT_APPLICABLE", "rows": [named, deleted]},
-    )
-    assert response.status_code == 400
-    assert response.json()["detail"]["rule_id"] == "REVIEW_CLUSTER_COMPLETE"
-
-
 def test_a_stored_pass_does_not_raise_the_ceiling(tmp_path: Path) -> None:
     client, run_id, _digest = _client(tmp_path)
     with session_factory(tmp_path / "studio.sqlite")() as session:
@@ -328,72 +317,30 @@ def test_rule_coverage_matches_the_catalog() -> None:
     assert completed.returncode == 0, completed.stderr
 
 
-def _client(tmp_path: Path, *, quicklook_seen: bool = False) -> tuple[TestClient, int, str]:
-    database = tmp_path / "studio.sqlite"
-    upgrade_database(database)
-    evidence = {
-        "genes": [{"gene": "STAT1", "expression": [1, 2]}, {"gene": "CD68", "expression": [3]}],
-        "labels": {"group": "AS", "condition": "case"},
-        "clusters": ["0", "1"],
-        "overview": [
-            {"resolution": "0.4", "n_clusters": 2, "min_cluster_size": 10, "max_cluster_size": 20},
-            {"resolution": "0.2", "n_clusters": 2, "min_cluster_size": 10, "max_cluster_size": 20},
-        ],
-        "clusters_by_resolution": {
-            "0.4": ["0", "1"],
-            "0.2": ["0", "1"],
-        },
-    }
-    raw = json.dumps(evidence)
-    source = tmp_path / "counts.h5ad"
-    source.write_bytes(b"counts")
-    with session_factory(database)() as session:
-        project = create_project(session, "plaque")
-        protocol = freeze_protocol(
-            session,
-            project.id,
-            protocol_document(
-                target_gene="STAT1",
-                species="human",
-                manifest=[{"library_id": "A", "dataset": "D1"}],
-                qc={"loose_min_genes": 200},
-                harmony_keys=["dataset"],
-            ),
-        )
-        run = open_stage_run(session, project_id=project.id, protocol=protocol, input_path=source)
-        run.evidence_json = raw
-        run.leiden_ids_json = json.dumps(["0", "1"])
-        run.quicklook_seen = quicklook_seen
-        session.commit()
-        run_id = run.id
-    app = create_app("secret-token", port=8765, launch=LAUNCH, database=database)
-    return TestClient(app), run_id, evidence_digest(raw)
-
-
-def _resolution(digest: str) -> dict[str, str]:
-    return {
-        "reviewer": "Lin",
-        "decided_on": "2026-10-01",
-        "rationale": "marker panel separates the monocyte cloud",
-        "evidence_hash": digest,
-        "resolution": "0.4",
-        "blinding": "BLIND",
-    }
-
-
-def _row(cluster: str, decision: str) -> dict[str, str]:
-    return {
-        "cluster": cluster,
-        "decision": decision,
-        "rationale": "marker and QC",
-        "reviewer": "Lin",
-        "decided_on": "2026-10-01",
-    }
-
-
 def _clusters(client: TestClient, run_id: int):
+    first = client.post(
+        f"/api/stage-runs/{run_id}/clusters",
+        headers=TOKEN,
+        json={
+            "blinding": "NOT_APPLICABLE",
+            "round_index": 0,
+            "rows": [
+                _row("0", "KEEP"),
+                _row("1", "KEEP"),
+            ],
+        },
+    )
+    if first.status_code != 201:
+        return first
     return client.post(
         f"/api/stage-runs/{run_id}/clusters",
         headers=TOKEN,
-        json={"blinding": "NOT_APPLICABLE", "rows": [_row("0", "KEEP"), _row("1", "KEEP")]},
+        json={
+            "blinding": "NOT_APPLICABLE",
+            "round_index": 0,
+            "rows": [
+                {**_row("0", "KEEP"), "name": "Type 0"},
+                {**_row("1", "KEEP"), "name": "Type 1"},
+            ],
+        },
     )

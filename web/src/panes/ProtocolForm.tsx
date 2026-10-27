@@ -6,9 +6,29 @@ import {
   loadProtocolForm,
   type ProtocolField,
 } from "../api/client";
+import { takeProposal } from "../proposal_store";
 import { chrome } from "../text/chrome";
 
-type LibraryRow = { library_id: string; dataset: string };
+type LibraryRow = {
+  library_id: string;
+  dataset: string;
+  donor_id: string;
+  source_block: string;
+};
+
+const LIBRARY_COLUMNS: [keyof LibraryRow, string][] = [
+  ["library_id", chrome.library],
+  ["dataset", "dataset"],
+  ["donor_id", "donor_id"],
+  ["source_block", "source_block"],
+];
+
+const emptyRow = (): LibraryRow => ({
+  library_id: "",
+  dataset: "",
+  donor_id: "",
+  source_block: "",
+});
 
 export function ProtocolForm() {
   const [fields, setFields] = useState<ProtocolField[]>([]);
@@ -17,10 +37,23 @@ export function ProtocolForm() {
   const [harmony, setHarmony] = useState("dataset");
   const [minGenes, setMinGenes] = useState("200");
   const [dataPath, setDataPath] = useState("");
-  const [libraries, setLibraries] = useState<LibraryRow[]>([
-    { library_id: "", dataset: "" },
-  ]);
+  const [libraries, setLibraries] = useState<LibraryRow[]>([emptyRow()]);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const apply = () => {
+      const values = takeProposal();
+      if (!values || !("target_gene" in values)) return;
+      setGene(values.target_gene);
+      setSpecies(values.species);
+      setHarmony(values.harmony_keys.join(", "));
+      setMinGenes(String(values.loose_min_genes));
+      setMessage(chrome.assistantProposalApplied);
+    };
+    apply();
+    window.addEventListener("stagecraft:apply-proposal", apply);
+    return () => window.removeEventListener("stagecraft:apply-proposal", apply);
+  }, []);
 
   useEffect(() => {
     void loadProtocolForm()
@@ -91,48 +124,52 @@ export function ProtocolForm() {
         />
         <span className="hint">{help("data_path")?.reason}</span>
       </label>
-      {libraries.map((row, index) => (
-        <div key={index} className="row">
-          <input
-            value={row.library_id}
-            placeholder={chrome.library}
-            onChange={(event) =>
-              setLibraries((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index
-                    ? { ...item, library_id: event.target.value }
-                    : item,
-                ),
-              )
-            }
-          />
-          <input
-            value={row.dataset}
-            placeholder="dataset"
-            onChange={(event) =>
-              setLibraries((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index
-                    ? { ...item, dataset: event.target.value }
-                    : item,
-                ),
-              )
-            }
-          />
+      <div className="card" style={{ gap: "8px" }}>
+        <div className="row spread">
+          <h4>{chrome.library}</h4>
+          <span className="hint">{help("libraries")?.reason}</span>
         </div>
-      ))}
-      <div className="row" style={{ gap: "8px" }}>
-        <button
-          type="button"
-          onClick={() =>
-            setLibraries((current) => [
-              ...current,
-              { library_id: "", dataset: "" },
-            ])
-          }
-        >
-          + {chrome.library}
-        </button>
+        <table>
+          <thead>
+            <tr>
+              {LIBRARY_COLUMNS.map(([key, label]) => (
+                <th key={key}>{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {libraries.map((row, index) => (
+              <tr key={index}>
+                {LIBRARY_COLUMNS.map(([key, placeholder]) => (
+                  <td key={key}>
+                    <input
+                      style={{ width: "100%" }}
+                      value={row[key]}
+                      placeholder={placeholder}
+                      onChange={(event) =>
+                        setLibraries((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, [key]: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div>
+          <button
+            type="button"
+            onClick={() => setLibraries((current) => [...current, emptyRow()])}
+          >
+            + {chrome.library}
+          </button>
+        </div>
       </div>
       <button type="submit">{chrome.freeze}</button>
       {message ? <p className="hint">{message}</p> : null}

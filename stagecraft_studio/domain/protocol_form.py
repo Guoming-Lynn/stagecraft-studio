@@ -67,8 +67,11 @@ def form_fields() -> list[dict[str, object]]:
             "name": "libraries",
             "kind": "rows",
             "required": True,
-            "columns": ["library_id", "dataset"],
-            "reason": "每个 library 属于哪个 dataset。",
+            "columns": ["library_id", "dataset", "donor_id", "source_block"],
+            "reason": (
+                "每个 library 属于哪个 dataset、哪个供体、哪个来源块。"
+                "矩阵里没有 donor_id 时必须填供体；来源块留空时等于 dataset。"
+            ),
             "freeze_impact": "改了以后，旧 stage run 不能继续。",
         },
     ]
@@ -97,7 +100,17 @@ def document_from_form(
         dataset = row.get("dataset", "").strip()
         if not library_id or not dataset:
             raise FormError("PROTOCOL_FORM")
-        rows.append({"library_id": library_id, "dataset": dataset})
+        entry: dict[str, JsonValue] = {
+            "library_id": library_id,
+            "dataset": dataset,
+            "source_block": row.get("source_block", "").strip() or dataset,
+        }
+        donor_id = row.get("donor_id", "").strip()
+        if donor_id:
+            entry["donor_id"] = donor_id
+        rows.append(entry)
+    if len({row["library_id"] for row in rows}) != len(rows):
+        raise FormError("PROTOCOL_FORM")
     if not rows:
         raise FormError("PROTOCOL_FORM")
     return protocol_document(

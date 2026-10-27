@@ -9,7 +9,7 @@ import {
   type StageGalleryView,
   type StageRunItem,
 } from "../api/client";
-import { chrome } from "../text/chrome";
+import { chrome, getLanguage } from "../text/chrome";
 import { GalleryCard } from "./GalleryCard";
 
 export function Gallery() {
@@ -80,7 +80,8 @@ export function Gallery() {
         {gallery ? (
           <div className="row" style={{ gap: "6px", fontSize: "12px" }}>
             <span className="badge">
-              总图数: {gallery.total_figures} (可用: {gallery.available_count})
+              {chrome.totalFigures}: {gallery.total_figures} (
+              {chrome.availableFigures}: {gallery.available_count})
             </span>
             {gallery.not_estimable_count > 0 ? (
               <span className="badge badge-warning">
@@ -92,30 +93,35 @@ export function Gallery() {
       </div>
 
       {gallery ? (
-        <div
-          className="scientific-banner"
-          style={{
-            border: "1px solid var(--border-strong, #cbd5e1)",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            marginBottom: "12px",
-            background: "var(--bg-surface, #f8fafc)",
-          }}
-        >
+        <div className="scientific-banner" style={{ marginBottom: "12px" }}>
           <div className="row spread" style={{ alignItems: "center" }}>
             <div className="row" style={{ gap: "8px", alignItems: "center" }}>
-              <strong>科学边界：</strong>
+              <strong>{chrome.scientificBoundary}:</strong>
               <span className="badge badge-warning">
-                校准状态: {gallery.scientific_status.calibration_status}
+                {chrome.calibration}:{" "}
+                {gallery.scientific_status.calibration_status}
               </span>
               <span className="badge">
-                关联断言:{" "}
+                {chrome.verdict}: {gallery.scientific_status.scientific_status}
+              </span>
+              <span className="badge">
+                {chrome.association}:{" "}
                 {gallery.scientific_status.associated
                   ? "true"
-                  : "false (未建立)"}
+                  : getLanguage() === "en-US"
+                    ? "false (not established)"
+                    : "false（尚未建立）"}
               </span>
               <span className="badge">
-                证据上限: {gallery.scientific_status.evidence_ceiling}
+                {chrome.limmaClaim}:{" "}
+                {gallery.scientific_status.claims_limma ? "true" : "false"}
+              </span>
+              <span className="badge">
+                {chrome.holdout}: {gallery.scientific_status.holdout}
+              </span>
+              <span className="badge">
+                {chrome.evidenceCeiling}:{" "}
+                {gallery.scientific_status.evidence_ceiling}
               </span>
             </div>
           </div>
@@ -124,11 +130,10 @@ export function Gallery() {
               style={{
                 margin: "6px 0 0 0",
                 fontSize: "12px",
-                color: "var(--amber-primary, #b45309)",
+                color: "var(--amber-primary)",
               }}
             >
-              ⚠️ 保留 {gallery.not_estimable_count} 个不可估计 (NOT_ESTIMABLE)
-              槽位：按科学规范保留，不为排版美观而隐匿失败项。
+              ⚠ {gallery.not_estimable_count} {chrome.notEstimableNote}
             </p>
           ) : null}
         </div>
@@ -139,14 +144,15 @@ export function Gallery() {
         style={{ gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}
       >
         {[
-          { key: "ALL", label: `全部 (${items.length})` },
-          { key: "Part 1", label: "Part 1 网格" },
-          { key: "Part 2", label: "Part 2 描述" },
-          { key: "Part 4", label: "Part 4 可识别性" },
-          { key: "Part 5", label: "Part 5 拟合" },
+          { key: "ALL", label: `${chrome.allFigures} (${items.length})` },
+          { key: "Part 1", label: chrome.part1Grid },
+          { key: "Part 2", label: chrome.part2Description },
+          { key: "Part 3", label: chrome.part3Figures },
+          { key: "Part 4", label: chrome.part4Identifiability },
+          { key: "Part 5", label: chrome.part5Model },
           {
             key: "NOT_ESTIMABLE",
-            label: `仅看不可估计 (${gallery?.not_estimable_count ?? 0})`,
+            label: `${chrome.onlyNotEstimable} (${gallery?.not_estimable_count ?? 0})`,
           },
         ].map((f) => (
           <button
@@ -180,6 +186,13 @@ export function Gallery() {
           : null}
       </div>
 
+      {filterPart === "Part 3" &&
+      items.every((item) => item.stage_part !== "Part 3") ? (
+        <div className="empty-state">
+          <p>{chrome.part3FiguresPending}</p>
+        </div>
+      ) : null}
+
       {focus && runId ? (
         <dialog open className="lightbox" style={{ maxWidth: "800px" }}>
           <div className="lightbox-top">
@@ -209,7 +222,7 @@ export function Gallery() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  下载 SVG
+                  {chrome.downloadSvg}
                 </a>
               ) : null}
               {focus.format_pdf ? (
@@ -218,7 +231,7 @@ export function Gallery() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  下载 PDF
+                  {chrome.downloadPdf}
                 </a>
               ) : null}
               {focus.source_data ? (
@@ -227,7 +240,7 @@ export function Gallery() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  下载 Source Data
+                  {chrome.downloadSourceData}
                 </a>
               ) : null}
               {focus.parameters ? (
@@ -236,7 +249,7 @@ export function Gallery() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  查看参数
+                  {chrome.viewParameters}
                 </a>
               ) : null}
             </div>

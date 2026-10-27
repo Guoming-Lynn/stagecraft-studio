@@ -8,7 +8,8 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from stagecraft_studio.db.models import Project, ProtocolVersion, ReviewDecision, StageRun
+from stagecraft_studio.db.models import ProtocolVersion, ReviewDecision, StageRun
+from stagecraft_studio.engine.registry import TARGET_EXPOSING_TASKS
 
 BLINDING_VALUES = frozenset({"BLIND", "UNBLINDED_WITH_REASON", "NOT_APPLICABLE"})
 LEIDEN_RESOLUTIONS: tuple[str, ...] = (
@@ -30,6 +31,7 @@ PRE_RESOLUTION = frozenset(
         "formal_part1_qc",
         "formal_part1_merge",
         "formal_part1_grid",
+        "formal_part1_review_tables",
     }
 )
 POST_LOCK_TASKS = frozenset(
@@ -120,6 +122,12 @@ _EXCLUDED_EVIDENCE = frozenset(
         "part4",
         "verdict",
         "lock",
+        "active_resolution",
+        "active_leiden_ids",
+        "clusters",
+        "active_grid_rel",
+        "active_part1_round",
+        "review_tables_run",
     }
 )
 
@@ -188,6 +196,8 @@ def require_cluster_rows(rows: list[dict[str, str]], leiden_ids: list[str]) -> l
     deleted = any(row["decision"] == "DELETE" for row in cleaned)
     if named and deleted:
         raise GateRejected("REVIEW_CLUSTER_COMPLETE", 400)
+    if named and any(not row["name"] for row in cleaned):
+        raise GateRejected("REVIEW_CLUSTER_COMPLETE", 400)
     return cleaned
 
 
@@ -237,7 +247,10 @@ def get_latest_review(session: Session, run_id: int, kind: str) -> ReviewDecisio
 
 
 def is_blinding_active(session: Session, run: StageRun) -> bool:
-    """True if annotation review is uncompleted or blinding is recorded as BLIND."""
+    """True until a cluster review matching the current cluster set is recorded.
+
+    ``BLIND`` records how the reviewer worked; it does not keep results hidden afterwards.
+    """
     decision = get_latest_review(session, run.id, "clusters")
     if decision is None:
         return True
@@ -253,22 +266,17 @@ def is_blinding_active(session: Session, run: StageRun) -> bool:
         return True
     try:
         body = json.loads(decision.body_json)
-        if isinstance(body, dict):
-            return body.get("blinding") == "BLIND"
     except (json.JSONDecodeError, OSError):
-        pass
-    return True
+        return True
+    return not (isinstance(body, dict) and body.get("blinding") in BLINDING_VALUES)
 
 
 def get_target_gene(session: Session, run: StageRun) -> str:
-    project = session.get(Project, run.project_id)
-    if project and project.name:
-        return project.name
     protocol = session.get(ProtocolVersion, run.protocol_id)
     if protocol and protocol.document_json:
         try:
             doc = json.loads(protocol.document_json)
-            if isinstance(doc, dict) and "target_gene" in doc:
+            if isinstance(doc, dict) and doc.get("target_gene"):
                 return str(doc["target_gene"])
         except (json.JSONDecodeError, OSError):
             pass
@@ -276,24 +284,13 @@ def get_target_gene(session: Session, run: StageRun) -> str:
 
 
 def is_target_gene_artifact(rel_path: str, target_gene: str = "") -> bool:
-    norm = rel_path.replace("\\", "/").lower()
+    norm = rel_path.replace("\\", "/")
     parts = [p for p in norm.split("/") if p]
-    filename = parts[-1] if parts else norm
-    for marker in (
-        "formal_part2",
-        "formal_part4",
-        "formal_part5",
-        "f02_",
-        "f04_",
-        "f05_",
-        "part2_",
-        "part4_",
-        "part5_",
-    ):
-        if any(marker in part for part in parts):
-            return True
+    filename = parts[-1].lower() if parts else norm.lower()
+    if parts and parts[0] in TARGET_EXPOSING_TASKS:
+        return True
     if target_gene and target_gene.strip():
         tg = target_gene.strip().lower()
-        if tg in filename or any(tg == part for part in parts):
+        if tg in filename or any(tg == part.lower() for part in parts):
             return True
     return False

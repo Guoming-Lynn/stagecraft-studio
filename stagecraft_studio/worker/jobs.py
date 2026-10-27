@@ -1,3 +1,4 @@
+# hygiene: worker orchestration module
 """Worker for queued formal analysis jobs.
 
 Runs one job at a time in a background thread.
@@ -17,18 +18,17 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from stagecraft_studio.db.models import (
-    Artifact,
     AuditEvent,
     Job,
     Project,
     ProtocolVersion,
     StageRun,
 )
-from stagecraft_studio.db.reviews import latest_review
+from stagecraft_studio.db.reviews import latest_review_for_round
 from stagecraft_studio.db.store import continue_stage_run, session_factory
 from stagecraft_studio.domain.protocol import ProtocolBlocked
 from stagecraft_studio.engine.formal_args import (
@@ -41,8 +41,13 @@ from stagecraft_studio.engine.formal_contract import FORMAL_OUTPUT_CONTRACTS
 from stagecraft_studio.engine.formal_launch import FormalLaunch
 from stagecraft_studio.rules.evaluator import record_job_evidence, record_job_rules
 from stagecraft_studio.rules.quicklook import FormalInputRejected
+from stagecraft_studio.worker.formal_defaults import (
+    ProtocolDefaultsError,
+    fill_protocol_defaults,
+    publish_subpath,
+)
 from stagecraft_studio.worker.process_tree import kill_tree, spawn
-from stagecraft_studio.worker.publish import atomic_publish, stream_sha256
+from stagecraft_studio.worker.publish import atomic_publish, register_artifacts
 
 
 def _now() -> datetime:
@@ -259,46 +264,148 @@ class FormalWorker:
             payload = json.loads(job.payload_json) if job.payload_json else {}
             fields = dict(payload.get("fields", {}))
             task_id = job.task_id
+            run = session.get(StageRun, job.stage_run_id)
+            protocol = session.get(ProtocolVersion, run.protocol_id) if run else None
+            document = (
+                json.loads(protocol.document_json) if protocol and protocol.document_json else {}
+            )
 
-        if task_id == "formal_stage_report":
+        try:
+            fill_protocol_defaults(
+                task_id, fields, document=document, stage_dir=stage_dir, tmp_dir=tmp_dir
+            )
+            publish_rel = publish_subpath(task_id, fields)
+        except (ProtocolDefaultsError, OSError, json.JSONDecodeError) as exc:
+            with self._factory() as session:
+                job = session.get(Job, job_id)
+                if job:
+                    self._mark_failed(session, job, f"PROTOCOL_DEFAULTS_FAILED: {exc}")
+            return
+
+        if task_id == "formal_part1_round":
+            round_index = int(fields["round_index"])
+            previous_round = round_index - 1
+            previous_rel = (
+                "formal_part1_grid"
+                if previous_round == 0
+                else f"formal_part1_round_{previous_round}"
+            )
+            with self._factory() as session:
+                resolution = latest_review_for_round(
+                    session, job.stage_run_id, "resolution", previous_round
+                )
+                clusters = latest_review_for_round(
+                    session, job.stage_run_id, "clusters", previous_round
+                )
+                if resolution is None or clusters is None:
+                    self._mark_failed(session, job, "PART1_ROUND_REVIEW_MISSING")
+                    return
+                resolution_body = json.loads(resolution.body_json)
+                cluster_body = json.loads(clusters.body_json)
+                grid_jobs = session.scalars(
+                    select(Job)
+                    .where(
+                        Job.stage_run_id == job.stage_run_id,
+                        Job.task_id == "formal_part1_grid",
+                        Job.job_status == "COMPLETED",
+                    )
+                    .order_by(Job.id.desc())
+                )
+                grid_config = None
+                for grid_job in grid_jobs:
+                    grid_payload = json.loads(grid_job.payload_json)
+                    grid_fields = grid_payload.get("fields", {})
+                    if isinstance(grid_fields, dict) and grid_fields.get("config"):
+                        grid_config = Path(str(grid_fields["config"]))
+                        break
+                if grid_config is None:
+                    self._mark_failed(session, job, "GRID_CONFIG_NOT_FOUND")
+                    return
+            review_path = tmp_dir / "cluster_review.json"
+            review_path.write_text(
+                json.dumps(
+                    {
+                        "resolution": resolution_body["resolution"],
+                        "rows": cluster_body["rows"],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            prior_common = (
+                stage_dir / previous_rel / "retained_common.h5ad"
+                if previous_round > 0
+                else stage_dir / "formal_part1_merge" / "primary_common.h5ad"
+            )
+            fields.update(
+                common=prior_common,
+                previous_grid=stage_dir / previous_rel / "all_resolutions.h5ad",
+                review=review_path,
+                config=grid_config,
+                gene=document.get("target_gene", ""),
+            )
+            fields["out"] = tmp_dir
+            publish_rel = f"formal_part1_round_{round_index}"
+        elif task_id == "formal_part1_review_tables":
+            round_index = int(fields["round_index"])
+            grid_rel = (
+                "formal_part1_grid"
+                if round_index == 0
+                else f"formal_part1_round_{round_index}"
+            )
+            fields["grid"] = stage_dir / grid_rel / "all_resolutions.h5ad"
+            fields["round_index"] = round_index
+            fields["gene"] = document.get("target_gene", "")
+            fields["out"] = tmp_dir
+            publish_rel = f"{grid_rel}/review_tables"
+        elif task_id == "formal_stage_report":
             fields.setdefault("stage", stage_dir)
             fields["out"] = tmp_dir / "REPORT.md"
         elif task_id == "formal_part1_lock":
-            fields.setdefault("common", stage_dir / "formal_part1_merge" / "primary_common.h5ad")
-            fields.setdefault("grid", stage_dir / "formal_part1_grid")
-            if "gene" not in fields:
-                with self._factory() as session:
-                    run = session.get(StageRun, job.stage_run_id)
-                    if run:
-                        prot = session.get(ProtocolVersion, run.protocol_id)
-                        if prot and prot.document_json:
-                            doc = json.loads(prot.document_json)
-                            if isinstance(doc, dict) and "target_gene" in doc:
-                                fields["gene"] = doc["target_gene"]
+            with self._factory() as session:
+                run = session.get(StageRun, job.stage_run_id)
+                evidence = json.loads(run.evidence_json) if run and run.evidence_json else {}
+                round_index = int(evidence.get("active_part1_round", 0))
+                active_rel = (
+                    "formal_part1_grid"
+                    if round_index == 0
+                    else f"formal_part1_round_{round_index}"
+                )
+                res_dec = latest_review_for_round(
+                    session, job.stage_run_id, "resolution", round_index
+                )
+                cls_dec = latest_review_for_round(
+                    session, job.stage_run_id, "clusters", round_index
+                )
+                res_body = json.loads(res_dec.body_json) if res_dec else {}
+                cls_body = json.loads(cls_dec.body_json) if cls_dec else {}
+            fields.setdefault(
+                "common",
+                stage_dir / active_rel / "retained_common.h5ad"
+                if round_index > 0
+                else stage_dir / "formal_part1_merge" / "primary_common.h5ad",
+            )
+            fields.setdefault("grid", stage_dir / active_rel)
+            if "gene" not in fields and document.get("target_gene"):
+                fields["gene"] = document["target_gene"]
             if "review" not in fields:
-                with self._factory() as session:
-                    res_dec = latest_review(session, job.stage_run_id, "resolution")
-                    cls_dec = latest_review(session, job.stage_run_id, "clusters")
-                    if res_dec and cls_dec:
-                        res_body = json.loads(res_dec.body_json)
-                        cls_body = json.loads(cls_dec.body_json)
-                        rev_path = tmp_dir / "cluster_review.json"
-                        rev_path.write_text(
-                            json.dumps(
-                                {
-                                    "resolution": res_body.get("resolution"),
-                                    "rows": cls_body.get("rows"),
-                                },
-                                ensure_ascii=False,
-                            ),
-                            encoding="utf-8",
-                        )
-                        fields["review"] = rev_path
+                rev_path = tmp_dir / "cluster_review.json"
+                rev_path.write_text(
+                    json.dumps(
+                        {
+                            "resolution": res_body.get("resolution"),
+                            "rows": cls_body.get("rows"),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                fields["review"] = rev_path
             fields["out"] = tmp_dir
         else:
             fields["out"] = tmp_dir
 
-        path_keys: set[str] = {"out", "stage"}
+        path_keys: set[str] = {"out", "stage", "donor_map", "audit_flags", "verdict_table"}
         spec = SPECS.get(task_id)
         if spec is not None:
             path_keys |= {key for _, key, kind in spec[2] if kind == "path"}
@@ -355,34 +462,9 @@ class FormalWorker:
                 self._mark_failed(session, job, "OUTPUT_CONTRACT_MISSING")
                 return
 
-            dest_dir = stage_dir / task_id
+            dest_dir = stage_dir / publish_rel
             atomic_publish(tmp_dir, dest_dir)
-
-            prior_job_ids = select(Job.id).where(
-                Job.stage_run_id == job.stage_run_id,
-                Job.task_id == job.task_id,
-            )
-            session.execute(
-                update(Artifact)
-                .where(
-                    Artifact.job_id.in_(prior_job_ids),
-                    Artifact.artifact_status == "VALID",
-                )
-                .values(artifact_status="SUPERSEDED")
-            )
-
-            for fpath in sorted(dest_dir.rglob("*")):
-                if fpath.is_file():
-                    rel_path = fpath.relative_to(stage_dir).as_posix()
-                    digest = stream_sha256(fpath)
-                    session.add(
-                        Artifact(
-                            job_id=job.id,
-                            relative_path=rel_path,
-                            content_hash=digest,
-                            artifact_status="VALID",
-                        )
-                    )
+            register_artifacts(session, job, stage_dir, publish_rel)
 
             record_job_rules(session, job, dest_dir=dest_dir)
             record_job_evidence(session, job, dest_dir=dest_dir)

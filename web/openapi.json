@@ -1524,6 +1524,199 @@
           }
         }
       }
+    },
+    "/api/assistant/provider": {
+      "get": {
+        "summary": "Status",
+        "operationId": "status_api_assistant_provider_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Configure",
+        "operationId": "configure_api_assistant_provider_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Provider",
+        "operationId": "remove_provider_api_assistant_provider_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "type": "object",
+                  "title": "Response Remove Provider Api Assistant Provider Delete"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/preview": {
+      "post": {
+        "summary": "Send Preview",
+        "operationId": "send_preview_api_assistant_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/call": {
+      "post": {
+        "summary": "Send Call",
+        "operationId": "send_call_api_assistant_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/calls/{call_id}/cancel": {
+      "post": {
+        "summary": "Cancel",
+        "operationId": "cancel_api_assistant_calls__call_id__cancel_post",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Cancel Api Assistant Calls  Call Id  Cancel Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1619,6 +1812,157 @@
         ],
         "title": "Bootstrap"
       },
+      "CallRequest": {
+        "properties": {
+          "preview_id": {
+            "type": "string",
+            "title": "Preview Id"
+          },
+          "call_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Call Id"
+          },
+          "input_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash"
+          },
+          "authorized": {
+            "type": "boolean",
+            "title": "Authorized",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "preview_id",
+          "call_id",
+          "input_hash"
+        ],
+        "title": "CallRequest"
+      },
+      "CallView": {
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "COMPLETED",
+              "FAILED",
+              "REJECTED",
+              "CANCELLED"
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposalView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auxiliary": {
+            "type": "boolean",
+            "title": "Auxiliary",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "call_id",
+          "status",
+          "text",
+          "model",
+          "prompt_version",
+          "input_hash",
+          "sources",
+          "created_at"
+        ],
+        "title": "CallView"
+      },
+      "Capabilities": {
+        "properties": {
+          "text": {
+            "type": "boolean",
+            "title": "Text",
+            "default": false
+          },
+          "streaming": {
+            "type": "boolean",
+            "title": "Streaming",
+            "default": false
+          },
+          "structured_output": {
+            "type": "boolean",
+            "title": "Structured Output",
+            "default": false
+          },
+          "tool_calling": {
+            "type": "boolean",
+            "title": "Tool Calling",
+            "default": false
+          },
+          "probed": {
+            "type": "boolean",
+            "title": "Probed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Capabilities"
+      },
       "CarryBody": {
         "properties": {
           "data_path": {
@@ -1646,11 +1990,58 @@
         ],
         "title": "CarryBody"
       },
+      "ClusterAnnotationDraft": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Cluster Id"
+          },
+          "candidate_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z][A-Za-z0-9 _./-]*$",
+            "title": "Candidate Name"
+          },
+          "marker_genes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Marker Genes"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Rationale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "candidate_name",
+          "marker_genes",
+          "rationale"
+        ],
+        "title": "ClusterAnnotationDraft"
+      },
       "ClusterBody": {
         "properties": {
           "blinding": {
             "type": "string",
             "title": "Blinding"
+          },
+          "round_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Round Index",
+            "default": 0
           },
           "rows": {
             "items": {
@@ -2100,6 +2491,16 @@
           "dataset": {
             "type": "string",
             "title": "Dataset"
+          },
+          "donor_id": {
+            "type": "string",
+            "title": "Donor Id",
+            "default": ""
+          },
+          "source_block": {
+            "type": "string",
+            "title": "Source Block",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -2381,6 +2782,315 @@
         ],
         "title": "PortfolioView"
       },
+      "PreviewRequest": {
+        "properties": {
+          "stage_run_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage Run Id"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "stage",
+              "rule",
+              "field",
+              "proposal",
+              "annotation"
+            ],
+            "title": "Topic",
+            "default": "stage"
+          },
+          "rule_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Rule Id",
+            "default": "DESIGN_ESTIMABLE"
+          },
+          "field_name": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Field Name",
+            "default": "harmony_keys"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Question",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PreviewRequest"
+      },
+      "PreviewView": {
+        "properties": {
+          "preview_id": {
+            "type": "string",
+            "title": "Preview Id"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "explanation",
+              "tools"
+            ],
+            "title": "Mode"
+          },
+          "local_text": {
+            "type": "string",
+            "title": "Local Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "preview_id",
+          "input_hash",
+          "payload",
+          "sources",
+          "mode",
+          "local_text"
+        ],
+        "title": "PreviewView"
+      },
+      "ProposalView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProtocolDraft"
+              },
+              {
+                "$ref": "#/components/schemas/ClusterAnnotationDraft"
+              }
+            ],
+            "title": "Values"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "status": {
+            "type": "string",
+            "const": "DRAFT",
+            "title": "Status",
+            "default": "DRAFT"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": "仅为草案；转入研究设计表单后由用户检查，仍需通过常规校验才能冻结。"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "values",
+          "rationale"
+        ],
+        "title": "ProposalView"
+      },
+      "ProtocolDraft": {
+        "properties": {
+          "target_gene": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$",
+            "title": "Target Gene"
+          },
+          "species": {
+            "type": "string",
+            "enum": [
+              "human",
+              "mouse"
+            ],
+            "title": "Species"
+          },
+          "harmony_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Harmony Keys"
+          },
+          "loose_min_genes": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Loose Min Genes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target_gene",
+          "species",
+          "harmony_keys",
+          "loose_min_genes"
+        ],
+        "title": "ProtocolDraft"
+      },
+      "ProviderConfig": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic"
+            ],
+            "title": "Provider"
+          },
+          "base_url": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Base Url"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:/-]+$",
+            "title": "Model"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Timeout Seconds",
+            "default": 30
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "maximum": 2048.0,
+            "minimum": 64.0,
+            "title": "Max Output Tokens",
+            "default": 1024
+          },
+          "context_chars": {
+            "type": "integer",
+            "maximum": 24000.0,
+            "minimum": 4000.0,
+            "title": "Context Chars",
+            "default": 16000
+          },
+          "call_limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Call Limit",
+            "default": 20
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider",
+          "base_url",
+          "model"
+        ],
+        "title": "ProviderConfig"
+      },
+      "ProviderSettings": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ProviderConfig"
+          },
+          "api_key": {
+            "type": "string",
+            "format": "password",
+            "title": "Api Key",
+            "default": "",
+            "writeOnly": true
+          },
+          "remember_key": {
+            "type": "boolean",
+            "title": "Remember Key",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "ProviderSettings"
+      },
+      "ProviderView": {
+        "properties": {
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProviderConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "key_storage": {
+            "type": "string",
+            "enum": [
+              "none",
+              "session",
+              "credential_store"
+            ],
+            "title": "Key Storage",
+            "default": "none"
+          },
+          "calls_used": {
+            "type": "integer",
+            "title": "Calls Used",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProviderView"
+      },
       "QuicklookForm": {
         "properties": {
           "input_path": {
@@ -2488,6 +3198,12 @@
           "blinding": {
             "type": "string",
             "title": "Blinding"
+          },
+          "round_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Round Index",
+            "default": 0
           }
         },
         "additionalProperties": false,

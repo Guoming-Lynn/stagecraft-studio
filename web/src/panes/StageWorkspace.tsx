@@ -47,16 +47,11 @@ export function StageWorkspace() {
   }
 
   return (
-    <div className="stack">
+    <div className="stage-workspace stack">
       {message ? <p className="log-error">{message}</p> : null}
-      <div
-        className="row spread"
-        style={{ alignItems: "center", marginBottom: "8px" }}
-      >
-        <div className="row" style={{ alignItems: "center", gap: "8px" }}>
-          <label htmlFor="stage-run-select">
-            <strong>Stage Run:</strong>
-          </label>
+      <div className="workspace-toolbar">
+        <label className="run-selector" htmlFor="stage-run-select">
+          <span>{chrome.project}</span>
           <select
             id="stage-run-select"
             value={runId ?? ""}
@@ -68,15 +63,16 @@ export function StageWorkspace() {
               </option>
             ))}
           </select>
-        </div>
+        </label>
         {ws ? (
-          <span className="badge" style={{ fontSize: "12px" }}>
-            状态: {ws.stage_status} {ws.invalidated ? "(已失效)" : ""}
+          <span className="workspace-status badge">
+            {chrome.workspaceStatus}: {ws.stage_status}{" "}
+            {ws.invalidated ? "(INVALIDATED)" : ""}
           </span>
         ) : null}
       </div>
 
-      <div className="tabs">
+      <nav className="tabs workspace-tabs" aria-label={chrome.workspace}>
         <button
           type="button"
           className={tab === "inputs" ? "on" : ""}
@@ -112,13 +108,10 @@ export function StageWorkspace() {
         >
           {chrome.log}
         </button>
-      </div>
+      </nav>
 
       {ws ? (
-        <div
-          className="pane-content"
-          style={{ padding: "12px", overflowY: "auto" }}
-        >
+        <div className="pane-content formal-content">
           {tab === "inputs" && <InputsTab ws={ws} />}
           {tab === "parameters" && <ParametersTab ws={ws} />}
           {tab === "results" && <ResultsTab ws={ws} />}
@@ -126,7 +119,7 @@ export function StageWorkspace() {
           {tab === "logs" && <LogsTab ws={ws} />}
         </div>
       ) : (
-        <p>正在加载工作区数据...</p>
+        <p>{chrome.workspaceLoading}</p>
       )}
     </div>
   );
@@ -135,43 +128,61 @@ export function StageWorkspace() {
 function InputsTab({ ws }: { ws: StageWorkspaceView }) {
   const { inputs } = ws;
   return (
-    <div className="stack" style={{ gap: "12px" }}>
-      <div className="card">
-        <h4>基本信息</h4>
-        <p>
-          <strong>目标基因:</strong> {inputs.target_gene || "未设定"} |{" "}
-          <strong>物种:</strong> {inputs.species || "未设定"}
-        </p>
-        <p>
-          <strong>数据文件:</strong> <code>{inputs.data_path}</code>
-        </p>
-        <p>
-          <strong>项目路径:</strong> <code>{inputs.root_path}</code>
-        </p>
-      </div>
-      <div className="card">
-        <h4>协议防篡改哈希</h4>
-        <p>
-          <strong>协议 SHA256:</strong>{" "}
-          <code>{inputs.protocol_hash || "无"}</code>
-        </p>
-        <p>
-          <strong>输入数据 SHA256:</strong>{" "}
-          <code>{inputs.input_hash || "无"}</code>
-        </p>
-      </div>
+    <div className="stack workspace-section">
+      <section className="card input-summary">
+        <h4>{chrome.inputSummary}</h4>
+        <dl className="key-value-grid">
+          <div>
+            <dt>{chrome.gene}</dt>
+            <dd>{inputs.target_gene || "-"}</dd>
+          </div>
+          <div>
+            <dt>{chrome.species}</dt>
+            <dd>{inputs.species || "-"}</dd>
+          </div>
+          <div className="wide">
+            <dt>{chrome.dataFile}</dt>
+            <dd>
+              <code>{inputs.data_path}</code>
+            </dd>
+          </div>
+          <div className="wide">
+            <dt>{chrome.projectPath}</dt>
+            <dd>
+              <code>{inputs.root_path}</code>
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section className="card">
+        <h4>{chrome.protocolHash}</h4>
+        <dl className="key-value-grid hash-grid">
+          <div className="wide">
+            <dt>{chrome.protocolHash}</dt>
+            <dd>
+              <code>{inputs.protocol_hash || "无"}</code>
+            </dd>
+          </div>
+          <div className="wide">
+            <dt>{chrome.inputHash}</dt>
+            <dd>
+              <code>{inputs.input_hash || "无"}</code>
+            </dd>
+          </div>
+        </dl>
+      </section>
     </div>
   );
 }
 
 function ParametersTab({ ws }: { ws: StageWorkspaceView }) {
   return (
-    <div className="stack" style={{ gap: "8px" }}>
+    <div className="stack workspace-section">
       {ws.parameters.length === 0 ? (
-        <p className="empty-state">尚未入队任何分析任务。</p>
+        <p className="empty-state">{chrome.noQueuedTasks}</p>
       ) : (
         ws.parameters.map((p) => (
-          <div key={p.job_id} className="card" style={{ fontSize: "13px" }}>
+          <div key={p.job_id} className="card parameter-card">
             <div className="row spread">
               <strong>
                 Job #{p.job_id}: {p.task_id}
@@ -182,7 +193,7 @@ function ParametersTab({ ws }: { ws: StageWorkspaceView }) {
               style={{
                 margin: "6px 0 0",
                 padding: "6px",
-                background: "var(--bg-card)",
+                background: "var(--bg-code)",
               }}
             >
               {JSON.stringify(p.fields, null, 2)}

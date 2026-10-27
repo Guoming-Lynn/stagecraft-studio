@@ -1,3 +1,4 @@
+# hygiene: facade route module
 """Review gates over HTTP. The checks run here, not in the page."""
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from stagecraft_studio.db.gallery import (
     get_authorized_raw_artifact,
     get_stage_gallery,
 )
-from stagecraft_studio.db.models import AuditEvent, Job, ProtocolVersion, StageRun
+from stagecraft_studio.db.models import AuditEvent, Job, Project, ProtocolVersion, StageRun
 from stagecraft_studio.db.reviews import (
     annotation_evidence,
     carry_quicklook,
@@ -52,6 +53,7 @@ class ResolutionBody(BaseModel):
     evidence_hash: str
     resolution: str
     blinding: str
+    round_index: int = Field(default=0, ge=0)
 
 
 class ClusterRowBody(BaseModel):
@@ -69,6 +71,7 @@ class ClusterBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     blinding: str
+    round_index: int = Field(default=0, ge=0)
     rows: list[ClusterRowBody]
 
 
@@ -93,6 +96,8 @@ class LibraryBody(BaseModel):
 
     library_id: str
     dataset: str
+    donor_id: str = ""
+    source_block: str = ""
 
 
 class FreezeBody(BaseModel):
@@ -119,18 +124,37 @@ def build_review_router(
     @router.post("/api/stage-runs/{run_id}/resolution", status_code=201)
     def resolution(request: Request, run_id: int, body: ResolutionBody) -> dict[str, object]:
         _mutation(request, token, origin)
+        job_id: int | None = None
+        review_id = 0
+        review_hash = ""
         with factory() as session:
             run = _run(session, run_id)
             try:
                 row = submit_resolution(session, run, **body.model_dump())
+                job = enqueue(
+                    session,
+                    run,
+                    task_id="formal_part1_review_tables",
+                    fields={
+                        "round_index": body.round_index,
+                        "resolution": row.body_json and json.loads(row.body_json)["resolution"],
+                    },
+                )
+                job_id = job.id
+                review_id = row.id
+                review_hash = row.evidence_hash
                 session.commit()
             except GateRejected as exc:
                 _raise(exc)
-            return {"id": row.id, "evidence_hash": row.evidence_hash}
+        if formal_worker is not None:
+            formal_worker.wake()
+        return {"id": review_id, "evidence_hash": review_hash, "job_id": job_id or 0}
 
     @router.post("/api/stage-runs/{run_id}/clusters", status_code=201)
     def clusters(request: Request, run_id: int, body: ClusterBody) -> dict[str, int]:
         _mutation(request, token, origin)
+        next_job_id: int | None = None
+        review_id = 0
         with factory() as session:
             run = _run(session, run_id)
             try:
@@ -139,11 +163,41 @@ def build_review_router(
                     run,
                     rows=[item.model_dump() for item in body.rows],
                     blinding=body.blinding,
+                    round_index=body.round_index,
                 )
+                body_json = json.loads(row.body_json)
+                deleted = any(
+                    item.get("decision") == "DELETE"
+                    for item in body_json.get("rows", [])
+                    if isinstance(item, dict)
+                )
+                named = all(
+                    str(item.get("name", "")).strip()
+                    for item in body_json.get("rows", [])
+                    if isinstance(item, dict)
+                )
+                if deleted:
+                    next_job = enqueue(
+                        session,
+                        run,
+                        task_id="formal_part1_round",
+                        fields={"round_index": body.round_index + 1},
+                    )
+                    next_job_id = next_job.id
+                elif named:
+                    lock_job = enqueue(
+                        session,
+                        run,
+                        task_id="formal_part1_lock",
+                    )
+                    next_job_id = lock_job.id
+                review_id = row.id
                 session.commit()
             except GateRejected as exc:
                 _raise(exc)
-            return {"id": row.id}
+        if next_job_id is not None and formal_worker is not None:
+            formal_worker.wake()
+        return {"id": review_id, "next_job_id": next_job_id or 0}
 
     @router.get("/api/stage-runs/{run_id}/review-evidence")
     def review_evidence(run_id: int) -> dict[str, object]:
@@ -251,7 +305,13 @@ def build_review_router(
             target = document.get("target_gene") if isinstance(document, dict) else ""
             if not isinstance(target, str):
                 target = ""
-            return review_center(run, target)
+            project = session.get(Project, run.project_id)
+            stage_root = (
+                Path(project.root_path) / "analysis" / f"stage_{run.id}"
+                if project is not None and project.root_path
+                else None
+            )
+            return review_center(run, target, session=session, stage_root=stage_root)
 
     @router.get("/api/stage-runs/{run_id}/workspace")
     def workspace(run_id: int) -> dict[str, object]:

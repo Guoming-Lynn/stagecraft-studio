@@ -57,20 +57,22 @@ class LoadArgs(_Args):
     input: Path
     format: _Format
     out: Path
+    donor_map: Path | None = None
+    dataset: OptionalToken = ""
 
 
 class QcArgs(_Args):
     library_id: Token
     source: Path
-    loaded: Path
     config: Path
     out: Path
+    loaded: Path | None = None
 
 
 class MergeArgs(_Args):
-    manifest: Path
     gene: Token
     out: Path
+    manifest: Path | None = None
 
 
 class GridArgs(_Args):
@@ -78,6 +80,25 @@ class GridArgs(_Args):
     gene: Token
     config: Path
     out: Path
+
+
+class Part1RoundArgs(_Args):
+    common: Path
+    previous_grid: Path
+    review: Path
+    config: Path
+    gene: Token
+    round_index: int
+    out: Path
+
+
+class ReviewTableArgs(_Args):
+    grid: Path
+    resolution: str
+    round_index: int
+    gene: Token
+    out: Path
+    lineage_genes: str = ""
 
 
 class LockArgs(_Args):
@@ -128,6 +149,8 @@ class PrepareArgs(_Args):
     model: _Model | Literal[""] = ""
     single_source_declared: bool = False
     block_fallback_declared: bool = False
+    audit_flags: Path | None = None
+    verdict_table: Path | None = None
 
 
 class ReportArgs(_Args):
@@ -159,6 +182,8 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
             ("--input", "input", _PATH),
             ("--format", "format", _VALUE),
             ("--out", "out", _PATH),
+            ("--donor-map", "donor_map", _OPTIONAL),
+            ("--dataset", "dataset", _OPTIONAL),
         ),
     ),
     "formal_part1_qc": _spec(
@@ -167,7 +192,7 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
         (
             ("--library-id", "library_id", _VALUE),
             ("--source", "source", _PATH),
-            ("--loaded", "loaded", _PATH),
+            ("--loaded", "loaded", _OPTIONAL),
             ("--config", "config", _PATH),
             ("--out", "out", _PATH),
         ),
@@ -175,7 +200,11 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
     "formal_part1_merge": _spec(
         "part1_merge.py",
         MergeArgs,
-        (("--manifest", "manifest", _PATH), ("--gene", "gene", _VALUE), ("--out", "out", _PATH)),
+        (
+            ("--manifest", "manifest", _OPTIONAL),
+            ("--gene", "gene", _VALUE),
+            ("--out", "out", _PATH),
+        ),
     ),
     "formal_part1_grid": _spec(
         "part1_resolution_grid.py",
@@ -184,6 +213,31 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
             ("--common", "common", _PATH),
             ("--gene", "gene", _VALUE),
             ("--config", "config", _PATH),
+            ("--out", "out", _PATH),
+        ),
+    ),
+    "formal_part1_round": _spec(
+        "part1_round.py",
+        Part1RoundArgs,
+        (
+            ("--common", "common", _PATH),
+            ("--previous-grid", "previous_grid", _PATH),
+            ("--review", "review", _PATH),
+            ("--config", "config", _PATH),
+            ("--gene", "gene", _VALUE),
+            ("--round-index", "round_index", _VALUE),
+            ("--out", "out", _PATH),
+        ),
+    ),
+    "formal_part1_review_tables": _spec(
+        "cluster_review_tables.py",
+        ReviewTableArgs,
+        (
+            ("--input", "grid", _PATH),
+            ("--resolution", "resolution", _VALUE),
+            ("--round-index", "round_index", _VALUE),
+            ("--gene", "gene", _VALUE),
+            ("--lineage-genes", "lineage_genes", _OPTIONAL),
             ("--out", "out", _PATH),
         ),
     ),
@@ -269,6 +323,8 @@ SPECS: dict[str, tuple[str, type[_Args], tuple[_Arg, ...]]] = {
             ("--model", "model", _OPTIONAL),
             ("--single-source-declared", "single_source_declared", _SWITCH),
             ("--block-fallback-declared", "block_fallback_declared", _SWITCH),
+            ("--audit-flags", "audit_flags", _OPTIONAL),
+            ("--verdict-table", "verdict_table", _OPTIONAL),
         ),
     ),
     "formal_stage_report": _spec(

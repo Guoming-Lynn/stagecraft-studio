@@ -6,10 +6,11 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, event, pool
+from stagecraft_studio.db.assistant_models import ProviderProfile
 from stagecraft_studio.db.base import Base
 from stagecraft_studio.db.models import Project
 
-_ = Project
+_ = (Project, ProviderProfile)
 
 config = context.config
 if config.config_file_name is not None:

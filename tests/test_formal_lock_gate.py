@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from stagecraft_studio.api.app import create_app
 from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.db.models import Job
@@ -110,7 +111,7 @@ def test_lock_requires_resolution_and_clusters(tmp_path: Path) -> None:
 def test_lock_rejects_delete_action(tmp_path: Path) -> None:
     client, run_id, digest = _setup(tmp_path)
 
-    client.post(
+    resolution = client.post(
         f"/api/stage-runs/{run_id}/resolution",
         headers=TOKEN,
         json={
@@ -122,6 +123,8 @@ def test_lock_rejects_delete_action(tmp_path: Path) -> None:
             "blinding": "BLIND",
         },
     )
+    assert resolution.status_code == 201
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
 
     # Submit cluster review with DELETE
     clu_resp = client.post(
@@ -164,7 +167,7 @@ def test_lock_rejects_delete_action(tmp_path: Path) -> None:
 def test_post_lock_tasks_require_completed_lock(tmp_path: Path) -> None:
     client, run_id, digest = _setup(tmp_path)
 
-    client.post(
+    resolution = client.post(
         f"/api/stage-runs/{run_id}/resolution",
         headers=TOKEN,
         json={
@@ -176,31 +179,40 @@ def test_post_lock_tasks_require_completed_lock(tmp_path: Path) -> None:
             "blinding": "BLIND",
         },
     )
-    client.post(
+    assert resolution.status_code == 201
+    _complete_review_tables(tmp_path / "studio.sqlite", run_id)
+    cluster_rows = [
+        {
+            "cluster": cluster,
+            "decision": "KEEP",
+            "rationale": "Good",
+            "reviewer": "Lin",
+            "decided_on": "2026-10-02",
+            "name": "",
+        }
+        for cluster in ("0", "1")
+    ]
+    reviewed = client.post(
+        f"/api/stage-runs/{run_id}/clusters",
+        headers=TOKEN,
+        json={
+            "blinding": "NOT_APPLICABLE",
+            "rows": cluster_rows,
+        },
+    )
+    assert reviewed.status_code == 201
+    named = client.post(
         f"/api/stage-runs/{run_id}/clusters",
         headers=TOKEN,
         json={
             "blinding": "NOT_APPLICABLE",
             "rows": [
-                {
-                    "cluster": "0",
-                    "decision": "KEEP",
-                    "rationale": "Good",
-                    "reviewer": "Lin",
-                    "decided_on": "2026-10-02",
-                    "name": "T_cell",
-                },
-                {
-                    "cluster": "1",
-                    "decision": "KEEP",
-                    "rationale": "Good",
-                    "reviewer": "Lin",
-                    "decided_on": "2026-10-02",
-                    "name": "B_cell",
-                },
+                {**cluster_rows[0], "name": "T_cell"},
+                {**cluster_rows[1], "name": "B_cell"},
             ],
         },
     )
+    assert named.status_code == 201
 
     # 4. Enqueue post-lock tasks before lock completed -> rejected
     for task in ["formal_part2_survey", "formal_part3_recluster", "formal_part5_prepare"]:
@@ -235,3 +247,15 @@ def test_post_lock_tasks_require_completed_lock(tmp_path: Path) -> None:
         json={"task_id": "formal_part2_survey"},
     )
     assert allowed_p2.status_code == 201
+
+
+def _complete_review_tables(database: Path, run_id: int) -> None:
+    with session_factory(database)() as session:
+        job = session.scalar(
+            select(Job)
+            .where(Job.stage_run_id == run_id, Job.task_id == "formal_part1_review_tables")
+            .order_by(Job.id.desc())
+        )
+        assert job is not None
+        job.job_status = "COMPLETED"
+        session.commit()

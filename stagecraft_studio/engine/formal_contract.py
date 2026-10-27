@@ -25,6 +25,23 @@ FORMAL_OUTPUT_CONTRACTS: dict[str, tuple[str, ...]] = {
         "leiden_resolution_overview.png",
         "all_resolutions.h5ad",
     ),
+    "formal_part1_round": (
+        "Leiden_resolution_overview.csv",
+        "cluster_by_dataset.csv",
+        "pca_audit.csv",
+        "grid_record.json",
+        "leiden_resolution_overview.png",
+        "all_resolutions.h5ad",
+        "retained_common.h5ad",
+        "round_record.json",
+    ),
+    "formal_part1_review_tables": (
+        "review_table.json",
+        "selected_markers.csv",
+        "selected_top20_by_cluster.csv",
+        "selected_cluster_qc.csv",
+        "selected_tables.json",
+    ),
     "formal_part1_lock": (
         "locked_atlas.h5ad",
         "celltype_colors.yaml",

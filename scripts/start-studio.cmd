@@ -25,6 +25,23 @@ if not exist "%ENGINE%\scripts\run_pipeline.py" (
   pause
   exit /b 1
 )
+set "FORMAL_ENGINE=%CD%\..\stagecraft-formal-engine"
+set "FORMAL_ENGINE_AVAILABLE="
+if exist "%FORMAL_ENGINE%\scripts\part1_load.py" if exist "%FORMAL_ENGINE%\.venv\Scripts\python.exe" (
+  set "FORMAL_ENGINE_AVAILABLE=1"
+  if not defined STAGECRAFT_FORMAL_SCRIPTS set "STAGECRAFT_FORMAL_SCRIPTS=%FORMAL_ENGINE%\scripts"
+  if not defined STAGECRAFT_FORMAL_PYTHON set "STAGECRAFT_FORMAL_PYTHON=%FORMAL_ENGINE%\.venv\Scripts\python.exe"
+) else (
+  echo 未自动找到正式引擎，正式分析任务不会启动。
+  echo 如需正式分析，请设置 STAGECRAFT_FORMAL_SCRIPTS 和 STAGECRAFT_FORMAL_PYTHON。
+)
+if defined FORMAL_ENGINE_AVAILABLE (
+  echo 同步正式引擎...
+  pushd "%FORMAL_ENGINE%"
+  uv sync --frozen
+  if errorlevel 1 goto fail
+  popd
+)
 echo 同步引擎...
 pushd "%ENGINE%"
 uv sync --frozen

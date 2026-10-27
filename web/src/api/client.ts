@@ -16,6 +16,69 @@ export type FilePreview = components["schemas"]["FilePreview"];
 export type EnvironmentReport = components["schemas"]["EnvironmentReport"];
 export type DemoStarted = components["schemas"]["DemoStarted"];
 
+export interface AssistantProvider {
+  config: {
+    provider: "openai" | "anthropic";
+    base_url: string;
+    model: string;
+    timeout_seconds: number;
+    max_output_tokens: number;
+    context_chars: number;
+    call_limit: number;
+  } | null;
+  capabilities: {
+    text: boolean;
+    streaming: boolean;
+    structured_output: boolean;
+    tool_calling: boolean;
+    probed: boolean;
+  };
+  key_storage: "none" | "session" | "credential_store";
+  calls_used: number;
+}
+
+export interface AssistantPreview {
+  preview_id: string;
+  input_hash: string;
+  payload: Record<string, unknown>;
+  sources: { ref: string; hash: string }[];
+  mode: "local" | "explanation" | "tools";
+  local_text: string;
+}
+
+export interface AssistantCall {
+  call_id: string;
+  status: "COMPLETED" | "FAILED" | "REJECTED" | "CANCELLED";
+  text: string;
+  model: string;
+  prompt_version: string;
+  input_hash: string;
+  sources: { ref: string; hash: string }[];
+  created_at: string;
+  usage: { input_tokens: number; output_tokens: number } | null;
+  proposal: {
+    id: number;
+    kind: string;
+    values:
+      | {
+          target_gene: string;
+          species: "human" | "mouse";
+          harmony_keys: string[];
+          loose_min_genes: number;
+        }
+      | {
+          cluster_id: string;
+          candidate_name: string;
+          marker_genes: string[];
+          rationale: string;
+        };
+    rationale: string;
+    status: "DRAFT";
+    note: string;
+  } | null;
+  auxiliary: true;
+}
+
 let token = "";
 
 export function rememberToken(value: string): void {
@@ -121,10 +184,30 @@ export type ReviewCenter = {
   id: number;
   stage_status: string;
   quicklook_seen: boolean;
+  active_round: number;
+  selected_resolution: string;
+  review_state: string;
+  round_job_status: string;
+  review_tables_job_status: string;
+  cluster_decisions: {
+    cluster: string;
+    decision: "KEEP" | "DELETE";
+    rationale: string;
+    reviewer: string;
+    decided_on: string;
+    name: string;
+  }[];
   evidence_hash: string;
   resolutions: ResolutionTile[];
   clusters: string[];
   genes: { gene: string; expression: number[] }[];
+  review_tables: {
+    available: boolean;
+    round_index: number;
+    resolution: string;
+    qc: Record<string, string | number | boolean | string[]>[];
+    markers: Record<string, string | number | boolean | string[]>[];
+  };
   scientific_status: {
     scientific_status: string;
     calibration_status: string;
@@ -140,6 +223,61 @@ export type ReviewCenter = {
 
 export function loadStageRuns(): Promise<StageRunItem[]> {
   return send("/api/stage-runs");
+}
+
+export function loadAssistantProvider(): Promise<AssistantProvider> {
+  return send("/api/assistant/provider", {
+    headers: { "X-Stagecraft-Token": token, Origin: window.location.origin },
+  });
+}
+
+export function saveAssistantProvider(body: {
+  config: NonNullable<AssistantProvider["config"]>;
+  api_key: string;
+  remember_key: boolean;
+}): Promise<AssistantProvider> {
+  return send("/api/assistant/provider", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function removeAssistantProvider(): Promise<{ removed: boolean }> {
+  return send("/api/assistant/provider", { method: "DELETE", body: "{}" });
+}
+
+export function previewAssistant(body: {
+  stage_run_id: number | null;
+  topic: "stage" | "rule" | "field" | "proposal" | "annotation";
+  rule_id: string;
+  field_name: string;
+  question: string;
+}): Promise<AssistantPreview> {
+  return send("/api/assistant/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function callAssistant(
+  preview_id: string,
+  call_id: string,
+  input_hash: string,
+  authorized: boolean,
+): Promise<AssistantCall> {
+  return send("/api/assistant/call", {
+    method: "POST",
+    body: JSON.stringify({ preview_id, call_id, input_hash, authorized }),
+  });
+}
+
+export function cancelAssistant(
+  callId: string,
+): Promise<{ cancelled: boolean }> {
+  return send(`/api/assistant/calls/${callId}/cancel`, {
+    method: "POST",
+    body: "{}",
+  });
 }
 
 export function loadReviewCenter(runId: number): Promise<ReviewCenter> {
@@ -165,7 +303,12 @@ export function freezeProtocol(body: {
   harmony_keys: string[];
   loose_min_genes: number;
   data_path: string;
-  libraries: { library_id: string; dataset: string }[];
+  libraries: {
+    library_id: string;
+    dataset: string;
+    donor_id: string;
+    source_block: string;
+  }[];
 }): Promise<{ content_hash: string; stage_run_id: number }> {
   return send("/api/protocol/freeze", {
     method: "POST",
@@ -175,7 +318,7 @@ export function freezeProtocol(body: {
 
 export function submitResolution(
   runId: number,
-  body: Record<string, string>,
+  body: Record<string, string | number>,
 ): Promise<unknown> {
   return send(`/api/stage-runs/${runId}/resolution`, {
     method: "POST",
@@ -185,11 +328,26 @@ export function submitResolution(
 
 export function submitClusters(
   runId: number,
-  body: { blinding: string; rows: Record<string, string>[] },
+  body: {
+    blinding: string;
+    round_index: number;
+    rows: Record<string, string>[];
+  },
 ): Promise<unknown> {
   return send(`/api/stage-runs/${runId}/clusters`, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export function enqueueStageTask(
+  runId: number,
+  taskId: string,
+  fields: Record<string, unknown> = {},
+): Promise<{ id: number; task_id: string }> {
+  return send(`/api/stage-runs/${runId}/jobs`, {
+    method: "POST",
+    body: JSON.stringify({ task_id: taskId, fields }),
   });
 }
 
@@ -386,8 +544,14 @@ export interface StageGalleryView {
   run_id: number;
   project_id: number;
   scientific_status: {
+    scientific_status: string;
     calibration_status: string;
     associated: boolean;
+    claims_limma: boolean;
+    forecast_is_not_a_verdict: boolean;
+    lodo_is_replication: boolean;
+    holdout: string;
+    read_only: boolean;
     evidence_ceiling: string;
     reasons: string[];
   };

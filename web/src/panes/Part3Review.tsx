@@ -77,7 +77,7 @@ export function Part3Review({ runId }: { runId: number | null }) {
           resolution,
           blinding,
         }),
-      "停点 1 已完成",
+      chrome.part3Stop1Done,
     );
   };
 
@@ -95,7 +95,7 @@ export function Part3Review({ runId }: { runId: number | null }) {
             decided_on: "2026-10-01",
           })),
         }),
-      "停点 2 已完成",
+      chrome.part3Stop2Done,
     );
   };
 
@@ -113,7 +113,7 @@ export function Part3Review({ runId }: { runId: number | null }) {
             decided_on: "2026-10-01",
           })),
         }),
-      "停点 3 已完成",
+      chrome.part3Stop3Done,
     );
   };
 
@@ -155,11 +155,11 @@ export function Part3Review({ runId }: { runId: number | null }) {
               {chrome.reviewResolutions}
               <input
                 value={rationale}
-                placeholder="依据"
+                placeholder={chrome.rationale}
                 onChange={(e) => setRationale(e.target.value)}
               />
             </label>
-            <button type="submit">提交停点 1 分辨率</button>
+            <button type="submit">{chrome.submitPart3Stop1}</button>
           </form>
         )}
       </section>
@@ -173,11 +173,11 @@ export function Part3Review({ runId }: { runId: number | null }) {
           {active === "STOP2_CLUSTERS" ? (
             <form onSubmit={submitStop2}>
               <Stop2Table rows={stop2Rows} onChange={setStop2Rows} />
-              <button type="submit">提交停点 2 决策</button>
+              <button type="submit">{chrome.submitPart3Stop2}</button>
             </form>
           ) : (
             <p className="hint">
-              已完成停点 2：
+              {chrome.stop2Completed}
               {center.current_clusters?.rows
                 .map((r) => `${r.cluster}: ${r.decision}`)
                 .join(", ")}
@@ -193,11 +193,11 @@ export function Part3Review({ runId }: { runId: number | null }) {
           {active === "STOP3_NAMES" ? (
             <form onSubmit={submitStop3}>
               <Stop3Table rows={stop3Rows} onChange={setStop3Rows} />
-              <button type="submit">提交停点 3 亚型命名</button>
+              <button type="submit">{chrome.submitPart3Stop3}</button>
             </form>
           ) : (
             <p className="hint">
-              已完成停点 3 命名：
+              {chrome.stop3Completed}
               {center.current_names?.rows
                 .map((r) => `${r.cluster}: ${r.name}`)
                 .join(", ")}

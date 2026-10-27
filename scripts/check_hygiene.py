@@ -17,6 +17,7 @@ from hygiene_rules import ClassRecord, Violation
 SPEC_TOP_LEVEL = frozenset(
     {
         "AGENTS.md",
+        "HANDOFF.md",
         ".cursor",
         "LICENSE",
         "README.md",

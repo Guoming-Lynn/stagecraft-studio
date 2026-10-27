@@ -61,6 +61,10 @@ def test_gallery_empty_run(tmp_path: Path):
         sc = data["scientific_status"]
         assert sc["calibration_status"] == "NOT_ESTABLISHED_FOR_THIS_ANALYSIS"
         assert sc["associated"] is False
+        assert sc["scientific_status"] == "NOT_REPORTED"
+        assert sc["claims_limma"] is False
+        assert sc["holdout"] == "not_run"
+        assert sc["lodo_is_replication"] is False
 
 
 def test_gallery_with_figures_and_formats(tmp_path: Path):
@@ -78,7 +82,13 @@ def test_gallery_with_figures_and_formats(tmp_path: Path):
             job_status="COMPLETED",
             created_at=datetime.now(timezone.utc),
         )
-        session.add_all([job1, job2])
+        job3 = Job(
+            stage_run_id=run_id,
+            task_id="formal_part3_recluster",
+            job_status="COMPLETED",
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add_all([job1, job2, job3])
         session.flush()
 
         session.add_all(
@@ -125,15 +135,24 @@ def test_gallery_with_figures_and_formats(tmp_path: Path):
                     content_hash="hash_p1_csv",
                     artifact_status="VALID",
                 ),
+                Artifact(
+                    job_id=job3.id,
+                    relative_path="formal_part3_recluster/leiden_resolution_overview.png",
+                    content_hash="hash_p3_png",
+                    artifact_status="VALID",
+                ),
             ]
         )
         session.commit()
 
         # Before annotation review: blinding is active, KRAS (Part 2) is filtered out
         blind_data = get_stage_gallery(session, run_id)
-        assert blind_data["total_figures"] == 1
-        assert blind_data["available_count"] == 1
-        assert blind_data["figures"][0]["stage_part"] == "Part 1"
+        assert blind_data["total_figures"] == 2
+        assert blind_data["available_count"] == 2
+        assert {item["stage_part"] for item in blind_data["figures"]} == {
+            "Part 1",
+            "Part 3",
+        }
 
         # Complete unblinded annotation review
         session.add(
@@ -148,8 +167,8 @@ def test_gallery_with_figures_and_formats(tmp_path: Path):
         session.commit()
 
         data = get_stage_gallery(session, run_id)
-        assert data["total_figures"] == 2
-        assert data["available_count"] == 2
+        assert data["total_figures"] == 3
+        assert data["available_count"] == 3
         assert data["not_estimable_count"] == 0
 
         p2_item = next(f for f in data["figures"] if f["stage_part"] == "Part 2")
@@ -169,6 +188,11 @@ def test_gallery_with_figures_and_formats(tmp_path: Path):
         assert p1_item["panel_id"] == "F01_grid"
         assert p1_item["format_png"] == "formal_part1_grid/leiden_resolution_overview.png"
         assert p1_item["source_data"] == "formal_part1_grid/Leiden_resolution_overview.csv"
+
+        p3_item = next(f for f in data["figures"] if f["stage_part"] == "Part 3")
+        assert p3_item["panel_id"] == "F03_grid"
+        assert p3_item["title"] == "Part 3: Leiden resolution overview"
+        assert p3_item["format_png"] == "formal_part3_recluster/leiden_resolution_overview.png"
 
 
 def test_gallery_preserves_not_estimable_slots(tmp_path: Path):
@@ -325,20 +349,20 @@ def test_gallery_api_and_raw_artifact_serving(tmp_path: Path):
     res_escape = client.get(f"/api/stage-runs/{run_id}/artifacts/raw?rel=../../secret.txt")
     assert res_escape.status_code == 403
 
-    # 7. Submit unblinded annotation review
+    # 7. Submit a review done blind
     with factory() as session:
         session.add(
             ReviewDecision(
                 stage_run_id=run_id,
                 evidence_hash="hash_rev",
                 reviewer="Dr. Auditor",
-                body_json=json.dumps({"kind": "clusters", "blinding": "UNBLINDED_WITH_REASON"}),
+                body_json=json.dumps({"kind": "clusters", "blinding": "BLIND"}),
                 created_at=datetime.now(timezone.utc),
             )
         )
         session.commit()
 
-    # 8. After unblinded review, target gene figure is accessible (200)
+    # 8. Once the blind review is recorded, target gene figure is accessible (200)
     res_raw = client.get(
         f"/api/stage-runs/{run_id}/artifacts/raw?rel=formal_part2_figures/F02_01_KRAS_umap_counts.png"
     )

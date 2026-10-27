@@ -76,11 +76,11 @@ describe("Gallery components", () => {
 
     expect(host.textContent).toContain("F02_01");
     expect(host.textContent).toContain("KRAS umap counts");
-    expect(host.textContent).toContain("大图");
+    expect(host.textContent).toContain("预览");
     expect(host.textContent).toContain("SVG");
     expect(host.textContent).toContain("PDF");
-    expect(host.textContent).toContain("数据");
-    expect(host.textContent).toContain("参数");
+    expect(host.textContent).toContain("下载 Source Data");
+    expect(host.textContent).toContain("查看参数");
 
     const img = host.querySelector("img");
     expect(img).not.toBeNull();
@@ -117,7 +117,7 @@ describe("Gallery components", () => {
     expect(host.textContent).toContain("Part 5 Model Fit: Basal");
     expect(host.textContent).toContain("LOW_N");
     expect(host.textContent).toContain("NO_EXPOSURE_RANGE");
-    expect(host.textContent).toContain("下载资格数据 (CSV)");
+    expect(host.textContent).toContain("下载 Source Data (CSV)");
   });
 
   it("renders empty state when there are no formal stage runs", () => {

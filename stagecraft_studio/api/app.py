@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from stagecraft_studio.api.assistant_routes import build_assistant_router
 from stagecraft_studio.api.part3_routes import build_part3_router
 from stagecraft_studio.api.review_routes import build_review_router
 from stagecraft_studio.api.routes import build_router
@@ -19,6 +20,7 @@ from stagecraft_studio.api.steps import engine_identity
 from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.engine.formal_launch import FormalLaunch, resolve_formal_launch
 from stagecraft_studio.engine.launch import EngineConfigError, EngineLaunch, resolve_engine_launch
+from stagecraft_studio.llm.service import AssistantService
 from stagecraft_studio.worker.jobs import FormalWorker
 from stagecraft_studio.worker.runs import RunStore
 
@@ -33,11 +35,13 @@ def create_app(
     database: Path | None = None,
     formal_launch: FormalLaunch | None = None,
     formal_worker: FormalWorker | None = None,
+    assistant_service: AssistantService | None = None,
 ) -> FastAPI:
     db_path = database
     if db_path is None:
         db_path = Path(tempfile.mkdtemp(prefix="stagecraft-db-")) / "studio.sqlite"
     upgrade_database(db_path)
+    assistant = assistant_service or AssistantService(db_path)
 
     worker = formal_worker
     if worker is None:
@@ -60,6 +64,7 @@ def create_app(
         yield
         if worker is not None:
             worker.stop()
+        await assistant.close()
 
     app = FastAPI(title="Stagecraft Studio", version="0.0.0", lifespan=_lifespan)
     app.add_middleware(
@@ -74,6 +79,7 @@ def create_app(
     identity = engine_identity(launch.script)
     app.state.database = db_path
     app.state.formal_worker = worker
+    app.state.assistant_service = assistant
 
     app.include_router(
         build_router(
@@ -98,6 +104,9 @@ def create_app(
             origin=allowed_origin,
             database=db_path,
         )
+    )
+    app.include_router(
+        build_assistant_router(token=token, origin=allowed_origin, service=assistant)
     )
     if include_ui:
         _mount_ui(app)

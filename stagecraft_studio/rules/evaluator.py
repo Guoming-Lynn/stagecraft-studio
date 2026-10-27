@@ -1,3 +1,4 @@
+# hygiene: evaluator module
 """Evaluate engine outputs and failure modes into persistent RuleResultRow records."""
 
 from __future__ import annotations
@@ -328,7 +329,7 @@ def record_job_evidence(
         if lpath.is_file():
             with contextlib.suppress(json.JSONDecodeError, OSError):
                 evidence["lock"] = json.loads(lpath.read_text(encoding="utf-8"))
-    elif task_id == "formal_part1_grid":
+    elif task_id in {"formal_part1_grid", "formal_part1_round"}:
         gpath = dest_dir / "grid_record.json"
         if gpath.is_file():
             with contextlib.suppress(json.JSONDecodeError, OSError):
@@ -338,9 +339,28 @@ def record_job_evidence(
             evidence["overview"] = overview
         if res_map is not None:
             evidence["clusters_by_resolution"] = res_map
-            default_res = "0.2" if "0.2" in res_map else (next(iter(res_map)) if res_map else None)
-            if default_res and res_map.get(default_res):
-                evidence["clusters"] = list(res_map[default_res])
+            selected = evidence.get("active_resolution")
+            if isinstance(selected, str) and res_map.get(selected):
+                evidence["clusters"] = list(res_map[selected])
+        if task_id == "formal_part1_grid":
+            evidence["active_part1_round"] = 0
+            evidence["active_grid_rel"] = "formal_part1_grid"
+        else:
+            record_path = dest_dir / "round_record.json"
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                record = json.loads(record_path.read_text(encoding="utf-8"))
+                evidence["active_part1_round"] = record["round_index"]
+                evidence["active_grid_rel"] = f"formal_part1_round_{record['round_index']}"
+                evidence["clusters"] = []
+                evidence.pop("active_resolution", None)
+                evidence.pop("active_leiden_ids", None)
+    elif task_id == "formal_part1_review_tables":
+        evidence["review_tables_run"] = int(json.loads(job.payload_json)["fields"]["round_index"])
+    elif task_id == "formal_part1_lock":
+        lpath = dest_dir / "lock_record.json"
+        if lpath.is_file():
+            with contextlib.suppress(json.JSONDecodeError, OSError):
+                evidence["lock"] = json.loads(lpath.read_text(encoding="utf-8"))
     elif task_id == "formal_part3_recluster":
         rpath = dest_dir / "part3_record.json"
         if rpath.is_file():

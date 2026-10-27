@@ -111,6 +111,34 @@ def test_quicklook_task_is_not_a_formal_command(tmp_path: Path) -> None:
         formal_argv("quicklook_run", {}, work_dir=tmp_path, launch=launch)
 
 
+def test_load_and_prepare_accept_protocol_paths(tmp_path: Path) -> None:
+    launch = resolve_formal_launch(*_engine(tmp_path))
+    donor_map = tmp_path / "donor_map.csv"
+    donor_map.write_text("library_id,donor_id\nL1,P1\n", encoding="utf-8")
+    load_fields = {
+        **_fields(tmp_path, "formal_part1_load"),
+        "donor_map": donor_map,
+        "dataset": "D1",
+    }
+    load_argv = formal_argv("formal_part1_load", load_fields, work_dir=tmp_path, launch=launch)
+    assert "--donor-map" in load_argv
+    assert "--dataset" in load_argv
+    flags = tmp_path / "audit_flags.json"
+    flags.write_text("{}", encoding="utf-8")
+    table = tmp_path / "verdict_table.json"
+    table.write_text("[]", encoding="utf-8")
+    prepare_fields = {
+        **_fields(tmp_path, "formal_part5_prepare"),
+        "audit_flags": flags,
+        "verdict_table": table,
+    }
+    prepare_argv = formal_argv(
+        "formal_part5_prepare", prepare_fields, work_dir=tmp_path, launch=launch
+    )
+    assert "--audit-flags" in prepare_argv
+    assert "--verdict-table" in prepare_argv
+
+
 def test_part5_block_fallback_declared_flag(tmp_path: Path) -> None:
     launch = resolve_formal_launch(*_engine(tmp_path))
     fields = _fields(tmp_path, "formal_part5_prepare")

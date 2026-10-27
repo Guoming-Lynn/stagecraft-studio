@@ -25,7 +25,7 @@ export function Stop2Table({
         <tr>
           <th>{chrome.reviewClusters}</th>
           <th>{chrome.keep}</th>
-          <th>依据</th>
+          <th>{chrome.rationale}</th>
         </tr>
       </thead>
       <tbody>
@@ -51,7 +51,7 @@ export function Stop2Table({
             <td>
               <input
                 value={r.rationale}
-                placeholder="依据"
+                placeholder={chrome.rationale}
                 onChange={(e) =>
                   onChange((c) =>
                     c.map((it) =>
@@ -83,7 +83,7 @@ export function Stop3Table({
         <tr>
           <th>{chrome.reviewClusters}</th>
           <th>{chrome.name}</th>
-          <th>依据</th>
+          <th>{chrome.rationale}</th>
         </tr>
       </thead>
       <tbody>
@@ -93,7 +93,7 @@ export function Stop3Table({
             <td>
               <input
                 value={r.name}
-                placeholder="亚型命名（禁止含目标基因）"
+                placeholder={chrome.subtypePlaceholder}
                 onChange={(e) =>
                   onChange((c) =>
                     c.map((it) =>
@@ -108,7 +108,7 @@ export function Stop3Table({
             <td>
               <input
                 value={r.rationale}
-                placeholder="依据"
+                placeholder={chrome.rationale}
                 onChange={(e) =>
                   onChange((c) =>
                     c.map((it) =>

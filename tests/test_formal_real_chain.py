@@ -124,9 +124,9 @@ def test_real_formal_engine_chain_part1(tmp_path: Path) -> None:
             job1_id = job1.id
 
         _wait_for_job(factory, job1_id)
-        loaded_h5ad = stage_dir / "formal_part1_load" / "loaded.h5ad"
+        loaded_h5ad = stage_dir / "formal_part1_load" / "L1" / "loaded.h5ad"
         assert loaded_h5ad.is_file()
-        assert (stage_dir / "formal_part1_load" / "symbol_audit.csv").is_file()
+        assert (stage_dir / "formal_part1_load" / "L1" / "symbol_audit.csv").is_file()
 
         # 2. Enqueue and execute formal_part1_qc
         qc_cfg = stage_root / "qc_config.json"
@@ -150,8 +150,8 @@ def test_real_formal_engine_chain_part1(tmp_path: Path) -> None:
             job2_id = job2.id
 
         _wait_for_job(factory, job2_id)
-        assert (stage_dir / "formal_part1_qc" / "qc_record.json").is_file()
-        clean_h5ad = stage_dir / "formal_part1_qc" / "clean.h5ad"
+        assert (stage_dir / "formal_part1_qc" / "L1" / "qc_record.json").is_file()
+        clean_h5ad = stage_dir / "formal_part1_qc" / "L1" / "clean.h5ad"
         assert clean_h5ad.is_file()
 
         # 3. Enqueue and execute formal_part1_merge
@@ -162,6 +162,7 @@ def test_real_formal_engine_chain_part1(tmp_path: Path) -> None:
                     {
                         "library_id": "L1",
                         "dataset": "D1",
+                        "source_block": "D1",
                         "include_in_primary_atlas": True,
                         "path": str(clean_h5ad),
                     }

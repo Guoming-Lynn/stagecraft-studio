@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.0 - 2026-10-11
+
+- Part 1 QC review now shows per-cluster P5/P25/median/P75/P95 distributions in a compact labeled summary and no longer labels clusters with machine-generated QC review flags.
+- Marker 证据表增加靠近表格顶部的同步横向滚动条和固定高度的纵向视口；横向查看不必滚到 140 行表格底部，表头在纵向滚动时保持可见。
+- 真人试用前界面整理：正式分析工作区增加清晰层级与窄屏适配；科学状态文案改为结论先行，校准、关联支持和 Limma 主张分列显示，并精简证据边界说明。中英文同步。
+- 正式分析图库补齐 Part 3 分类与筛选。若当前运行尚未生成 Part 3 图像，页面显示等待原因；后端测试覆盖 `F03_grid` 分类和盲审可见性。
+- 当前真实 GEO StageRun #1 仍停在 Part 1 人工审阅门禁。没有代用户选择 resolution、提交 KEEP/DELETE 或填写细胞群名称；Part 3 图像尚未生成是当前阶段状态，不代表数据丢失。
+
+## 0.0.0 - 2026-10-10
+
+- M6 AI 助手：右侧助手新增本地解释与 OpenAI 兼容/Anthropic 配置，使用发送前摘要预览、用户授权、工具白名单、schema 校验、调用上限/超时/取消与来源 hash。配置建议只生成 `Proposal (DRAFT)` 并可回填研究设计表单；密钥不进入数据库。新增离线模拟测试与 Alembic 修订 `0004_assistant`；OpenAI/Anthropic provider mock、错误/恶意响应、服务级取消、只读 cluster marker Proposal、GUI 授权/取消/草案回填均已通过；真实模型端点仍待维护者配置。
+- M5 真实 GUI 走查推进：真实 GEO 16-library 数据在仓库外 Studio 数据库中完成研究设计冻结、16/16 load、16/16 QC、merge 和 9 档 resolution grid；GUI 已停在真实人工 resolution/cluster 审阅门禁，未自动选择或命名。期间确认双 worker 共用 SQLite/HDF5 会造成 Windows 文件锁冲突，单 worker 顺序执行后 16/16 load 和 QC 全部完成。
+
+## 0.0.0 - 2026-10-03
+
+- 修正轮 K：协议每个 library 增加 `donor_id` 与 `source_block`；Worker 生成 `donor_map.csv` 与带来源块的合并清单；load/qc 按 library 分目录发布；盲审在匹配的聚类审阅完成后解除，目标基因只读协议；任务注册表用 `exposes_target` 判断暴露。
+
 ## 0.0.0 - 2026-09-30
 
 - 真实正式引擎端到端全流程串联测试（M4/M5）：新增 `tests/test_formal_real_pipeline.py`，不使用假脚本，使用真实引擎脚本完整走完 Part 1（加载→QC→合并→网格）→ 人工门禁（分辨率与聚类审阅）→ Part 3（重聚类）→ Part 2（单细胞概览与图表）→ Part 4（目标基因表达与图表）→ Part 5（准备分析与判定）→ 阶段报告（REPORT.md 校验）→ 工作区与图库 API（5 个页签与原图下载校验）全流程；更新审阅凭证摘要算法，排除下游结果字段对聚类审阅有效性的干扰。
@@ -55,3 +72,9 @@
 - 单元 F5：汇总图上的每一格打开原图；旁边有同名表时，中栏打开那张表。
 - 单元 F6：双击 `scripts/start-studio.cmd` 同步两个环境，必要时构建页面，启动 serve，并打开浏览器。
 - 启动脚本在显示中文前提示控制台使用 UTF-8，避免代码页 936 把提示打成乱码。
+# Unreleased
+
+- feat: add a right-side Part 1 review tables view for per-Leiden QC summaries and top markers. QC flags are review prompts only and never submit KEEP/DELETE decisions.
+- fix: enforce the Part 1 review stops in order: selected resolution generates formal marker/QC tables, KEEP/DELETE is separate from naming, DELETE triggers retained-count reclustering, and Part 1 locks after naming in a stable round. Failed review-table, reclustering, and lock jobs can be retried.
+- fix: repair Part 1 review-table QC field compatibility and derive missing QC summaries from raw counts; export one marker gene per row with detection-rate evidence tiers, and split the Studio view into separate QC and marker tables.
+- 修复真实 Studio 在受限进程权限下提交分辨率时无法写入 SQLite、返回 500 的启动问题；默认主题改为浅色，同时保留用户已保存的主题偏好。

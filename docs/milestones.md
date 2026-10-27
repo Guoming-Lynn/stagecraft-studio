@@ -104,7 +104,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 ## G0 专有声明
 
-状态：已提交 `22a55a6`。根目录 `LICENSE` 是 `Copyright 2026 GuomingLin. All rights reserved.`。仓库仍是公开的，这一提交还没推送。
+状态：已提交 `22a55a6`。根目录 `LICENSE` 是 `Copyright 2026 GuomingLin. All rights reserved.`。产品闭源。GitHub 仓库的可见性由维护者在网页上确认为私有之前，不推送。
 
 ## G4 数据库与协议冻结
 
@@ -136,7 +136,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 ## P16 正式分析图库
 
-状态：已提交 `61fb4b3`。后端实现 `GET /api/stage-runs/{run_id}/gallery` 与 `GET /api/stage-runs/{run_id}/artifacts/raw`；支持 PNG/SVG 预览、PDF/CSV/JSON 下载；前端实现 `Gallery.tsx` 与 `GalleryCard.tsx`，如实保留并突出展示 `NOT_ESTIMABLE` 槽位，杜绝美观隐匿失败项。
+状态：基础图库已提交 `61fb4b3`。后续补齐 Part 3：`formal_part3_recluster` 图像现归类为 Part 3，图库提供中英文筛选；当前 StageRun 尚未运行 Part 3 时会明确提示图像尚未生成。回归测试验证 Part 3 resolution overview 被归到 `F03_grid`，且盲审仍保留 Part 1/3、过滤 Part 2。见 `tests/test_gallery.py`。
 
 ## M4 验收
 
@@ -153,14 +153,44 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 | 条款 | 状态 | 说明 |
 | --- | --- | --- |
-| 同一主线在 GUI 里跑通 | 部分满足 | Studio 后端与真实正式引擎已在 `tests/test_formal_real_pipeline.py` 实现 Part 1–5 全流程真实串联通过（含阶段工作区与图库 API），GUI 端已覆盖单点 E2E 演示与单元测试，浏览器中大样本真实数据全流程联动待实测 |
+| 同一主线在 GUI 里跑通 | 部分满足 | 真实 GEO 数据已在 Studio GUI 完成研究设计冻结、16/16 load、16/16 QC、merge 与 resolution grid，并在审阅中心停到真实人工 resolution/cluster gate；真人试用尚待用户完成 resolution/cluster 决策，之后再继续 Part 1 lock、Part 3、Part 2/4/5 |
 | skill 仓库已有科学回归不退化 | 通过（需 PATH 含 sc_analysis\Library\bin） | Windows 下需将 `D:\miniforge\envs\sc_analysis\Library\bin` 加入 PATH 解决 `libiomp5md.dll` 依赖，加入后全量 pytest 125 passed，零退化 |
 | 不可估计和校准限制在界面和报告中保留 | 通过 | 报告、审阅中心、阶段工作区、图库页均保留 NOT_ESTIMABLE 槽位与校准限制；盲审门禁在原图下载（`/artifacts/raw`）与图库（`/gallery`）已补齐（审阅前/盲审期过滤目标基因产物，严禁 `.studio/` 内部访问），已在 `test_formal_real_pipeline.py` 中端到端核验 |
 
 ## 剩余工作
 
-- 大样本真实数据在 Studio GUI 中的全流程端到端实测核验。
+- 真人交互试用当前 Studio；收集并修复用户指出的术语和操作可读性问题。用户真实提交 resolution/cluster 审阅前，不继续真实 StageRun 的下游阶段。
+- 大样本真实数据在 Studio GUI 中从人工 resolution/cluster gate 继续完成 Part 1–5；真实设计、load、QC、merge、grid 已完成，当前没有 Part 3 任务。
 - 正式引擎私有远端仓库配置（由维护者创建与推送，GitHub Actions 对私有仓库消耗额度，由维护者决定是否启用）。
 - GPL 依赖与闭源分发的许可风险，M7 打包前必须解决（替换实现或取得合规方案）。涉及：harmonypy（GPL-3.0，用于 Part 1 合并批次校正 formal_part1_merge）、leidenalg（GPL-3.0，用于 Part 1 分辨率网格聚类 formal_part1_grid 与 Part 3 重聚类 formal_part3_recluster）、python-igraph（GPL-2.0-or-later，leidenalg 的底层图计算依赖）。
 - M6（可选 AI 助手，只读证据与代码解释，不生成新标签与推断结论）。
 - M7（打包与部署）。
+
+## M6 AI 助手
+
+状态：核心闭环已实现，真实外部端点待维护者配置后验证。右侧助手支持本地字段/规则/阶段解释、OpenAI 兼容与 Anthropic Messages 配置、能力探测、摘要发送预览、显式发送确认、有限工具调用与结构化 `Proposal (DRAFT)`。Proposal 只能回填正式研究设计表单，仍须用户检查并通过原有校验；助手不会冻结协议、提交审阅或改变科学状态。服务端只持久化不含 key 的模型设置、调用 hash、来源引用、状态/用量和草案；密钥进入系统凭据库，失败则仅留在进程内存。M6 本地模式已有 Playwright 覆盖；全量 Python 测试、mypy、Ruff、hygiene、OpenAPI、Web typecheck/ESLint/Vitest 和 Playwright 均通过。
+
+已完成 M6 第一项中的 provider HTTP mock、错误/恶意响应拒绝，以及从授权 marker evidence 生成只读 `cluster_annotation` Proposal；目标基因、盲审 marker、未授权 cluster/marker 均被服务端过滤或拒绝，候选不会写回正式标签。补充覆盖了 Anthropic Messages 请求/解析、服务级取消，以及 GUI 取消和 `protocol_config` 草案回填（只进入研究设计表单，不自动冻结或提交审阅）。见 `tests/test_assistant.py` 与 `tests/test_assistant_providers.py`。
+
+验证：Studio Python 全量 `182 passed, 1 warning`；mypy、Ruff、hygiene、OpenAPI、Web typecheck/ESLint/Vitest（3 files / 12 tests）、Prettier 和 Playwright（4 tests）均通过。剩余：维护者提供端点后进行真实服务验证；前端仍为完整响应，未实现流式展示。真实模型服务、key 和人工审阅仍未验收。
+
+## 当前执行顺序
+
+1. 用户在 `http://127.0.0.1:8795/` 真人完整试用；依据即时反馈修复界面并继续同步术语。
+2. 用户亲自完成真实 Part 1 resolution 与 cluster KEEP/DELETE/命名审阅；严禁用 fixture 或模型代交。
+3. 依注册任务继续 Part 1 lock、Part 3、Part 2/4/5；Part 5 根据真实设计可估计性决定是否拟合。
+4. M6 真实端点验收待维护者提供服务和凭据；不阻塞当前试用。
+5. 再按原计划进入 M1 速览引擎安装/CI/卫生/curated 基线，之后进入 M7 许可、安装、性能和备份恢复验收。
+
+2026-10-11 试用前验证：图库后端 `tests/test_gallery.py` 为 `5 passed`；Web Vitest 为 `14 passed`，typecheck、ESLint、Prettier、生产构建通过。Studio 真人服务使用仓库外 SQLite；本次仅只读核查，StageRun #1 仍为 `READY`，无 Part 3 job，无人工审阅变更。
+### 真人试用：Part 1 群体审阅表格（2026-10-11）
+
+右侧面板新增“表格”入口，读取正式引擎生成的逐群 QC 与 marker 摘要。当前真实运行尚未到生成这些表的阶段，因此显示受控空状态；不会用估算值替代正式产物。QC 复核提示仅供人工审阅，不改变审阅门禁。
+
+## 2026-10-12 Part 1 分轮人工审阅流程
+
+状态：工程修复完成，真实人工判断仍等待用户。选择 resolution 后自动生成正式 marker/QC 表；表格未完成前拒绝群体审阅。KEEP/DELETE 与最终命名分为两个停点；DELETE 后从 retained raw counts 重算下一轮，稳定轮完成后才锁定 Part 1。前端切换运行会重置临时状态，失败任务可重试。`tests/test_part1_review_workflow.py` 和锁定/链路回归覆盖状态转换；真实 Run #1 仍为 `CHOOSE_RESOLUTION`。
+
+## 2026-10-12 Part 1 marker/QC 表格质量修复
+
+状态：代码已更新，真实表格待重跑。Formal Engine 现在兼容真实合并对象的 QC 字段，并从 counts 补算缺失的核糖体比例、Top 50 基因比例和复杂度；新增逐行 marker 证据表，记录群内/群外检出率、检出率差和描述性质量等级。Studio API 与右侧界面拆分 QC 汇总和 Marker 证据两张表，旧紧凑 marker 文件保留兼容读取。Scrublet 未保存时明确显示“对象未保存”。TypeScript 与 AST 语法检查通过，完整 Python 回归受当前 Windows 环境 DLL/解释器问题影响尚未完成。真实 Run #1 未改变，人工审阅仍需用户完成。

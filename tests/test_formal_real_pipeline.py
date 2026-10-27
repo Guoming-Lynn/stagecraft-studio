@@ -56,7 +56,8 @@ def _make_synth(
         "counts = np.random.default_rng(s).integers("
         "0, 10, size=(240, len(genes)), dtype=np.int64)\n"
         "obs = pd.DataFrame(index=[f'{pre}_{i}' for i in range(240)])\n"
-        "obs['dataset'], obs['donor_id'] = ds, dn\n"
+        "obs['dataset'] = ds\n"
+        "if dn: obs['donor_id'] = dn\n"
         "ad.AnnData(X=counts, obs=obs, var=pd.DataFrame(index=genes)).write_h5ad(out)\n"
     )
     subprocess.run(
@@ -98,7 +99,7 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
     raw1, raw2 = root / "raw" / "lib1.h5ad", root / "raw" / "lib2.h5ad"
     _make_synth(py, raw1, seed=42, prefix="c1", dataset="D1", donor="donor_1")
-    _make_synth(py, raw2, seed=43, prefix="c2", dataset="D2", donor="donor_2")
+    _make_synth(py, raw2, seed=43, prefix="c2", dataset="D2", donor="")
 
     db_path = tmp_path / "studio.sqlite"
     upgrade_database(db_path)
@@ -111,8 +112,8 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
         "loose_min_genes": 200,
         "data_path": "raw/lib1.h5ad",
         "libraries": [
-            {"library_id": "L1", "dataset": "D1"},
-            {"library_id": "L2", "dataset": "D2"},
+            {"library_id": "L1", "dataset": "D1", "source_block": "S1"},
+            {"library_id": "L2", "dataset": "D2", "source_block": "S2", "donor_id": "donor_2"},
         ],
     }
 
@@ -135,39 +136,51 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
         # Step 1: formal_part1_load
         p1_l1 = {"library_id": "L1", "input": str(raw1), "format": "h5ad", "out": str(root)}
         p1_l2 = {"library_id": "L2", "input": str(raw2), "format": "h5ad", "out": str(root)}
-        _task(client, factory, run_id, "formal_part1_load", p1_l1)
+        first_l1 = _task(client, factory, run_id, "formal_part1_load", p1_l1)
         _task(client, factory, run_id, "formal_part1_load", p1_l2)
+        rerun_l1 = _task(client, factory, run_id, "formal_part1_load", p1_l1)
+        assert (stage_dir / "formal_part1_load" / "L1" / "loaded.h5ad").is_file()
+        assert (stage_dir / "formal_part1_load" / "L2" / "loaded.h5ad").is_file()
+        assert (stage_dir / "formal_part1_load" / "L2" / "donor_map.csv").is_file()
+        with factory() as session:
+            load_arts = list(
+                session.scalars(
+                    select(Artifact)
+                    .join(Job, Artifact.job_id == Job.id)
+                    .where(Job.task_id == "formal_part1_load")
+                ).all()
+            )
+        assert all(a.artifact_status == "SUPERSEDED" for a in load_arts if a.job_id == first_l1)
+        assert all(
+            a.artifact_status == "VALID"
+            for a in load_arts
+            if a.job_id == rerun_l1 or a.relative_path.startswith("formal_part1_load/L2/")
+        )
 
-        # Step 2: formal_part1_qc
+        # Step 2: formal_part1_qc, one output folder per library
         qc_cfg = root / "qc_config.json"
         qc_cfg.write_text(json.dumps({"random_seed": 42}), encoding="utf-8")
-        loaded_l1 = stage_dir / "formal_part1_load" / "loaded.h5ad"
-        p1_qc = {
-            "library_id": "L1",
-            "source": str(raw1),
-            "loaded": str(loaded_l1),
-            "config": str(qc_cfg),
-            "out": str(root),
-        }
-        _task(client, factory, run_id, "formal_part1_qc", p1_qc)
-        clean_l1 = stage_dir / "formal_part1_qc" / "clean.h5ad"
-        assert clean_l1.is_file()
-
-        # Step 3: formal_part1_merge
-        mfile = root / "manifest.json"
-        manifest_data = [
-            {
-                "library_id": "L1",
-                "dataset": "D1",
-                "include_in_primary_atlas": True,
-                "path": str(clean_l1),
+        for lib_id, raw in (("L1", raw1), ("L2", raw2)):
+            p1_qc = {
+                "library_id": lib_id,
+                "source": str(raw),
+                "config": str(qc_cfg),
+                "out": str(root),
             }
-        ]
-        mfile.write_text(json.dumps(manifest_data), encoding="utf-8")
-        p1_merge = {"manifest": str(mfile), "gene": "STAT1", "out": str(root)}
-        _task(client, factory, run_id, "formal_part1_merge", p1_merge)
+            _task(client, factory, run_id, "formal_part1_qc", p1_qc)
+            assert (stage_dir / "formal_part1_qc" / lib_id / "clean.h5ad").is_file()
+
+        # Step 3: formal_part1_merge builds its manifest from the frozen protocol
+        _task(client, factory, run_id, "formal_part1_merge", {"gene": "STAT1", "out": str(root)})
         primary = stage_dir / "formal_part1_merge" / "primary_common.h5ad"
         assert primary.is_file()
+        manifest = json.loads(
+            (stage_dir / "formal_part1_merge" / "merge_manifest.json").read_text(encoding="utf-8")
+        )
+        assert {row["library_id"]: row["source_block"] for row in manifest} == {
+            "L1": "S1",
+            "L2": "S2",
+        }
 
         # Step 4: formal_part1_grid
         gcfg = root / "grid_config.json"
@@ -189,12 +202,11 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
             "resolution": "0.2",
             "blinding": "BLIND",
         }
-        assert (
-            client.post(
-                f"/api/stage-runs/{run_id}/resolution", headers=HEADERS, json=r_body
-            ).status_code
-            == 201
+        resolution_response = client.post(
+            f"/api/stage-runs/{run_id}/resolution", headers=HEADERS, json=r_body
         )
+        assert resolution_response.status_code == 201
+        _wait(factory, int(resolution_response.json()["job_id"]))
 
         with factory() as session:
             run_db = session.get(StageRun, run_id)
@@ -210,35 +222,26 @@ def test_real_formal_engine_pipeline_end_to_end(tmp_path: Path) -> None:
                 "rationale": f"c{c}",
                 "reviewer": "Lin",
                 "decided_on": "2026-10-02",
-                "name": f"c{c}",
             }
             for c in real_clusters
         ]
-        assert (
-            client.post(
-                f"/api/stage-runs/{run_id}/clusters",
-                headers=HEADERS,
-                json={"blinding": "NOT_APPLICABLE", "rows": c_rows},
-            ).status_code
-            == 201
+        cluster_response = client.post(
+            f"/api/stage-runs/{run_id}/clusters",
+            headers=HEADERS,
+            json={"blinding": "NOT_APPLICABLE", "rows": c_rows},
         )
+        assert cluster_response.status_code == 201
 
-        # Step 5b: formal_part1_lock
-        rev_file = root / "cluster_review.json"
-        rev_data = {
-            "resolution": "0.2",
-            "rows": c_rows,
-        }
-        rev_file.write_text(json.dumps(rev_data), encoding="utf-8")
-        grid_out = stage_dir / "formal_part1_grid"
-        p1_lock = {
-            "common": str(primary),
-            "grid": str(grid_out),
-            "review": str(rev_file),
-            "gene": "STAT1",
-            "out": str(root),
-        }
-        _task(client, factory, run_id, "formal_part1_lock", p1_lock)
+        named_rows = [{**row, "name": f"c{row['cluster']}"} for row in c_rows]
+        naming_response = client.post(
+            f"/api/stage-runs/{run_id}/clusters",
+            headers=HEADERS,
+            json={"blinding": "NOT_APPLICABLE", "rows": named_rows},
+        )
+        assert naming_response.status_code == 201
+
+        # Step 5b: final naming queues the Part 1 lock.
+        _wait(factory, int(naming_response.json()["next_job_id"]))
         locked = stage_dir / "formal_part1_lock" / "locked_atlas.h5ad"
         assert locked.is_file()
         assert (stage_dir / "formal_part1_lock" / "celltype_colors.yaml").is_file()

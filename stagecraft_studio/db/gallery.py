@@ -1,3 +1,4 @@
+# hygiene: aggregation module
 """Formal analysis gallery aggregation.
 
 Collects image artifacts (PNG, SVG), publication PDFs, parameter sidecars,
@@ -46,8 +47,14 @@ class ArtifactAccessDenied(Exception):
 
 
 class ScientificStatusView(BaseModel):
+    scientific_status: str
     calibration_status: str
     associated: bool
+    claims_limma: bool
+    forecast_is_not_a_verdict: bool
+    lodo_is_replication: bool
+    holdout: str
+    read_only: bool
     evidence_ceiling: str
     reasons: list[str] = Field(default_factory=list)
 
@@ -120,11 +127,21 @@ def get_stage_gallery(session: Session, run_id: int) -> dict[str, Any]:
         invalidated=run.invalidated,
         evidence=evidence,
     )
-    raw_reasons = raw_sc.get("reasons", [])
-    reasons_list = [str(r) for r in raw_reasons] if isinstance(raw_reasons, list) else []
+    limits = raw_sc.get("limits", [])
+    if not isinstance(limits, list):
+        limits = []
+    reasons_list = [str(item) for item in limits if isinstance(item, str)]
     sc_view = ScientificStatusView(
-        calibration_status="NOT_ESTABLISHED_FOR_THIS_ANALYSIS",
-        associated=False,
+        scientific_status=str(raw_sc.get("scientific_status", "NOT_REPORTED")),
+        calibration_status=str(
+            raw_sc.get("calibration_status", "NOT_ESTABLISHED_FOR_THIS_ANALYSIS")
+        ),
+        associated=raw_sc.get("associated") is True,
+        claims_limma=raw_sc.get("claims_limma") is True,
+        forecast_is_not_a_verdict=raw_sc.get("forecast_is_not_a_verdict") is True,
+        lodo_is_replication=raw_sc.get("lodo_is_replication") is True,
+        holdout=str(raw_sc.get("holdout", "not_run")),
+        read_only=raw_sc.get("read_only") is True,
         evidence_ceiling=str(raw_sc.get("evidence_ceiling", "descriptive")),
         reasons=reasons_list,
     )
@@ -187,6 +204,16 @@ def get_stage_gallery(session: Session, run_id: int) -> dict[str, Any]:
             panel_id = name[:6] if len(name) >= 6 else name
             title = f"{panel_id}: {name[7:].replace('_', ' ')}" if len(name) > 7 else name
             caption = "Part 2 single-cell target survey on locked UMAP coordinates."
+        elif task_id == "formal_part3_recluster":
+            stage_part = "Part 3"
+            if name == "leiden_resolution_overview":
+                panel_id = "F03_grid"
+                title = "Part 3: Leiden resolution overview"
+                caption = "Resolution scan for the reclustered compartment; no resolution is selected automatically."
+            else:
+                panel_id = name
+                title = f"Part 3: {name.replace('_', ' ')}"
+                caption = "Part 3 reclustering view for the selected compartment."
         elif name.startswith("F04_") or task_id == "formal_part4_figures":
             stage_part = "Part 4"
             panel_id = name[:6] if len(name) >= 6 else name

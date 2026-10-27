@@ -22,6 +22,7 @@ import {
 import { readLayout, saveLayout } from "./layout_store";
 import { noticePermission, shouldNotify } from "./notify";
 import { Assistant } from "./panes/Assistant";
+import { ReviewTables } from "./panes/ReviewTables";
 import { Compare } from "./panes/Compare";
 import { Environment } from "./panes/Environment";
 import { Files } from "./panes/Files";
@@ -43,13 +44,22 @@ export function App() {
   const [source, setSource] = useState<SourceView | null>(null);
   const [stepId, setStepId] = useState("");
   const [left, setLeft] = useState<"steps" | "files">("steps");
-  const [right, setRight] = useState<"images" | "assistant">("images");
+  const [right, setRight] = useState<"images" | "tables" | "assistant">(
+    "images",
+  );
+  const [, setLanguageVersion] = useState(0);
   const [mode, setMode] = useState<Mode>("quicklook");
   const previousStatus = useRef("");
   const [focus, setFocus] = useState("");
   const [fileRel, setFileRel] = useState("");
   const [error, setError] = useState("");
   const [layout] = useState(readLayout);
+
+  useEffect(() => {
+    const apply = () => setMode("formal");
+    window.addEventListener("stagecraft:apply-proposal", apply);
+    return () => window.removeEventListener("stagecraft:apply-proposal", apply);
+  }, []);
 
   useEffect(() => {
     void loadBootstrap()
@@ -136,6 +146,7 @@ export function App() {
         onRun={setRun}
         onSteps={setSteps}
         onError={setError}
+        onLanguageChange={() => setLanguageVersion((version) => version + 1)}
       />
       {error ? <p className="log-error">{error}</p> : null}
       <Group
@@ -233,6 +244,13 @@ export function App() {
               >
                 {chrome.assistant}
               </button>
+              <button
+                type="button"
+                className={right === "tables" ? "on" : ""}
+                onClick={() => setRight("tables")}
+              >
+                {chrome.tables}
+              </button>
             </div>
             {right === "images" ? (
               <Images
@@ -244,8 +262,10 @@ export function App() {
                   setLeft("files");
                 }}
               />
+            ) : right === "tables" ? (
+              <ReviewTables />
             ) : (
-              <Assistant />
+              <Assistant ready={Boolean(bootstrap)} />
             )}
           </div>
         </Panel>

@@ -1,3 +1,4 @@
+# hygiene: integration test module
 """Chain test from Part 1 to Part 3 through Studio worker."""
 
 from __future__ import annotations
@@ -293,6 +294,8 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             },
         )
         assert res_resp.status_code == 201
+        tables_id = int(res_resp.json()["job_id"])
+        _wait_for_jobs(db_path, [tables_id])
 
         # Still rejected before cluster review
         before_clusters = client.post(
@@ -304,32 +307,43 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         assert before_clusters.json()["detail"]["rule_id"] == "REVIEW_CLUSTER_COMPLETE"
 
         # Submit cluster review decision (fixture human decision)
+        cluster_rows = [
+            {
+                "cluster": "0",
+                "decision": "KEEP",
+                "rationale": "FIXTURE_HUMAN_DECISION: primary myeloid",
+                "reviewer": "GuomingLin",
+                "decided_on": "2026-10-01",
+            },
+            {
+                "cluster": "1",
+                "decision": "KEEP",
+                "rationale": "FIXTURE_HUMAN_DECISION: primary lymphoid",
+                "reviewer": "GuomingLin",
+                "decided_on": "2026-10-01",
+            },
+        ]
         clu_resp = client.post(
             f"/api/stage-runs/{run_id}/clusters",
             headers=TOKEN_HEADERS,
             json={
                 "blinding": "NOT_APPLICABLE",
-                "rows": [
-                    {
-                        "cluster": "0",
-                        "decision": "KEEP",
-                        "rationale": "FIXTURE_HUMAN_DECISION: primary myeloid",
-                        "reviewer": "GuomingLin",
-                        "decided_on": "2026-10-01",
-                        "name": "Myeloid_0",
-                    },
-                    {
-                        "cluster": "1",
-                        "decision": "KEEP",
-                        "rationale": "FIXTURE_HUMAN_DECISION: primary lymphoid",
-                        "reviewer": "GuomingLin",
-                        "decided_on": "2026-10-01",
-                        "name": "Lymphoid_1",
-                    },
-                ],
+                "rows": cluster_rows,
             },
         )
         assert clu_resp.status_code == 201
+
+        named_rows = [
+            {**row, "name": name}
+            for row, name in zip(cluster_rows, ("Myeloid_0", "Lymphoid_1"), strict=True)
+        ]
+        named_resp = client.post(
+            f"/api/stage-runs/{run_id}/clusters",
+            headers=TOKEN_HEADERS,
+            json={"blinding": "NOT_APPLICABLE", "rows": named_rows},
+        )
+        assert named_resp.status_code == 201
+        lock_id = int(named_resp.json()["next_job_id"])
 
         # 6b. Attempting Part 3 recluster directly before locking atlas must be blocked
         j_premature = client.post(
@@ -340,17 +354,7 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         assert j_premature.status_code == 409
         assert j_premature.json()["detail"]["rule_id"] == "LOCKED_ATLAS_REQUIRED"
 
-        # 6c. Enqueue formal_part1_lock and complete
-        lock_id = _post_job(
-            "formal_part1_lock",
-            {
-                "common": str(counts_file),
-                "grid": str(project_root),
-                "review": str(manifest),
-                "gene": "STAT1",
-                "out": str(project_root),
-            },
-        )
+        # 6c. The naming stop queues the Part 1 lock.
         _wait_for_jobs(db_path, [lock_id])
 
         with factory() as session:
@@ -382,8 +386,8 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
         list_resp = client.get(f"/api/stage-runs/{run_id}/jobs")
         assert list_resp.status_code == 200
         jobs_data = list_resp.json()
-        assert len(jobs_data) == 6
-        expected_ids = [job1_id, job2_id, job3_id, job4_id, lock_id, job5_id]
+        assert len(jobs_data) == 7
+        expected_ids = [job1_id, job2_id, job3_id, job4_id, tables_id, lock_id, job5_id]
         assert [item["id"] for item in jobs_data] == expected_ids
         assert all(item["job_status"] == "COMPLETED" for item in jobs_data)
         expected_tasks = [
@@ -391,6 +395,7 @@ def test_formal_chain_part1_to_part3_e2e(tmp_path: Path) -> None:
             "formal_part1_qc",
             "formal_part1_merge",
             "formal_part1_grid",
+            "formal_part1_review_tables",
             "formal_part1_lock",
             "formal_part3_recluster",
         ]

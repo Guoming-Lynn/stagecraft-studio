@@ -126,13 +126,13 @@ def test_queued_job_executes_and_registers_artifacts(tmp_path: Path) -> None:
             )
             assert len(artifacts) >= 2
             paths = {a.relative_path for a in artifacts}
-            assert "formal_part1_load/loaded.h5ad" in paths
-            assert "formal_part1_load/symbol_audit.csv" in paths
+            assert "formal_part1_load/L1/loaded.h5ad" in paths
+            assert "formal_part1_load/L1/symbol_audit.csv" in paths
             for a in artifacts:
                 assert a.artifact_status == "VALID"
                 assert len(a.content_hash) == 64
 
-        dest_dir = stage_root / "analysis" / f"stage_{run_id}" / "formal_part1_load"
+        dest_dir = stage_root / "analysis" / f"stage_{run_id}" / "formal_part1_load" / "L1"
         assert (dest_dir / "loaded.h5ad").is_file()
         assert (dest_dir / "symbol_audit.csv").is_file()
     finally:

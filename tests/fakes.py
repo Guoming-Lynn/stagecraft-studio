@@ -127,6 +127,29 @@ def write_fake_formal_scripts(directory: Path) -> Path:
                 "    args.out.parent.mkdir(parents=True, exist_ok=True)\n"
                 "    args.out.write_text('# Formal Stage Report\\n', encoding='utf-8')\n"
             )
+        elif script_name == "cluster_review_tables.py":
+            code = (
+                "import argparse, json, pathlib\n"
+                "parser = argparse.ArgumentParser()\n"
+                "parser.add_argument('--out', type=pathlib.Path)\n"
+                "parser.add_argument('--resolution', default='0.4')\n"
+                "parser.add_argument('--round-index', type=int, default=0)\n"
+                "args, _ = parser.parse_known_args()\n"
+                "args.out.mkdir(parents=True, exist_ok=True)\n"
+                "(args.out / 'review_table.json').write_text('{}\\n', encoding='utf-8')\n"
+                "(args.out / 'selected_tables.json').write_text(json.dumps({"
+                "'resolution': args.resolution, 'round_index': args.round_index}), encoding='utf-8')\n"
+                "(args.out / 'selected_cluster_qc.csv').write_text("
+                "'cluster,n_cells,n_donors,n_datasets,n_libraries,p5_total_counts,p25_total_counts,median_total_counts,p75_total_counts,p95_total_counts,p5_n_genes,p25_n_genes,median_n_genes,p75_n_genes,p95_n_genes,p5_pct_mt,p25_pct_mt,median_pct_mt,p75_pct_mt,p95_pct_mt\\n'"
+                "+ '0,20,3,2,2,500,750,1000,1250,1500,200,300,400,500,600,1,3,5,7,9\\n'"
+                "+ '1,10,2,2,2,250,375,500,625,750,100,150,200,250,300,5,12,20,28,35\\n', encoding='utf-8')\n"
+                "(args.out / 'selected_top20_by_cluster.csv').write_text("
+                "'cluster,top20_markers\\n0,LYZ;FCER1G\\n1,CD3D;CD3E\\n', encoding='utf-8')\n"
+                "(args.out / 'selected_markers.csv').write_text("
+                "'cluster,rank,gene,logfoldchange,pct_in,pct_out,pct_delta,marker_quality,quality_basis\\n'"
+                "+ '0,1,LYZ,1.2,0.8,0.1,0.7,STRONG,thresholds\\n'"
+                "+ '1,1,CD3D,0.9,0.7,0.1,0.6,STRONG,thresholds\\n', encoding='utf-8')\n"
+            )
         else:
             code = (
                 "import argparse\n"

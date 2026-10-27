@@ -35,7 +35,7 @@ def scientific_status(
     return {
         "scientific_status": status,
         "calibration_status": CALIBRATION,
-        "associated": source_holdout and recorded.get("associated") is True,
+        "associated": not closed and source_holdout and recorded.get("associated") is True,
         "claims_limma": claims_limma,
         "forecast_is_not_a_verdict": True,
         "lodo_is_replication": False,

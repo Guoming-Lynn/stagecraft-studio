@@ -1,73 +1,68 @@
 import type { StageWorkspaceView } from "../api/client";
+import {
+  chrome,
+  scientificLimitText,
+  scientificStatusNote,
+  scientificStatusTitle,
+} from "../text/chrome";
 
 export function ResultsTab({ ws }: { ws: StageWorkspaceView }) {
   const sci = ws.results.scientific_status;
   return (
-    <div className="stack" style={{ gap: "12px" }}>
-      <div
-        className="card"
-        style={{ borderLeft: "4px solid var(--accent, #3b82f6)" }}
-      >
-        <h4>科学状态与推断上限</h4>
-        <div
-          className="row"
-          style={{ gap: "8px", flexWrap: "wrap", margin: "8px 0" }}
-        >
-          <span className="badge">判决: {sci.scientific_status}</span>
-          <span className="badge">校准: {sci.calibration_status}</span>
-          <span className="badge">
-            关联支持 (associated): {sci.associated ? "True" : "False"}
-          </span>
-          <span className="badge">
-            Limma 主张: {sci.claims_limma ? "True" : "False"}
+    <div className="stack workspace-section">
+      <section className="card card-scientific scientific-status-card">
+        <div className="scientific-status-heading">
+          <div className="scientific-status-copy">
+            <h4>{scientificStatusTitle(sci.scientific_status)}</h4>
+            <p>{scientificStatusNote(sci.scientific_status)}</p>
+          </div>
+          <span className="status-code" title={chrome.scientificStatusCode}>
+            {sci.scientific_status}
           </span>
         </div>
-        <ul
-          style={{
-            margin: "4px 0 0 18px",
-            fontSize: "12px",
-            color: "var(--muted, #666)",
-          }}
-        >
-          {sci.limits.map((lim, idx) => (
-            <li key={idx}>{lim}</li>
-          ))}
+        <dl className="scientific-status-facts">
+          <div>
+            <dt>{chrome.calibration}</dt>
+            <dd>{chrome.calibrationReadable}</dd>
+          </div>
+          <div>
+            <dt>{chrome.association}</dt>
+            <dd>{sci.associated ? chrome.supported : chrome.notSupported}</dd>
+          </div>
+          <div>
+            <dt>{chrome.limmaClaim}</dt>
+            <dd>{sci.claims_limma ? chrome.reported : chrome.notReported}</dd>
+          </div>
+        </dl>
+        <h5 className="interpretation-heading">{chrome.scientificLimits}</h5>
+        <ul className="limit-list">
+          {sci.limits
+            .filter((lim) => scientificLimitText(lim))
+            .map((lim) => (
+              <li key={lim}>{scientificLimitText(lim)}</li>
+            ))}
         </ul>
-      </div>
+      </section>
 
-      <div className="card">
-        <h4>产物文件 ({ws.results.artifacts.length})</h4>
+      <section className="card artifact-card">
+        <h4>
+          {chrome.artifactFiles} ({ws.results.artifacts.length})
+        </h4>
         {ws.results.artifacts.length === 0 ? (
-          <p className="empty-state">尚未生成任何产物文件。</p>
+          <p className="empty-state">{chrome.noArtifacts}</p>
         ) : (
-          <table
-            style={{
-              width: "100%",
-              fontSize: "12px",
-              borderCollapse: "collapse",
-            }}
-          >
+          <table className="artifact-table">
             <thead>
-              <tr
-                style={{
-                  textAlign: "left",
-                  borderBottom: "1px solid var(--border, #ddd)",
-                }}
-              >
-                <th>相对路径</th>
-                <th>状态</th>
-                <th>SHA256</th>
+              <tr>
+                <th>{chrome.relativePath}</th>
+                <th>{chrome.status}</th>
+                <th>SHA-256</th>
               </tr>
             </thead>
             <tbody>
               {ws.results.artifacts.map((a) => (
-                <tr
-                  key={a.id}
-                  style={{
-                    borderBottom: "1px solid var(--border-light, #eee)",
-                  }}
-                >
-                  <td style={{ padding: "4px 0" }}>
+                <tr key={a.id}>
+                  <td>
                     <code>{a.relative_path}</code>
                   </td>
                   <td>{a.artifact_status}</td>
@@ -79,36 +74,27 @@ export function ResultsTab({ ws }: { ws: StageWorkspaceView }) {
             </tbody>
           </table>
         )}
-      </div>
+      </section>
     </div>
   );
 }
 
 export function ChecksTab({ ws }: { ws: StageWorkspaceView }) {
   return (
-    <div className="stack" style={{ gap: "8px" }}>
-      <h4>机器规则与审阅检查结果 ({ws.checks.length})</h4>
+    <div className="stack workspace-section">
+      <h4>
+        {chrome.ruleChecks} ({ws.checks.length})
+      </h4>
       {ws.checks.length === 0 ? (
-        <p className="empty-state">尚未运行任何规则检查。</p>
+        <p className="empty-state">{chrome.noChecks}</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            fontSize: "12px",
-            borderCollapse: "collapse",
-          }}
-        >
+        <table className="checks-table">
           <thead>
-            <tr
-              style={{
-                textAlign: "left",
-                borderBottom: "1px solid var(--border, #ddd)",
-              }}
-            >
-              <th>规则</th>
-              <th>判定</th>
-              <th>详情</th>
-              <th>时间</th>
+            <tr>
+              <th>{chrome.rule}</th>
+              <th>{chrome.decision}</th>
+              <th>{chrome.details}</th>
+              <th>{chrome.time}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,15 +106,8 @@ export function ChecksTab({ ws }: { ws: StageWorkspaceView }) {
                     ? "var(--warning, #ca8a04)"
                     : "var(--danger, #dc2626)";
               return (
-                <tr
-                  key={c.id}
-                  style={{
-                    borderBottom: "1px solid var(--border-light, #eee)",
-                  }}
-                >
-                  <td style={{ padding: "6px 0", fontWeight: 600 }}>
-                    {c.rule_id}
-                  </td>
+                <tr key={c.id}>
+                  <td className="rule-id">{c.rule_id}</td>
                   <td>
                     <span style={{ color, fontWeight: 700 }}>
                       {c.rule_status}
@@ -139,7 +118,7 @@ export function ChecksTab({ ws }: { ws: StageWorkspaceView }) {
                       {JSON.stringify(c.detail, null, 1)}
                     </pre>
                   </td>
-                  <td style={{ color: "var(--muted, #888)", fontSize: "11px" }}>
+                  <td className="check-time">
                     {c.checked_at
                       ? new Date(c.checked_at).toLocaleTimeString()
                       : "-"}
@@ -156,10 +135,12 @@ export function ChecksTab({ ws }: { ws: StageWorkspaceView }) {
 
 export function LogsTab({ ws }: { ws: StageWorkspaceView }) {
   return (
-    <div className="stack" style={{ gap: "8px" }}>
-      <h4>任务执行日志 ({ws.logs.length})</h4>
+    <div className="stack workspace-section">
+      <h4>
+        {chrome.taskLogs} ({ws.logs.length})
+      </h4>
       {ws.logs.length === 0 ? (
-        <p className="empty-state">尚无任务执行记录。</p>
+        <p className="empty-state">{chrome.noTaskLogs}</p>
       ) : (
         ws.logs.map((l) => (
           <div key={l.id} className="card" style={{ fontSize: "13px" }}>
@@ -170,12 +151,12 @@ export function LogsTab({ ws }: { ws: StageWorkspaceView }) {
               <span className="badge">{l.job_status}</span>
             </div>
             {l.failure_reason ? (
-              <p style={{ color: "var(--danger, #dc2626)", margin: "4px 0 0" }}>
-                失败原因: {l.failure_reason}
+              <p style={{ color: "var(--rose-primary)", margin: "4px 0 0" }}>
+                {chrome.failureReason}: {l.failure_reason}
               </p>
             ) : null}
-            <small style={{ color: "var(--muted, #888)" }}>
-              创建时间:{" "}
+            <small style={{ color: "var(--text-muted)" }}>
+              {chrome.createdAt}:{" "}
               {l.created_at ? new Date(l.created_at).toLocaleString() : "-"}
             </small>
           </div>

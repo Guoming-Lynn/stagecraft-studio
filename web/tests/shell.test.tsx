@@ -6,6 +6,14 @@ import type { Bootstrap, RunView, StepView } from "../src/api/client";
 import { saveLayout } from "../src/layout_store";
 import { lineClass } from "../src/log_lines";
 import { shouldNotify } from "../src/notify";
+import {
+  chrome,
+  getLanguage,
+  scientificStatusNote,
+  scientificStatusTitle,
+  scientificLimitText,
+  setLanguage,
+} from "../src/text/chrome";
 import { Assistant } from "../src/panes/Assistant";
 import { Images } from "../src/panes/Images";
 import { StartForm } from "../src/panes/StartForm";
@@ -64,8 +72,10 @@ describe("shell", () => {
     expect(host.textContent).not.toContain("empty_violin");
   });
 
-  it("leaves the assistant disconnected", () => {
-    expect(mount(<Assistant />).textContent).toContain("未接入");
+  it("shows a usable assistant shell", () => {
+    const host = mount(<Assistant ready={false} />);
+    expect(host.textContent).toContain("研究助手");
+    expect(host.textContent).toContain("检查发送内容");
   });
 
   it("shows the server group note and not an engine path field", () => {
@@ -114,6 +124,34 @@ describe("shell", () => {
     expect(shouldNotify("", "succeeded", "granted")).toBe(false);
     expect(shouldNotify("running", "succeeded", "default")).toBe(false);
     expect(shouldNotify("succeeded", "succeeded", "granted")).toBe(false);
+  });
+
+  it("keeps scientific terminology explicit in both interface languages", () => {
+    setLanguage("zh-CN");
+    expect(chrome.reviewResolutions).toBe("聚类分辨率");
+    setLanguage("en-US");
+    expect(getLanguage()).toBe("en-US");
+    expect(chrome.reviewResolutions).toBe("Clustering resolution");
+    expect(chrome.name).toBe("Cluster annotation");
+    expect(
+      scientificLimitText("校准状态保持为 NOT_ESTABLISHED_FOR_THIS_ANALYSIS。"),
+    ).toBe("");
+    setLanguage("zh-CN");
+  });
+
+  it("explains scientific status codes without changing their raw value", () => {
+    setLanguage("zh-CN");
+    expect(scientificStatusTitle("NOT_REPORTED")).toBe("科学审阅尚未完成");
+    expect(scientificStatusNote("NOT_REPORTED")).toContain(
+      "分辨率和细胞群审阅",
+    );
+    setLanguage("en-US");
+    expect(scientificStatusTitle("INVALIDATED")).toBe("Result invalidated");
+    expect(scientificStatusNote("INVALIDATED")).toContain("must be rerun");
+    expect(scientificLimitText("NOT_ESTIMABLE 不表示效应不存在。")).toContain(
+      "effect estimate",
+    );
+    setLanguage("zh-CN");
   });
 });
 

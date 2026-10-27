@@ -1,4 +1,5 @@
 import { stageArtifactUrl, type GalleryFigureItem } from "../api/client";
+import { chrome } from "../text/chrome";
 
 export function GalleryCard({
   item,
@@ -11,20 +12,13 @@ export function GalleryCard({
 }) {
   if (item.status === "NOT_ESTIMABLE") {
     return (
-      <div
-        style={{
-          border: "2px dashed var(--amber-primary, #d97706)",
-          borderRadius: "8px",
-          padding: "12px",
-          background: "var(--amber-surface, #fffbeb)",
-        }}
-      >
+      <div className="gallery-card-not-estimable">
         <div className="row spread" style={{ marginBottom: "6px" }}>
           <span className="badge badge-warning">{item.panel_id}</span>
           <span
             style={{
-              fontWeight: "bold",
-              color: "var(--amber-primary, #b45309)",
+              fontWeight: "700",
+              color: "var(--amber-primary)",
               fontSize: "12px",
             }}
           >
@@ -37,7 +31,7 @@ export function GalleryCard({
         <p
           style={{
             fontSize: "12px",
-            color: "var(--text-muted, #475569)",
+            color: "var(--text-muted)",
             margin: "0 0 8px 0",
           }}
         >
@@ -66,7 +60,7 @@ export function GalleryCard({
             rel="noreferrer"
             style={{ fontSize: "12px" }}
           >
-            下载资格数据 (CSV)
+            {chrome.downloadSourceData} (CSV)
           </a>
         ) : null}
       </div>
@@ -109,7 +103,7 @@ export function GalleryCard({
       <p
         style={{
           fontSize: "11px",
-          color: "var(--text-muted, #64748b)",
+          color: "var(--text-muted)",
           margin: "4px 0",
         }}
       >
@@ -124,7 +118,7 @@ export function GalleryCard({
           onClick={() => onFocus(item)}
           style={{ padding: "2px 6px" }}
         >
-          大图
+          {chrome.preview}
         </button>
         {item.format_svg ? (
           <a
@@ -150,7 +144,7 @@ export function GalleryCard({
             target="_blank"
             rel="noreferrer"
           >
-            数据
+            {chrome.downloadSourceData}
           </a>
         ) : null}
         {item.parameters ? (
@@ -159,7 +153,7 @@ export function GalleryCard({
             target="_blank"
             rel="noreferrer"
           >
-            参数
+            {chrome.viewParameters}
           </a>
         ) : null}
       </div>

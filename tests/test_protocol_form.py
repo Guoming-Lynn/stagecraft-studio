@@ -24,6 +24,8 @@ def test_form_has_no_code_field(tmp_path: Path) -> None:
     harmony = next(field for field in fields if field["name"] == "harmony_keys")
     assert harmony["default"] == ["dataset"]
     assert "donor_id" in harmony["forbidden"]
+    libraries = next(field for field in fields if field["name"] == "libraries")
+    assert libraries["columns"] == ["library_id", "dataset", "donor_id", "source_block"]
 
 
 def test_donor_is_not_a_harmony_key(tmp_path: Path) -> None:
@@ -45,6 +47,20 @@ def test_extra_field_is_rejected(tmp_path: Path) -> None:
     body["script"] = "print(1)"
     response = client.post("/api/protocol/freeze", headers=TOKEN, json=body)
     assert response.status_code == 422
+
+
+def test_duplicate_library_id_is_rejected(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    source = tmp_path / "counts.h5ad"
+    source.write_bytes(b"counts")
+    body = _body(source)
+    body["libraries"] = [
+        {"library_id": "A", "dataset": "D1", "donor_id": "P1", "source_block": "S1"},
+        {"library_id": "A", "dataset": "D2", "donor_id": "P2", "source_block": "S2"},
+    ]
+    response = client.post("/api/protocol/freeze", headers=TOKEN, json=body)
+    assert response.status_code == 400
+    assert response.json()["detail"]["rule_id"] == "PROTOCOL_FORM"
 
 
 def test_a_valid_form_freezes_a_hash(tmp_path: Path) -> None:
