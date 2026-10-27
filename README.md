@@ -1,77 +1,103 @@
+<div align="center">
+
 # Stagecraft Studio
 
-本地单用户分析壳。速览与正式分析由固定程序执行；可选 AI 助手支持本地解释和 BYOK 模型接入。模型未配置时，分析流程仍可独立运行。
+**从单细胞速览到可追溯的正式分析。**
 
-## Windows 快速开始（测试版）
+为研究者设计的本地单细胞 RNA-seq 工作台：运行固定分析流程，审阅每个群体与证据，再决定哪些结果可以进入下游。
 
-准备 uv 0.9.2、Node 24、pnpm 12.8.1，以及能用于 Python 3.11 的环境。正式分析还需要 R 和正式引擎所需的 R 包。第一次运行需要联网安装依赖；具体安装步骤见 `docs/install.md`。
+[English](#english) · [功能](#功能) · [快速开始](#快速开始) · [许可](#license)
 
-将三个目录放在同一个上级目录：
+[![GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-2f6f5e.svg)](LICENSE)
+[![Python 3.10–3.11](https://img.shields.io/badge/python-3.10--3.11-3776ab.svg)](https://www.python.org/)
+[![本地运行](https://img.shields.io/badge/data-local-315f91.svg)](#使用前请知悉)
 
-```text
-某个文件夹/
-  stagecraft-studio/
-  scrna-target-engine/
-  stagecraft-formal-engine/
-```
+</div>
 
-获取源码：分别下载或克隆 [Studio](https://github.com/Guoming-Lynn/stagecraft-studio)、[速览引擎](https://github.com/Guoming-Lynn/scrna-target-engine) 和 [正式引擎](https://github.com/Guoming-Lynn/stagecraft-formal-engine)，将解压后的目录命名为上图名称。
+## Studio 一览
 
-安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.9.2 和 [Node.js](https://nodejs.org/) 24，然后在终端运行 npm install -g pnpm@12.8.1。正式模型需要 R 的 jsonlite、Matrix，以及所选模型对应的 limma、edgeR 或 DESeq2。
+界面把运行参数、图像、逐群 QC、marker 证据和人工审阅放在同一工作区。科学决定仍由研究者提交；可选 AI 助手只读取获准的摘要，并将建议保留为草案。
 
-双击 `stagecraft-studio/Start Studio.cmd`，等待依赖安装和浏览器打开。保持启动窗口打开；关闭窗口会停止服务。以后可以再次双击启动。首次启动耗时取决于网络和电脑，缺少工具或引擎时窗口会显示提示。
+![Stagecraft Studio 的 Part 1 细胞群审阅界面](docs/screenshots/part1-review.png)
 
-正式引擎缺失时只能使用速览。此版本仍在测试，真实数据尚未在界面中完成 Part 1–5 全流程验收。请先使用可公开的测试数据，分析结果需要由研究者审阅。
+<p align="center"><sub>真实运行界面。示例运行尚未提交细胞群去留决定；截图中的表单默认值不是分析结论。</sub></p>
 
-## 命令行启动
+## 示例结果
 
-本地页面只监听 127.0.0.1，并在聚类之后停住，不调用在线富集。引擎解释器和 `run_pipeline.py` 只在启动时确定，表单不能改它们。设置环境变量，或给 `serve` 传启动参数：
+以下图像来自公开 GEO 数据集的真实试跑：3 个 GEO 系列的 16 个 library，抽样并经 QC 后共 13,408 个细胞。Harmony 按数据集整合；图中为 Leiden resolution 0.5 的 UMAP，共 7 个群。它用于展示分析产物与审阅材料，不代表已完成人工群体命名或外部验证。
 
-```text
-set STAGECRAFT_QUICKLOOK_PYTHON=PATH\to\python.exe
-set STAGECRAFT_QUICKLOOK_SCRIPT=PATH\to\run_pipeline.py
-uv run python -m stagecraft_studio.engine.cli serve --port 8765
-```
+来源：[GSE233275](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE233275)、[GSE272294](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE272294)、[GSE280401](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE280401)。
 
-也可以不打开页面，直接跑。`quicklook` 读取同一对环境变量：
+![Leiden resolution 0.5 的 UMAP 示例，来自公开 GEO 数据试跑](docs/screenshots/example-umap-r0.5.png)
 
-```text
-uv run python -m stagecraft_studio.engine.cli quicklook --input DATA.h5ad --gene GENE --out PROJECT
-```
+<details>
+<summary>查看逐群 QC 汇总表示例</summary>
 
-`PYTHON` 是装有速览依赖的解释器。输出目录必须是新的或空的。
+QC 表按群体展示 UMI、检出基因数、线粒体与其他转录本比例、复杂度及其 P5/P25/P50/P75/P95。Marker 证据另表逐基因列出，便于人工比较。
 
-## 测试
+![Stagecraft Studio 中的逐群 QC 分位数表](docs/screenshots/cluster-qc-table.png)
 
-```text
+</details>
+
+## 功能
+
+- **快速速览**：固定的 Scanpy 流程、图像预览、分页表格和复现包；明确标为细胞水平探索结果。
+- **Part 1 图谱审阅**：从每个 library 的 QC、严格共同基因合并到 resolution 网格；人工决定 cluster 去留，删除后从保留的 raw counts 重算，稳定后再命名和锁定。
+- **Part 2–5 正式分析**：围绕锁定图谱生成描述性结果、可识别性检查和供体层面模型；设计不足时保留 NOT_ESTIMABLE，不会把缺少信息说成没有效应。
+- **证据与审计**：协议冻结、审阅记录、规则检查、产物 hash 和结果图集保存在本地项目中。
+- **双语界面与可选 AI 助手**：支持中文/English；助手不自动冻结协议、提交审阅或改写科学状态。
+
+## 快速开始
+
+当前提供 Windows 双击启动脚本。首次运行会同步三个组件的 Python 依赖、构建页面并打开浏览器。
+
+1. 安装 [uv 0.9.2](https://docs.astral.sh/uv/getting-started/installation/)、[Node.js 24](https://nodejs.org/) 和 Git；随后运行 npm install -g pnpm@12.8.1。
+2. 将三个仓库放在同一个文件夹中，目录名称保持如下：
+
+   ```text
+   your-folder/
+     stagecraft-studio/
+     scrna-target-engine/
+     stagecraft-formal-engine/
+   ```
+
+   - [Studio](https://github.com/Guoming-Lynn/stagecraft-studio)
+   - [速览引擎](https://github.com/Guoming-Lynn/scrna-target-engine)
+   - [正式分析引擎](https://github.com/Guoming-Lynn/stagecraft-formal-engine)
+
+3. 双击 stagecraft-studio/Start Studio.cmd。保持启动窗口打开；关闭窗口会停止本地服务。
+
+正式引擎仓库目前尚未上传源码，完整正式分析暂不可从 GitHub 安装。速览引擎可单独配合 Studio 使用。正式分析还需要 R、R 包 jsonlite、Matrix，以及模型对应的 limma、edgeR 或 DESeq2。安装说明和命令行选项见 [docs/install.md](docs/install.md)。
+
+## 使用前请知悉
+
+这是供早期试用的研究软件，不是临床诊断工具。当前公开版本尚未完成跨平台安装验收，也没有用真实研究数据在 GUI 中走完 Part 1–5 全流程。建议先使用公开数据，并由熟悉单细胞分析的研究者核查 QC、聚类和统计设计。
+
+Studio 默认只在本机回环地址提供服务；速览富集读取本地 GMT，不会把基因列表发送到在线服务。只有在你明确确认发送摘要后，AI 助手才会把授权摘要发往配置的模型服务。目标基因盲审、校准边界和“留一来源块不等于独立复制”等限制仍由后端规则约束。
+
+## 开发与测试
+
+```powershell
 uv sync --frozen
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
 uv run pytest
+uv run ruff check .
+uv run mypy
 uv run python scripts/check_hygiene.py
-uv run python scripts/export_rule_coverage.py --check
-uv run python scripts/export_openapi.py --check
 pnpm install --frozen-lockfile
 pnpm -C web lint
-pnpm -C web exec prettier --check .
 pnpm -C web typecheck
 pnpm -C web test
 pnpm -C web e2e
 ```
 
-### 真实正式引擎端到端串联测试
+## English
 
-正式分析引擎与 Studio 跨进程交互测试（`test_formal_real_chain.py` 与 `test_formal_real_pipeline.py`）需要通过环境变量指定正式引擎解释器及脚本目录：
+Stagecraft Studio is a local workbench for single-cell RNA-seq, from quick exploratory analysis to protocol-frozen, evidence-tracked workflows. Researchers retain control over cluster review and downstream decisions. The optional AI assistant works from authorized summaries and produces drafts only.
 
-```text
-set STAGECRAFT_FORMAL_SCRIPTS=D:\stagecraft-formal-engine\scripts
-set STAGECRAFT_FORMAL_PYTHON=D:\stagecraft-formal-engine\.venv\Scripts\python.exe
-uv run pytest tests/test_formal_real_chain.py tests/test_formal_real_pipeline.py
-```
+The screenshots show a real run on public GEO data: 16 libraries from three series, with 13,408 cells after sampling and QC. The UMAP shows Leiden resolution 0.5 with seven clusters. Cluster labels and review decisions have not been submitted.
 
-在未建立私有远端 CI 跨仓库集成前，本地提交前必须设置上述环境变量并跑通全量 `uv run pytest`（包括上述真实端到端串联用例）。未设置环境变量时，该两项测试会自动跳过（skipped）。
+This is an early-access research tool. The full Part 1–5 GUI workflow and clean-machine installation have not yet been validated end to end. See [Quick Start](#快速开始), [Usage Notes](#使用前请知悉), and [Installation Details](docs/install.md).
 
-## 许可
+## License
 
-本项目以 GPL-3.0-only 发布，详见 LICENSE。
+GPL-3.0-only. See [LICENSE](LICENSE).

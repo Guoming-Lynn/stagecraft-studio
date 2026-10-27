@@ -18,6 +18,7 @@ SPEC_TOP_LEVEL = frozenset(
     {
         "AGENTS.md",
         "HANDOFF.md",
+        "Start Studio.cmd",
         ".cursor",
         "LICENSE",
         "README.md",
@@ -131,6 +132,8 @@ def _docs(root: Path) -> list[Violation]:
     found: list[Violation] = []
     for child in docs.iterdir():
         relative = child.relative_to(root).as_posix()
+        if child.name == "screenshots" and child.is_dir():
+            continue
         if child.is_dir() or child.name not in DOCS_FILES:
             found.append(Violation(relative, "DOCS", "docs/ only allows the five named files"))
     return found
