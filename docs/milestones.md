@@ -194,3 +194,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 ## 2026-10-12 Part 1 marker/QC 表格质量修复
 
 状态：代码已更新，真实表格待重跑。Formal Engine 现在兼容真实合并对象的 QC 字段，并从 counts 补算缺失的核糖体比例、Top 50 基因比例和复杂度；新增逐行 marker 证据表，记录群内/群外检出率、检出率差和描述性质量等级。Studio API 与右侧界面拆分 QC 汇总和 Marker 证据两张表，旧紧凑 marker 文件保留兼容读取。Scrublet 未保存时明确显示“对象未保存”。TypeScript 与 AST 语法检查通过，完整 Python 回归受当前 Windows 环境 DLL/解释器问题影响尚未完成。真实 Run #1 未改变，人工审阅仍需用户完成。
+
+## 2026-10-27 开源决定
+
+维护者决定将 Studio 与两个引擎以 GPL-3.0-only 开源，取代此前的专有声明。发行包仍需核对各第三方依赖的许可与声明。

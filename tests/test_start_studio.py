@@ -27,7 +27,14 @@ def test_launcher_discovers_sibling_formal_engine_without_overriding_env() -> No
         "if not defined STAGECRAFT_FORMAL_PYTHON "
         'set "STAGECRAFT_FORMAL_PYTHON=%FORMAL_ENGINE%\\.venv\\Scripts\\python.exe"' in text
     )
-    assert "echo 同步正式引擎..." in text
+    assert 'if exist "%FORMAL_ENGINE%\\scripts\\part1_load.py" (' in text
     assert 'pushd "%FORMAL_ENGINE%"' in text
-    assert "if defined FORMAL_ENGINE_AVAILABLE (" in text
-    assert "未自动找到正式引擎，正式分析任务不会启动。" in text
+    assert text.index('pushd "%FORMAL_ENGINE%"') < text.index(
+        'set "STAGECRAFT_FORMAL_PYTHON=%FORMAL_ENGINE%\\.venv\\Scripts\\python.exe"'
+    )
+    assert "未在同级目录找到正式分析引擎" in text
+
+
+def test_root_launcher_delegates_to_script() -> None:
+    text = (ROOT / "Start Studio.cmd").read_text(encoding="utf-8")
+    assert 'call "%~dp0scripts\\start-studio.cmd"' in text
