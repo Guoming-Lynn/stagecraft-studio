@@ -34,7 +34,7 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 ## M1 速览引擎产品化
 
-状态：已开始。干净目录是 `D:\scrna-target-engine`。已去掉在线富集和 `hadha_source`，报告写明启发式分辨率。引擎测试 13 项通过。`uv sync` 因 annoy 构建超时未完成。CI 与卫生检查还没有。
+状态：已完成核心产品化。干净目录是 `D:\scrna-target-engine`，已去掉在线富集和 `hadha_source`，报告写明启发式分辨率；`uv sync --frozen`、`scripts/check_hygiene.py`、本地 pytest（28 passed）与 GitHub Actions 双平台 CI（`3da496b`）均通过。原盘点期目录 `06_curated_results` 已不在本机，不再作为回归基准。
 
 ## M0-C 规模确认
 
@@ -160,10 +160,8 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 ## 剩余工作
 
 - **M5 真实数据全流程验收**：`D:\geo_data\formal_atlas` 的 StageRun `#1` 已完成协议冻结、16/16 load、16/16 QC、merge、`resolution=0.5` 选择及审阅表生成（7 个群、140 行 marker），当前停在 `REVIEW_CLUSTERS`。须由用户亲自提交 KEEP/DELETE 与稳定轮细胞群命名，之后继续 Part 1 lock、Part 3、Part 2/4/5。
-- **规则函数收尾**：补齐 `docs/rule-coverage.md` 中尚标为未落实的两项（`DONOR_MAPPING_REQUIRED`、`QUICKLOOK_CLAIM_SCOPE`）。
 - **M6 真实外部端点验收**：离线/模拟闭环已完成；待维护者提供真实模型端点与 API key 后做一次联调验收（流式展示仍为可选未实现项）。
-- **M1 策展基线复跑与对比**：在速览引擎上完成至少两个 `06_curated_results` 数据集重跑对比并记录容差。
-- **M7 安装、性能与发布验收**：推送 `stagecraft-formal-engine` 源码并跑通远端 CI、核对发行包第三方依赖许可证声明、干净环境安装验证、规模耗时实测及备份恢复演练。
+- **M7 发布、规模耗时与干净机器验收**：环境页 R 包完备性探测（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）与 SQLite WAL 在线备份/校验恢复 CLI（`stagecraft-studio backup` / `restore`）已完成并通过单测；剩余推送 `stagecraft-formal-engine` 源码并跑通远端 CI、核对发行包第三方依赖许可证声明、干净机器安装验证与规模耗时实测。
 
 ## M6 AI 助手
 
@@ -175,10 +173,9 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 ## 当前执行顺序
 
-1. 保持代码门禁与 CI 全绿，完成当前收尾分支合并。
+1. 推送本地 `master` 修复并复验远端 Actions CI（包括 `stagecraft-formal-engine` 首次源码推送）。
 2. 用户在本地 Studio 服务上亲自完成真实 StageRun `#1` 的 Part 1 KEEP/DELETE 与稳定轮细胞群命名审阅（严禁用 fixture 或模型代交），随后推进 Part 1 lock、Part 3、Part 2/4/5。
-3. 补齐 `docs/rule-coverage.md` 剩余 2 条规则函数覆盖。
-4. 推进 M1 策展数据集重跑对比、M7 发布验收（正式引擎推送、依赖声明、干净环境安装、性能与备份恢复），以及维护者提供凭据后的 M6 真实端点验收。
+3. 完成 M7 剩余发布验收（第三方依赖声明、干净机器安装、规模耗时实测）及维护者提供凭据后的 M6 真实端点验收。
 ### 真人试用：Part 1 群体审阅表格（2026-10-11）
 
 右侧面板新增“表格”入口，读取正式引擎生成的逐群 QC 与 marker 摘要。当前真实运行尚未到生成这些表的阶段，因此显示受控空状态；不会用估算值替代正式产物。QC 复核提示仅供人工审阅，不改变审阅门禁。

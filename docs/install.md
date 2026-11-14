@@ -77,3 +77,14 @@ $env:Path = "D:\miniforge\envs\sc_analysis\Library\bin;$env:Path"
 $env:STAGECRAFT_FORMAL_SCRIPTS = "D:\stagecraft-formal-engine\scripts"
 $env:STAGECRAFT_FORMAL_PYTHON = "D:\stagecraft-formal-engine\.venv\Scripts\python.exe"
 ```
+
+## SQLite 状态备份与恢复
+
+Studio 提供基于标准库 `sqlite3` 在线备份接口的命令行工具，可在 WAL 模式下生成一致性快照并附带 SHA-256、Alembic 版本与表行数清单（不打包 `.h5ad` 原始矩阵或系统凭据库密钥）：
+
+```powershell
+uv run stagecraft-studio backup --database path\to\studio.sqlite --out path\to\studio-backup.zip
+uv run stagecraft-studio restore --backup path\to\studio-backup.zip --database path\to\restored.sqlite
+```
+
+恢复命令会在替换目标文件前校验压缩包成员白名单、SHA-256 摘要、`PRAGMA integrity_check` 与核心表行数；目标数据库已存在时默认拒绝覆盖（需显式加 `--overwrite`）。

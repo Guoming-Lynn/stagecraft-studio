@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: 补齐 `DONOR_MAPPING_REQUIRED` 与 `QUICKLOOK_CLAIM_SCOPE` 机器校验规则，使 `docs/rule-coverage.md` 全部 20/20 条规则均达到已落实状态；同步拆分 `worker/evidence.py`，在正式引擎 `load_library` 中拦截空白/NA `donor_id`。
+- feat: 环境自检新增正式 Part 5 所需 R 包（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）完备性探测；CLI 新增 WAL 一致性在线备份与完整性校验恢复子命令（`stagecraft-studio backup` / `restore`）。
 - chore: 拆分 `ReviewTables.tsx` 与 `MarkerEvidenceTable.tsx` 以符合 300 行组件卫生上限，清理 Studio 与正式引擎的 Ruff / mypy / Prettier 门禁问题，并将 `HANDOFF.md` 与 `docs/` 对齐当前代码基线。
 - feat: Studio 与两个引擎统一改为 `GPL-3.0-only` 开源，提供根目录 `Start Studio.cmd` 双击启动入口，默认浅色主题并保留用户主题偏好。
 - feat: 完善 Part 1 分轮人工审阅：选定 resolution 后生成正式 QC 五数摘要表（移除机器 `qc_flags` 标记）与逐基因 Marker 证据表（含顶部同步横向滚动条），KEEP/DELETE 与稳定轮命名分步执行，DELETE 后从保留 raw counts 重算下一轮。

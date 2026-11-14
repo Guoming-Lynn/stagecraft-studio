@@ -6,7 +6,7 @@
 
 | 目录 | 角色 | 许可证 | 当前状态 |
 | :--- | :--- | :--- | :--- |
-| `D:\stagecraft-studio` | Studio 主应用（API、规则、Worker、SQLite、双语前端、受限 AI 适配层） | `GPL-3.0-only` | 速览闭环（M2/M3）、Part 1–5 流水线与分轮人工门禁（M4/M5 代码）、受限助手离线闭环（M6 代码）均已入库并通过本地门禁 |
+| `D:\stagecraft-studio` | Studio 主应用（API、20/20 规则、Worker、SQLite 备份恢复、双语前端、受限 AI 适配层） | `GPL-3.0-only` | 速览闭环（M2/M3）、Part 1–5 流水线与分轮人工门禁（M4/M5 代码）、20/20 规则覆盖、受限助手离线闭环（M6 代码）、R 包探测与 SQLite 备份恢复 CLI 均已入库并通过本地门禁 |
 | `D:\stagecraft-formal-engine` | 正式分析引擎（Part 1–5 donor 水平推断） | `GPL-3.0-only` | 脚本与 `stagecraft_formal` 包已完成并过本地门禁；远端仓库源码尚未推送 |
 | `D:\scrna-target-engine` | 速览引擎（`quicklook` 细胞水平探索性分析，本地 GMT 富集） | `GPL-3.0-only` | 本地门禁与 GitHub Actions 双平台 CI 均通过 |
 | `D:\target-gene-scrna-stagecraft` | 原始科学规格与产品任务书 | `MIT` | 规格基准 `2.4.0`（任务书仅保留在本地，不提交进该仓库） |
@@ -54,11 +54,13 @@ pnpm -C web test
 pnpm -C web e2e
 ```
 
-## 5. 剩余三条待办线
+## 5. 已完成的工程收尾与剩余人工/发布项
 
-1. **线 A — M5 真实数据全流程闭环**：启动 Studio 连接 `D:\geo_data\formal_atlas\studio-gui-20261011.sqlite`，由用户在界面审阅 QC / Marker 表并提交 `KEEP/DELETE` 与稳定轮细胞群命名，随后按注册任务推进 `Part 1 lock` → `Part 3` → `Part 2 / 4 / 5` 与阶段报告。
-2. **线 B — 规则函数补齐**：在 `stagecraft_studio/rules/` 中落实 `docs/rule-coverage.md` 尚余的两项（`DONOR_MAPPING_REQUIRED`、`QUICKLOOK_CLAIM_SCOPE`）并同步导出覆盖表与测试。
-3. **线 C — M1 / M6 / M7 验收与发布收尾**：
-   - `M1`：在速览引擎上完成至少两个 `06_curated_results` 数据集基线复跑与容差记录；
-   - `M6`：维护者提供真实外部模型端点与 API key 后做一次联调验收；
-   - `M7`：推送 `stagecraft-formal-engine` 远端并跑通 CI、核对第三方依赖许可证声明、干净机器安装验证、规模耗时压测与备份恢复演练。
+- **已完成（纯工程收尾）**：
+  - `docs/rule-coverage.md` 全部 **20/20** 条规则均已落实并附可执行测试（含 `DONOR_MAPPING_REQUIRED` 供体映射入队阻断与审计落库、`QUICKLOOK_CLAIM_SCOPE` 速览摘要/方法/复现包主张范围校验，以及正式引擎对空白/NA `donor_id` 的拦截）。
+  - 环境自检新增正式分析 Part 5 所需 R 包（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）完备性探测；CLI 新增 `stagecraft-studio backup` / `restore` 在线 WAL 一致性备份与完整性恢复校验。
+  - `scrna-target-engine` 本地 28 项单测、卫生检查与双平台 CI 均通过（原盘点期目录 `06_curated_results` 已不在本机，不再作为基准）。
+- **剩余待办（需真人审阅 / 外部凭据 / 远端发布与压测）**：
+  1. **M5 真实数据人工审阅闭环**：启动 Studio 连接 `D:\geo_data\formal_atlas\studio-gui-20261011.sqlite`，由用户在界面审阅 QC / Marker 表并亲自提交 `KEEP/DELETE` 与稳定轮细胞群命名，随后继续跑 `Part 1 lock` → `Part 3` → `Part 2 / 4 / 5` 与阶段报告。
+  2. **M6 真实外部模型端点联调**：待维护者提供真实外部模型端点与 API key 后做一次联调验收。
+  3. **M7 远端推送与发布验收**：推送 `stagecraft-studio` 与 `stagecraft-formal-engine` 远端并复验双平台 Actions CI、核对发行包第三方依赖许可证声明、干净机器安装验证与规模耗时实测。
