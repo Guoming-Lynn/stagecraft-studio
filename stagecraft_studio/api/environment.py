@@ -15,17 +15,27 @@ from stagecraft_studio.engine.launch import EngineLaunch
 
 _MEMORY_FLOOR = 8 * 1024**3
 _DISK_FLOOR = 10 * 1024**3
+REQUIRED_R_PACKAGES: tuple[str, ...] = ("jsonlite", "Matrix", "limma", "edgeR", "DESeq2")
+_R_PKG_PROBE = (
+    "pkgs <- c('jsonlite','Matrix','limma','edgeR','DESeq2'); "
+    "miss <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly=TRUE)]; "
+    "cat(paste(miss, collapse=','))"
+)
 
 
 def collect_environment(launch: EngineLaunch, identity: EngineIdentity) -> EnvironmentReport:
-    """Probe the engine interpreter, R, version, memory, and free disk."""
+    """Probe the engine interpreter, R, R packages, version, memory, and free disk."""
+    r_program = _resolve_rscript()
+    r_ver = _r_version(r_program)
+    missing_r = _missing_r_packages(r_program) if r_ver else ()
     return environment_report(
         python_version=_python_version(launch.python),
-        r_version=_r_version(),
+        r_version=r_ver,
         engine_version=identity.version,
         engine_name=identity.name,
         memory_bytes=_memory_bytes(),
         disk_free_bytes=shutil.disk_usage(tempfile.gettempdir()).free,
+        missing_r_packages=missing_r,
     )
 
 
@@ -37,11 +47,12 @@ def environment_report(
     engine_name: str,
     memory_bytes: int | None,
     disk_free_bytes: int | None,
+    missing_r_packages: tuple[str, ...] = (),
 ) -> EnvironmentReport:
     """Turn probe results into pass or fail rows. Thresholds live only here."""
     checks = [
         _python(python_version),
-        _r(r_version),
+        _r(r_version, missing_r_packages),
         _engine(engine_name, engine_version),
         _memory(memory_bytes),
         _disk(disk_free_bytes),
@@ -55,10 +66,17 @@ def _python(version: str | None) -> EnvCheck:
     return _bad("python", "解释器没有返回版本。", "检查启动 Studio 时配置的引擎 Python 能否运行。")
 
 
-def _r(version: str | None) -> EnvCheck:
-    if version:
-        return _ok("r", version, "")
-    return _bad("r", "没有找到 Rscript。", "安装 R，或设置 STAGECRAFT_RSCRIPT 指向 Rscript。")
+def _r(version: str | None, missing_packages: tuple[str, ...] = ()) -> EnvCheck:
+    if not version:
+        return _bad("r", "没有找到 Rscript。", "安装 R，或设置 STAGECRAFT_RSCRIPT 指向 Rscript。")
+    if missing_packages:
+        shown = "、".join(missing_packages)
+        return _bad(
+            "r",
+            f"{version}（缺少 R 包：{shown}）",
+            f"在当前 R 环境中安装缺失包：{', '.join(missing_packages)}。",
+        )
+    return _ok("r", version, "")
 
 
 def _engine(name: str, version: str) -> EnvCheck:
@@ -116,13 +134,17 @@ def _python_version(python: Path) -> str | None:
     return text or None
 
 
-def _r_version() -> str | None:
-    program = os.environ.get("STAGECRAFT_RSCRIPT", "").strip() or shutil.which("Rscript")
-    if not program:
+def _resolve_rscript() -> str | None:
+    return os.environ.get("STAGECRAFT_RSCRIPT", "").strip() or shutil.which("Rscript")
+
+
+def _r_version(program: str | None = None) -> str | None:
+    resolved = program if program is not None else _resolve_rscript()
+    if not resolved:
         return None
     try:
         completed = subprocess.run(
-            [program, "--version"],
+            [resolved, "--version"],
             check=False,
             capture_output=True,
             text=True,
@@ -133,7 +155,29 @@ def _r_version() -> str | None:
     if completed.returncode != 0:
         return None
     text = (completed.stderr or completed.stdout).strip().splitlines()
-    return text[0] if text else program
+    return text[0] if text else resolved
+
+
+def _missing_r_packages(program: str | None) -> tuple[str, ...]:
+    if not program:
+        return ()
+    try:
+        completed = subprocess.run(
+            [program, "--vanilla", "-e", _R_PKG_PROBE],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return REQUIRED_R_PACKAGES
+    if completed.returncode != 0:
+        return REQUIRED_R_PACKAGES
+    raw = completed.stdout.strip()
+    if not raw:
+        return ()
+    allowed = set(REQUIRED_R_PACKAGES)
+    return tuple(pkg for pkg in (part.strip() for part in raw.split(",")) if pkg in allowed)
 
 
 def _memory_bytes() -> int | None:

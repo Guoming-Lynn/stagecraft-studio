@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from stagecraft_studio.api.app import serve
+from stagecraft_studio.db.backup import BackupError, create_backup, restore_backup
 from stagecraft_studio.engine.input_format import UnsupportedInput
 from stagecraft_studio.engine.launch import EngineConfigError, resolve_engine_launch
 from stagecraft_studio.engine.quicklook import OutputRejected, QuicklookRequest, run_quicklook
@@ -28,6 +30,14 @@ def main(argv: list[str] | None = None) -> int:
     serve_command.add_argument("--port", type=int, default=8765)
     serve_command.add_argument("--python", type=Path, default=None)
     serve_command.add_argument("--script", type=Path, default=None)
+    backup_command = sub.add_parser("backup")
+    backup_command.add_argument("--database", type=Path, required=True)
+    backup_command.add_argument("--out", type=Path, required=True)
+    backup_command.add_argument("--overwrite", action="store_true")
+    restore_command = sub.add_parser("restore")
+    restore_command.add_argument("--backup", type=Path, required=True)
+    restore_command.add_argument("--database", type=Path, required=True)
+    restore_command.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "serve":
         if args.port <= 0:
@@ -37,6 +47,22 @@ def main(argv: list[str] | None = None) -> int:
         except EngineConfigError as exc:
             sys.stderr.write(f"{exc}\n")
             return 2
+        return 0
+    if args.command == "backup":
+        try:
+            manifest = create_backup(args.database, args.out, overwrite=bool(args.overwrite))
+        except BackupError as exc:
+            sys.stderr.write(f"{exc}\n")
+            return 2
+        sys.stdout.write(json.dumps(manifest, ensure_ascii=False) + "\n")
+        return 0
+    if args.command == "restore":
+        try:
+            restored = restore_backup(args.backup, args.database, overwrite=bool(args.overwrite))
+        except BackupError as exc:
+            sys.stderr.write(f"{exc}\n")
+            return 2
+        sys.stdout.write(json.dumps(restored, ensure_ascii=False) + "\n")
         return 0
     if args.command != "quicklook":
         return 2
