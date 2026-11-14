@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-
 from stagecraft_studio.api.app import create_app
 from stagecraft_studio.db.migrate import upgrade_database
 from stagecraft_studio.db.models import Job

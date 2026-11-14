@@ -209,7 +209,10 @@ def get_stage_gallery(session: Session, run_id: int) -> dict[str, Any]:
             if name == "leiden_resolution_overview":
                 panel_id = "F03_grid"
                 title = "Part 3: Leiden resolution overview"
-                caption = "Resolution scan for the reclustered compartment; no resolution is selected automatically."
+                caption = (
+                    "Resolution scan for the reclustered compartment; "
+                    "no resolution is selected automatically."
+                )
             else:
                 panel_id = name
                 title = f"Part 3: {name.replace('_', ' ')}"

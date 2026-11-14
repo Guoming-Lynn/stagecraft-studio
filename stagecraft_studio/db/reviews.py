@@ -410,7 +410,12 @@ def review_tables(
         marker_rows = _expand_compact_markers(compact_rows)
     for row in qc_rows:
         row.pop("qc_flags", None)
-    return {**base, "available": bool(qc_rows or marker_rows), "qc": qc_rows, "markers": marker_rows}
+    return {
+        **base,
+        "available": bool(qc_rows or marker_rows),
+        "qc": qc_rows,
+        "markers": marker_rows,
+    }
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, object]]:

@@ -72,7 +72,8 @@ def fill_protocol_defaults(
     elif task_id == "formal_part1_round":
         fields.setdefault("common", stage_dir / "formal_part1_merge" / "primary_common.h5ad")
     elif task_id == "formal_part1_review_tables":
-        round_index = int(fields.get("round_index", 0))
+        raw_round = fields.get("round_index", 0)
+        round_index = int(raw_round) if isinstance(raw_round, (int, str)) else 0
         grid_rel = "formal_part1_grid" if round_index == 0 else f"formal_part1_round_{round_index}"
         fields.setdefault("grid", stage_dir / grid_rel / "all_resolutions.h5ad")
     elif task_id == "formal_part1_merge" and not fields.get("manifest"):
