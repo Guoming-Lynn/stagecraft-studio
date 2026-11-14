@@ -179,17 +179,16 @@ def enqueue(
         chosen = canonical_resolution(str(job_fields.get("resolution", "")))
         decision = latest_review_for_round(session, run.id, "resolution", requested_round)
         decision_body = json.loads(decision.body_json) if decision is not None else {}
-        if requested_round != current_round or canonical_resolution(
-            str(decision_body.get("resolution", ""))
-        ) != chosen:
+        if (
+            requested_round != current_round
+            or canonical_resolution(str(decision_body.get("resolution", ""))) != chosen
+        ):
             _block(session, run, "RESOLUTION_REVIEW_REQUIRED")
         if latest_review_for_round(session, run.id, "clusters", requested_round) is not None:
             _block(session, run, "REVIEW_CLUSTER_COMPLETE")
         job_fields["resolution"] = chosen
         job_fields["round_index"] = requested_round
-        existing = _latest_resolution_tables_job(
-            session, run.id, requested_round, chosen
-        )
+        existing = _latest_resolution_tables_job(session, run.id, requested_round, chosen)
         if existing is not None and existing.job_status in {"QUEUED", "RUNNING"}:
             return existing
     elif task_id == "formal_part1_round":
@@ -300,9 +299,7 @@ def review_center(
     resolution_review = latest_review_for_round(session, run.id, "resolution", round_index)
     resolution_body = json.loads(resolution_review.body_json) if resolution_review else {}
     selected_resolution = (
-        canonical_resolution(str(resolution_body.get("resolution", "")))
-        if resolution_body
-        else ""
+        canonical_resolution(str(resolution_body.get("resolution", ""))) if resolution_body else ""
     )
     cluster_review = latest_review_for_round(session, run.id, "clusters", round_index)
     cluster_body = json.loads(cluster_review.body_json) if cluster_review else {}
@@ -558,9 +555,7 @@ def _require_current_clusters(session: Session, run: StageRun) -> None:
 
 
 def _has_delete(session: Session, run: StageRun) -> bool:
-    decision = latest_review_for_round(
-        session, run.id, "clusters", _active_round(_evidence(run))
-    )
+    decision = latest_review_for_round(session, run.id, "clusters", _active_round(_evidence(run)))
     if decision is None:
         return False
     body = json.loads(decision.body_json)
@@ -641,9 +636,10 @@ def _rows_have_delete(body: dict[str, object]) -> bool:
 
 def _rows_have_names(body: dict[str, object]) -> bool:
     rows = body.get("rows")
-    return isinstance(rows, list) and bool(rows) and all(
-        isinstance(row, dict) and bool(str(row.get("name", "")).strip())
-        for row in rows
+    return (
+        isinstance(rows, list)
+        and bool(rows)
+        and all(isinstance(row, dict) and bool(str(row.get("name", "")).strip()) for row in rows)
     )
 
 

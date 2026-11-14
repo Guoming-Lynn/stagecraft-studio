@@ -24,9 +24,7 @@ TOKEN = {"origin": "http://127.0.0.1:8765", "x-stagecraft-token": "secret-token"
 LAUNCH = EngineLaunch(python=Path("python"), script=Path("run_pipeline.py"))
 
 
-def client_with_run(
-    tmp_path: Path, *, quicklook_seen: bool = False
-) -> tuple[TestClient, int, str]:
+def client_with_run(tmp_path: Path, *, quicklook_seen: bool = False) -> tuple[TestClient, int, str]:
     database = tmp_path / "studio.sqlite"
     upgrade_database(database)
     evidence = {

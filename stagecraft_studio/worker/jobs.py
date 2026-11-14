@@ -349,9 +349,7 @@ class FormalWorker:
         elif task_id == "formal_part1_review_tables":
             round_index = int(fields["round_index"])
             grid_rel = (
-                "formal_part1_grid"
-                if round_index == 0
-                else f"formal_part1_round_{round_index}"
+                "formal_part1_grid" if round_index == 0 else f"formal_part1_round_{round_index}"
             )
             fields["grid"] = stage_dir / grid_rel / "all_resolutions.h5ad"
             fields["round_index"] = round_index
@@ -367,9 +365,7 @@ class FormalWorker:
                 evidence = json.loads(run.evidence_json) if run and run.evidence_json else {}
                 round_index = int(evidence.get("active_part1_round", 0))
                 active_rel = (
-                    "formal_part1_grid"
-                    if round_index == 0
-                    else f"formal_part1_round_{round_index}"
+                    "formal_part1_grid" if round_index == 0 else f"formal_part1_round_{round_index}"
                 )
                 res_dec = latest_review_for_round(
                     session, job.stage_run_id, "resolution", round_index

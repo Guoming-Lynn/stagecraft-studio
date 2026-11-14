@@ -2436,15 +2436,29 @@ table tr:hover td {
   width: max(1080px, 100%);
 }
 
-.review-marker-table th:nth-child(1) { width: 8%; }
-.review-marker-table th:nth-child(2) { width: 7%; }
-.review-marker-table th:nth-child(3) { width: 13%; }
-.review-marker-table th:nth-child(4) { width: 10%; }
+.review-marker-table th:nth-child(1) {
+  width: 8%;
+}
+.review-marker-table th:nth-child(2) {
+  width: 7%;
+}
+.review-marker-table th:nth-child(3) {
+  width: 13%;
+}
+.review-marker-table th:nth-child(4) {
+  width: 10%;
+}
 .review-marker-table th:nth-child(5),
 .review-marker-table th:nth-child(6),
-.review-marker-table th:nth-child(7) { width: 12%; }
-.review-marker-table th:nth-child(8) { width: 12%; }
-.review-marker-table th:nth-child(9) { width: 26%; }
+.review-marker-table th:nth-child(7) {
+  width: 12%;
+}
+.review-marker-table th:nth-child(8) {
+  width: 12%;
+}
+.review-marker-table th:nth-child(9) {
+  width: 26%;
+}
 
 .marker-gene {
   font-family: var(--font-mono);
