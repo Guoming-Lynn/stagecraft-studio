@@ -5,17 +5,40 @@ import { chrome } from "../text/chrome";
 import { Gallery } from "./Gallery";
 import { ProtocolForm } from "./ProtocolForm";
 import { ReviewCenter } from "./ReviewCenter";
-import { StageWorkspace } from "./StageWorkspace";
+import { StageWorkspace, type WorkspaceTab } from "./StageWorkspace";
+
+type FormalPane = "workspace" | "gallery" | "review" | "design";
+
+type NavigateDetail = {
+  pane?: FormalPane;
+  runId?: number;
+  tab?: WorkspaceTab;
+};
 
 export function FormalDesk() {
-  const [pane, setPane] = useState<
-    "workspace" | "gallery" | "review" | "design"
-  >(() => (hasProposal() ? "design" : "workspace"));
+  const [pane, setPane] = useState<FormalPane>(() =>
+    hasProposal() ? "design" : "workspace",
+  );
+  const [targetRunId, setTargetRunId] = useState<number | null>(null);
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("results");
+
   useEffect(() => {
     const apply = () => setPane("design");
+    const navigate = (event: Event) => {
+      const detail = (event as CustomEvent<NavigateDetail>).detail;
+      if (!detail) return;
+      if (typeof detail.runId === "number") setTargetRunId(detail.runId);
+      if (detail.tab) setWorkspaceTab(detail.tab);
+      if (detail.pane) setPane(detail.pane);
+    };
     window.addEventListener("stagecraft:apply-proposal", apply);
-    return () => window.removeEventListener("stagecraft:apply-proposal", apply);
+    window.addEventListener("stagecraft:formal-navigate", navigate);
+    return () => {
+      window.removeEventListener("stagecraft:apply-proposal", apply);
+      window.removeEventListener("stagecraft:formal-navigate", navigate);
+    };
   }, []);
+
   return (
     <div className="formal-desk stack">
       <header className="formal-header">
@@ -54,9 +77,11 @@ export function FormalDesk() {
           {chrome.design}
         </button>
       </nav>
-      {pane === "workspace" && <StageWorkspace />}
+      {pane === "workspace" && (
+        <StageWorkspace initialRunId={targetRunId} initialTab={workspaceTab} />
+      )}
       {pane === "gallery" && <Gallery />}
-      {pane === "review" && <ReviewCenter />}
+      {pane === "review" && <ReviewCenter initialRunId={targetRunId} />}
       {pane === "design" && <ProtocolForm />}
     </div>
   );

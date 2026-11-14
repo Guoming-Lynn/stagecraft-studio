@@ -351,6 +351,12 @@ export function enqueueStageTask(
   });
 }
 
+export function cancelFormalJob(
+  jobId: number,
+): Promise<{ id: number; job_status: string }> {
+  return send(`/api/jobs/${jobId}/cancel`, { method: "POST", body: "{}" });
+}
+
 export interface Part3CenterView {
   stage_run_id: number;
   target_gene: string;

@@ -8,10 +8,17 @@ import {
   submitPart3Resolution,
   type Part3CenterView,
 } from "../api/client";
+import { todayIso } from "../reviewer_store";
 import { chrome } from "../text/chrome";
 import { Stop2Table, Stop3Table, type S2Row, type S3Row } from "./Part3Tables";
 
-export function Part3Review({ runId }: { runId: number | null }) {
+export function Part3Review({
+  runId,
+  reviewer,
+}: {
+  runId: number | null;
+  reviewer: string;
+}) {
   const [center, setCenter] = useState<Part3CenterView | null>(null);
   const [resolution, setResolution] = useState("");
   const [rationale, setRationale] = useState("");
@@ -54,6 +61,7 @@ export function Part3Review({ runId }: { runId: number | null }) {
 
   const active = center.active_stop_point;
   const blinding = center.quicklook_seen ? "UNBLINDED_WITH_REASON" : "BLIND";
+  const reviewerClean = reviewer.trim();
 
   const postAction = (fn: () => Promise<unknown>, label: string) => {
     fn()
@@ -66,13 +74,13 @@ export function Part3Review({ runId }: { runId: number | null }) {
 
   const submitStop1 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (runId === null) return;
+    if (runId === null || !reviewerClean || !rationale.trim()) return;
     postAction(
       () =>
         submitPart3Resolution(runId, {
-          reviewer: "Lin",
-          decided_on: "2026-10-01",
-          rationale: rationale || "Resolution",
+          reviewer: reviewerClean,
+          decided_on: todayIso(),
+          rationale: rationale.trim(),
           evidence_hash: center.evidence_hash,
           resolution,
           blinding,
@@ -83,16 +91,17 @@ export function Part3Review({ runId }: { runId: number | null }) {
 
   const submitStop2 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (runId === null) return;
+    if (runId === null || !reviewerClean) return;
+    const decidedOn = todayIso();
     postAction(
       () =>
         submitPart3Clusters(runId, {
           blinding,
           rows: stop2Rows.map((r) => ({
             ...r,
-            rationale: r.rationale || "Decision",
-            reviewer: "Lin",
-            decided_on: "2026-10-01",
+            rationale: r.rationale.trim(),
+            reviewer: reviewerClean,
+            decided_on: decidedOn,
           })),
         }),
       chrome.part3Stop2Done,
@@ -101,21 +110,29 @@ export function Part3Review({ runId }: { runId: number | null }) {
 
   const submitStop3 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (runId === null) return;
+    if (runId === null || !reviewerClean) return;
+    const decidedOn = todayIso();
     postAction(
       () =>
         submitPart3Names(runId, {
           blinding,
           rows: stop3Rows.map((r) => ({
             ...r,
-            rationale: r.rationale || "Annotation",
-            reviewer: "Lin",
-            decided_on: "2026-10-01",
+            name: r.name.trim(),
+            rationale: r.rationale.trim(),
+            reviewer: reviewerClean,
+            decided_on: decidedOn,
           })),
         }),
       chrome.part3Stop3Done,
     );
   };
+
+  const stop2Invalid =
+    !reviewerClean || stop2Rows.some((r) => !r.rationale.trim());
+  const stop3Invalid =
+    !reviewerClean ||
+    stop3Rows.some((r) => !r.name.trim() || !r.rationale.trim());
 
   return (
     <div className="stack" aria-label={chrome.part3ReviewTab}>
@@ -150,16 +167,21 @@ export function Part3Review({ runId }: { runId: number | null }) {
           ))}
         </div>
         {active === "STOP1_RESOLUTION" && (
-          <form onSubmit={submitStop1}>
+          <form className="stack" onSubmit={submitStop1}>
             <label>
-              {chrome.reviewResolutions}
+              {chrome.rationale}
               <input
                 value={rationale}
-                placeholder={chrome.rationale}
+                placeholder={chrome.rationalePlaceholder}
                 onChange={(e) => setRationale(e.target.value)}
               />
             </label>
-            <button type="submit">{chrome.submitPart3Stop1}</button>
+            <button
+              type="submit"
+              disabled={!reviewerClean || !resolution || !rationale.trim()}
+            >
+              {chrome.submitPart3Stop1}
+            </button>
           </form>
         )}
       </section>
@@ -171,9 +193,11 @@ export function Part3Review({ runId }: { runId: number | null }) {
           <h4>{chrome.part3Stop2Title}</h4>
           <p className="hint">{chrome.part3NoNamesAtStop2Warning}</p>
           {active === "STOP2_CLUSTERS" ? (
-            <form onSubmit={submitStop2}>
+            <form className="stack" onSubmit={submitStop2}>
               <Stop2Table rows={stop2Rows} onChange={setStop2Rows} />
-              <button type="submit">{chrome.submitPart3Stop2}</button>
+              <button type="submit" disabled={stop2Invalid}>
+                {chrome.submitPart3Stop2}
+              </button>
             </form>
           ) : (
             <p className="hint">
@@ -191,9 +215,11 @@ export function Part3Review({ runId }: { runId: number | null }) {
           <h4>{chrome.part3Stop3Title}</h4>
           <p className="hint">{chrome.part3TargetGeneInNameWarning}</p>
           {active === "STOP3_NAMES" ? (
-            <form onSubmit={submitStop3}>
+            <form className="stack" onSubmit={submitStop3}>
               <Stop3Table rows={stop3Rows} onChange={setStop3Rows} />
-              <button type="submit">{chrome.submitPart3Stop3}</button>
+              <button type="submit" disabled={stop3Invalid}>
+                {chrome.submitPart3Stop3}
+              </button>
             </form>
           ) : (
             <p className="hint">

@@ -17,19 +17,25 @@ import {
   scientificStatusNote,
   scientificStatusTitle,
 } from "../text/chrome";
+import { readReviewer, saveReviewer, todayIso } from "../reviewer_store";
 import { Part3Review } from "./Part3Review";
 
 type Row = { cluster: string; decision: "KEEP" | "DELETE"; name: string };
 
-export function ReviewCenter() {
+export function ReviewCenter({
+  initialRunId = null,
+}: {
+  initialRunId?: number | null;
+} = {}) {
   const [runs, setRuns] = useState<StageRunItem[]>([]);
-  const [runId, setRunId] = useState<number | null>(null);
+  const [runId, setRunId] = useState<number | null>(initialRunId);
   const [tab, setTab] = useState<"part1" | "part3">("part1");
   const [center, setCenter] = useState<Center | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [resolution, setResolution] = useState("");
   const [roundIndex, setRoundIndex] = useState(0);
   const [reviewState, setReviewState] = useState("CHOOSE_RESOLUTION");
+  const [reviewer, setReviewer] = useState(readReviewer);
   const [rationale, setRationale] = useState("");
   const [message, setMessage] = useState("");
   const [pollVersion, setPollVersion] = useState(0);
@@ -40,7 +46,10 @@ export function ReviewCenter() {
     void loadStageRuns()
       .then((list) => {
         setRuns(list);
-        setRunId(list[0]?.id ?? null);
+        setRunId((prev) => {
+          if (prev !== null && list.some((r) => r.id === prev)) return prev;
+          return list[list.length - 1]?.id ?? null;
+        });
       })
       .catch((reason: unknown) => setMessage(errorText(reason)));
   }, []);
@@ -152,19 +161,32 @@ export function ReviewCenter() {
         <div>
           <h2>{chrome.review}</h2>
         </div>
-        <label className="run-selector">
-          <span>{chrome.project}</span>
-          <select
-            value={runId ?? ""}
-            onChange={(event) => changeRun(Number(event.target.value))}
-          >
-            {runs.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.id} · {item.stage_status}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="review-meta-controls">
+          <label className="run-selector">
+            <span>{chrome.reviewerLabel}</span>
+            <input
+              value={reviewer}
+              placeholder={chrome.reviewerPlaceholder}
+              onChange={(event) => {
+                setReviewer(event.target.value);
+                saveReviewer(event.target.value);
+              }}
+            />
+          </label>
+          <label className="run-selector">
+            <span>{chrome.project}</span>
+            <select
+              value={runId ?? ""}
+              onChange={(event) => changeRun(Number(event.target.value))}
+            >
+              {runs.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.id} · {item.stage_status}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </header>
       <div className="tab-row" role="tablist">
         <button
@@ -188,7 +210,7 @@ export function ReviewCenter() {
       </div>
 
       {tab === "part3" ? (
-        <Part3Review runId={runId} />
+        <Part3Review runId={runId} reviewer={reviewer} />
       ) : (
         <div className="stack">
           {center ? (
@@ -273,12 +295,14 @@ export function ReviewCenter() {
                 </label>
                 <button
                   type="button"
-                  disabled={!resolution || !rationale.trim()}
+                  disabled={
+                    !resolution || !rationale.trim() || !reviewer.trim()
+                  }
                   onClick={() => {
                     if (!center || runId === null) return;
                     void submitResolution(runId, {
-                      reviewer: "Lin",
-                      decided_on: new Date().toISOString().slice(0, 10),
+                      reviewer: reviewer.trim(),
+                      decided_on: todayIso(),
                       rationale,
                       evidence_hash: center.evidence_hash,
                       resolution,
@@ -450,6 +474,7 @@ export function ReviewCenter() {
                 <button
                   type="button"
                   disabled={
+                    !reviewer.trim() ||
                     !rationale.trim() ||
                     (reviewState === "NAMES_PENDING" &&
                       rows.some((row) => !row.name.trim()))
@@ -465,8 +490,8 @@ export function ReviewCenter() {
                         cluster: row.cluster,
                         decision: row.decision,
                         rationale,
-                        reviewer: "Lin",
-                        decided_on: new Date().toISOString().slice(0, 10),
+                        reviewer: reviewer.trim(),
+                        decided_on: todayIso(),
                         name: deleted ? "" : row.name,
                       })),
                     })

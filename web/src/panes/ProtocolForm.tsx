@@ -39,6 +39,7 @@ export function ProtocolForm() {
   const [dataPath, setDataPath] = useState("");
   const [libraries, setLibraries] = useState<LibraryRow[]>([emptyRow()]);
   const [message, setMessage] = useState("");
+  const [frozenRunId, setFrozenRunId] = useState<number | null>(null);
 
   useEffect(() => {
     const apply = () => {
@@ -79,8 +80,14 @@ export function ProtocolForm() {
           data_path: dataPath,
           libraries,
         })
-          .then((frozen) => setMessage(frozen.content_hash))
-          .catch((reason: unknown) => setMessage(errorText(reason)));
+          .then((frozen) => {
+            setFrozenRunId(frozen.stage_run_id);
+            setMessage(frozen.content_hash);
+          })
+          .catch((reason: unknown) => {
+            setFrozenRunId(null);
+            setMessage(errorText(reason));
+          });
       }}
     >
       <h2>{chrome.design}</h2>
@@ -124,12 +131,12 @@ export function ProtocolForm() {
         />
         <span className="hint">{help("data_path")?.reason}</span>
       </label>
-      <div className="card" style={{ gap: "8px" }}>
+      <div className="card stack">
         <div className="row spread">
           <h4>{chrome.library}</h4>
           <span className="hint">{help("libraries")?.reason}</span>
         </div>
-        <table>
+        <table className="protocol-library-table">
           <thead>
             <tr>
               {LIBRARY_COLUMNS.map(([key, label]) => (
@@ -143,7 +150,6 @@ export function ProtocolForm() {
                 {LIBRARY_COLUMNS.map(([key, placeholder]) => (
                   <td key={key}>
                     <input
-                      style={{ width: "100%" }}
                       value={row[key]}
                       placeholder={placeholder}
                       onChange={(event) =>
@@ -171,7 +177,28 @@ export function ProtocolForm() {
           </button>
         </div>
       </div>
-      <button type="submit">{chrome.freeze}</button>
+      <div className="task-action-row">
+        <button type="submit">{chrome.freeze}</button>
+        {frozenRunId !== null ? (
+          <button
+            type="button"
+            className="primary-action"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("stagecraft:formal-navigate", {
+                  detail: {
+                    pane: "workspace",
+                    tab: "tasks",
+                    runId: frozenRunId,
+                  },
+                }),
+              )
+            }
+          >
+            {chrome.openWorkspaceTasks}
+          </button>
+        ) : null}
+      </div>
       {message ? <p className="hint">{message}</p> : null}
     </form>
   );

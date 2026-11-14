@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   errorText,
@@ -8,24 +8,49 @@ import {
   type StageWorkspaceView,
 } from "../api/client";
 import { chrome } from "../text/chrome";
+import { hasActiveFormalJobs } from "./workspace_task_helpers";
 import { ChecksTab, LogsTab, ResultsTab } from "./WorkspaceResults";
+import { WorkspaceTasks } from "./WorkspaceTasks";
 
-type Tab = "inputs" | "parameters" | "results" | "checks" | "logs";
+export type WorkspaceTab =
+  "tasks" | "inputs" | "parameters" | "results" | "checks" | "logs";
 
-export function StageWorkspace() {
+export function StageWorkspace({
+  initialRunId = null,
+  initialTab = "results",
+}: {
+  initialRunId?: number | null;
+  initialTab?: WorkspaceTab;
+}) {
   const [runs, setRuns] = useState<StageRunItem[]>([]);
-  const [runId, setRunId] = useState<number | null>(null);
+  const [runId, setRunId] = useState<number | null>(initialRunId);
   const [ws, setWs] = useState<StageWorkspaceView | null>(null);
-  const [tab, setTab] = useState<Tab>("results");
+  const [tab, setTab] = useState<WorkspaceTab>(initialTab);
   const [message, setMessage] = useState("");
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (initialRunId !== null) setRunId(initialRunId);
+  }, [initialRunId]);
 
   useEffect(() => {
     void loadStageRuns()
       .then((list) => {
         setRuns(list);
-        setRunId(list[0]?.id ?? null);
+        setRunId((prev) => {
+          if (prev !== null && list.some((r) => r.id === prev)) return prev;
+          return list[list.length - 1]?.id ?? null;
+        });
       })
       .catch((err: unknown) => setMessage(errorText(err)));
+  }, [refreshTick]);
+
+  const reloadWorkspace = useCallback(() => {
+    setRefreshTick((n) => n + 1);
   }, []);
 
   useEffect(() => {
@@ -33,10 +58,26 @@ export function StageWorkspace() {
       setWs(null);
       return;
     }
+    let cancelled = false;
     void loadStageWorkspace(runId)
-      .then(setWs)
-      .catch((err: unknown) => setMessage(errorText(err)));
-  }, [runId]);
+      .then((next) => {
+        if (!cancelled) setWs(next);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setMessage(errorText(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, refreshTick]);
+
+  useEffect(() => {
+    if (runId === null || !hasActiveFormalJobs(ws)) return;
+    const timer = window.setTimeout(() => {
+      setRefreshTick((n) => n + 1);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [runId, ws]);
 
   if (runs.length === 0) {
     return (
@@ -48,7 +89,7 @@ export function StageWorkspace() {
 
   return (
     <div className="stage-workspace stack">
-      {message ? <p className="log-error">{message}</p> : null}
+      {message ? <p className="hint">{message}</p> : null}
       <div className="workspace-toolbar">
         <label className="run-selector" htmlFor="stage-run-select">
           <span>{chrome.project}</span>
@@ -73,6 +114,13 @@ export function StageWorkspace() {
       </div>
 
       <nav className="tabs workspace-tabs" aria-label={chrome.workspace}>
+        <button
+          type="button"
+          className={tab === "tasks" ? "on" : ""}
+          onClick={() => setTab("tasks")}
+        >
+          {chrome.tasksTab}
+        </button>
         <button
           type="button"
           className={tab === "inputs" ? "on" : ""}
@@ -112,6 +160,13 @@ export function StageWorkspace() {
 
       {ws ? (
         <div className="pane-content formal-content">
+          {tab === "tasks" && (
+            <WorkspaceTasks
+              ws={ws}
+              onRefresh={reloadWorkspace}
+              onMessage={setMessage}
+            />
+          )}
           {tab === "inputs" && <InputsTab ws={ws} />}
           {tab === "parameters" && <ParametersTab ws={ws} />}
           {tab === "results" && <ResultsTab ws={ws} />}
@@ -160,13 +215,13 @@ function InputsTab({ ws }: { ws: StageWorkspaceView }) {
           <div className="wide">
             <dt>{chrome.protocolHash}</dt>
             <dd>
-              <code>{inputs.protocol_hash || "无"}</code>
+              <code>{inputs.protocol_hash || chrome.none}</code>
             </dd>
           </div>
           <div className="wide">
             <dt>{chrome.inputHash}</dt>
             <dd>
-              <code>{inputs.input_hash || "无"}</code>
+              <code>{inputs.input_hash || chrome.none}</code>
             </dd>
           </div>
         </dl>
@@ -189,13 +244,7 @@ function ParametersTab({ ws }: { ws: StageWorkspaceView }) {
               </strong>
               <span className="badge">{p.job_status}</span>
             </div>
-            <pre
-              style={{
-                margin: "6px 0 0",
-                padding: "6px",
-                background: "var(--bg-code)",
-              }}
-            >
+            <pre className="parameter-code">
               {JSON.stringify(p.fields, null, 2)}
             </pre>
           </div>
