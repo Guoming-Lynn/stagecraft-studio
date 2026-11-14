@@ -161,8 +161,10 @@ a, _ = p.parse_known_args()
 a.out.mkdir(parents=True, exist_ok=True)
 (a.out / "locked_atlas.h5ad").write_text("locked\\n", encoding="utf-8")
 (a.out / "celltype_colors.yaml").write_text("Monocyte: '#2f6f5e'\\n", encoding="utf-8")
+(a.out / "colors.json").write_text(json.dumps({"Monocyte": "#2f6f5e", "T_cell": "#1f77b4"}), encoding="utf-8")
 (a.out / "cluster_mapping.csv").write_text("cluster,name\\n0,Monocyte\\n1,T_cell\\n", encoding="utf-8")
-(a.out / "lock_record.json").write_text(json.dumps({"locked": True}), encoding="utf-8")
+(a.out / "cell_annotations.csv").write_text("barcode,cluster,cell_type\\ncell_1,0,Monocyte\\ncell_2,1,T_cell\\n", encoding="utf-8")
+(a.out / "lock_record.json").write_text(json.dumps({"locked": True, "mapping": {"0": "Monocyte", "1": "T_cell"}}), encoding="utf-8")
 `,
   "part2_survey.py": `import argparse, json, pathlib
 p = argparse.ArgumentParser()
@@ -188,8 +190,10 @@ p.add_argument("--out", type=pathlib.Path, required=True)
 a, _ = p.parse_known_args()
 a.out.mkdir(parents=True, exist_ok=True)
 (a.out / "compartment_counts.h5ad").write_text("comp\\n", encoding="utf-8")
-(a.out / "part3_record.json").write_text(json.dumps({"lineage": "Myeloid"}), encoding="utf-8")
+(a.out / "part3_record.json").write_text(json.dumps({"lineage": "Monocyte"}), encoding="utf-8")
 (a.out / "grid_record.json").write_text(json.dumps({"resolutions": ["0.4"]}), encoding="utf-8")
+(a.out / "Leiden_resolution_overview.csv").write_text("resolution,n_clusters,min_cluster_size,median_cluster_size,max_cluster_size\\n0.4,2,10,15,20\\n", encoding="utf-8")
+(a.out / "cluster_by_dataset.csv").write_text("resolution,cluster,dataset,n_cells\\n0.4,0,D1,20\\n0.4,1,D1,10\\n", encoding="utf-8")
 `,
   "part4_survey.py": `import argparse, json, pathlib
 p = argparse.ArgumentParser()
