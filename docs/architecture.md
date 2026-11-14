@@ -29,12 +29,14 @@ SQLite 结构统一由 Alembic 迁移管理（`0001_core_entities` 至 `0004_ass
 
 四种状态独立存储，不合并为单一“通过”标记：`job_status`、`stage_status`、`scientific_status`（保留 `NOT_ESTIMABLE` 与校准未确立限制）、`artifact_status`（采用 `.studio/tmp/<job_id>/` 校验后原子发布，重跑旧产物记为 `SUPERSEDED`，上游变更触发下游线性 `INVALIDATED`）。
 
-## 首版数据规模
+## 首版数据规模与实测耗时
 
-状态：按以下规模施工，尚未做 30 万细胞峰值内存压测，暂未启用硬性 `RESOURCE_LIMIT` 阻断，也严禁静默抽样。
+目标上限（Part 1 当前不使用 backed 模式，暂未启用硬性 `RESOURCE_LIMIT` 阻断，严禁静默抽样）：
 
-- 细胞数不超过 300,000
-- library 数不超过 40
-- 建议内存 32 GB
+- 细胞数不超过 300,000；library 数不超过 40；建议内存 32 GB（环境自检最低下限：可用内存 8 GB、空闲磁盘 10 GB）。
 
-参考基线：策展集 `GSE167363`（64,244 细胞，QC 后 39,864 细胞）速览四阶段约 12 分钟；更大公开数据集结果目录可达数十 GB，Part 1 当前不使用 backed 模式。
+本机实测基线（Windows 16 逻辑核工作站）：
+
+- **正式引擎多文库基准（合成 10,000 细胞 / QC 后 9,644 细胞 × 500 基因，4 libraries / 8 donors / 2 datasets）**：逐文库 `load + Scrublet QC` 5.97 s，`strict-common merge` 1.40 s，9 档分辨率 Harmony + Leiden + UMAP 网格 93.93 s，单档 QC 五数摘要与 Marker 审阅表导出 2.08 s，Part 1 合计 **103.37 s**；跨进程全链路（Part 1 → Part 3 → Part 2/4/5 → `REPORT.md`）回归测试约 **170 s**。
+- **公开 GEO 真实试跑（`GSE233275` / `GSE272294` / `GSE280401`，16 libraries，抽样与 QC 后 13,408 细胞）**：单进程 Worker 顺序完成 16/16 `load`、16/16 `qc`、`merge`、9 档 `grid` 与 `resolution=0.5` 审阅表。
+- **速览引擎（`scrna-target-engine`）**：1,600 细胞四阶段（含本地 GMT 富集与汇总图）约 **2 分 10 秒**；64,244 细胞（QC 后 39,864 细胞，`GSE167363`）四阶段约 **12 分钟**。30 万细胞上限峰值内存压测仍待单独大矩阵验证。

@@ -88,3 +88,11 @@ uv run stagecraft-studio restore --backup path\to\studio-backup.zip --database p
 ```
 
 恢复命令会在替换目标文件前校验压缩包成员白名单、SHA-256 摘要、`PRAGMA integrity_check` 与核心表行数；目标数据库已存在时默认拒绝覆盖（需显式加 `--overwrite`）。
+
+## 运行时第三方依赖许可证核对（GPL-3.0-only 兼容）
+
+Studio、速览引擎与正式分析引擎均以 `GPL-3.0-only` 发布。经对锁文件已安装 `dist-info/METADATA` 与 `package.json` 核验，全部直接运行时依赖均与 `GPL-3.0-only` 兼容（无专有闭源、AGPL 或 SSPL 冲突）：
+
+- **Studio Python 运行时**：`alembic==1.16.5`（MIT）、`fastapi==0.142.1`（MIT）、`httpx==0.28.1`（BSD-3-Clause）、`keyring==25.6.0`（MIT）、`pydantic==2.13.5`（MIT）、`python-multipart==0.0.32`（Apache-2.0）、`sqlalchemy==2.0.44`（MIT）、`uvicorn==0.54.0`（BSD-3-Clause）。
+- **Studio Web 运行时**：`react==19.3.0`、`react-dom==19.3.0`、`react-resizable-panels==4.14.1`、`shiki==4.4.3`、`@tanstack/react-table==9.2.4`、`@tanstack/react-virtual==3.14.13`（全部为 MIT）。
+- **双引擎科学计算与 R 运行时**：`scanpy` / `anndata` / `numpy` / `scipy` / `pandas` / `seaborn`（BSD-3-Clause），`harmonypy` / `scrublet` / `gseapy` / R `jsonlite`（MIT），`matplotlib`（PSF-2.0），`igraph` / R `Matrix` / `limma` / `edgeR`（GPL-2.0-or-later），`leidenalg`（GPL-3.0-or-later），R `DESeq2`（LGPL-3.0-or-later）。正式引擎完整声明见其仓库 `THIRD_PARTY_NOTICES.md`。

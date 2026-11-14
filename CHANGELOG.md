@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- test: 新增 `web/e2e/formal.spec.ts` 端到端浏览器测试，真实驱动研究方案冻结、Part 1 分轮人工审阅与表格展示、Part 1 锁定、工作区规则检查及图库科学边界；核对三仓 `GPL-3.0-only` 运行时依赖许可证并补充 10,000 细胞多文库实测基准。
 - feat: 补齐 `DONOR_MAPPING_REQUIRED` 与 `QUICKLOOK_CLAIM_SCOPE` 机器校验规则，使 `docs/rule-coverage.md` 全部 20/20 条规则均达到已落实状态；同步拆分 `worker/evidence.py`，在正式引擎 `load_library` 中拦截空白/NA `donor_id`。
 - feat: 环境自检新增正式 Part 5 所需 R 包（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）完备性探测；CLI 新增 WAL 一致性在线备份与完整性校验恢复子命令（`stagecraft-studio backup` / `restore`）。
 - chore: 拆分 `ReviewTables.tsx` 与 `MarkerEvidenceTable.tsx` 以符合 300 行组件卫生上限，清理 Studio 与正式引擎的 Ruff / mypy / Prettier 门禁问题，并将 `HANDOFF.md` 与 `docs/` 对齐当前代码基线。

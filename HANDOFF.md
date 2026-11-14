@@ -58,9 +58,10 @@ pnpm -C web e2e
 
 - **已完成（纯工程收尾）**：
   - `docs/rule-coverage.md` 全部 **20/20** 条规则均已落实并附可执行测试（含 `DONOR_MAPPING_REQUIRED` 供体映射入队阻断与审计落库、`QUICKLOOK_CLAIM_SCOPE` 速览摘要/方法/复现包主张范围校验，以及正式引擎对空白/NA `donor_id` 的拦截）。
+  - 浏览器端到端覆盖扩充至 **5 条 Playwright E2E**：除速览演示与受限助手外，`web/e2e/formal.spec.ts` 完整覆盖研究方案冻结、Harmony 违规拦截、Part 1 分辨率选择、逐群 QC/Marker 表渲染、KEEP 与细胞群命名锁定、阶段工作区规则检查及图库 `NOT_ESTIMABLE` / 校准边界。
   - 环境自检新增正式分析 Part 5 所需 R 包（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）完备性探测；CLI 新增 `stagecraft-studio backup` / `restore` 在线 WAL 一致性备份与完整性恢复校验。
-  - `scrna-target-engine` 本地 28 项单测、卫生检查与双平台 CI 均通过（原盘点期目录 `06_curated_results` 已不在本机，不再作为基准）。
-- **剩余待办（需真人审阅 / 外部凭据 / 远端发布与压测）**：
+  - 完成三仓运行时第三方依赖 `GPL-3.0-only` 许可证核验（写入 `docs/install.md` 与正式引擎 `THIRD_PARTY_NOTICES.md`）、10,000 细胞 / 4 文库正式引擎实测耗时基准（写入 `docs/architecture.md`），并加固正式引擎 GitHub Actions R 二进制依赖安装流程；正式引擎全量 `111 passed`，速览引擎全量 `28 passed`。
+- **剩余待办（需真人审阅 / 外部凭据 / 远端发布与干净机器验证）**：
   1. **M5 真实数据人工审阅闭环**：启动 Studio 连接 `D:\geo_data\formal_atlas\studio-gui-20261011.sqlite`，由用户在界面审阅 QC / Marker 表并亲自提交 `KEEP/DELETE` 与稳定轮细胞群命名，随后继续跑 `Part 1 lock` → `Part 3` → `Part 2 / 4 / 5` 与阶段报告。
   2. **M6 真实外部模型端点联调**：待维护者提供真实外部模型端点与 API key 后做一次联调验收。
-  3. **M7 远端推送与发布验收**：推送 `stagecraft-studio` 与 `stagecraft-formal-engine` 远端并复验双平台 Actions CI、核对发行包第三方依赖许可证声明、干净机器安装验证与规模耗时实测。
+  3. **M7 远端推送与干净机器验收**：确认后将 `stagecraft-studio` 与 `stagecraft-formal-engine` 本地 `master` 推送至 GitHub 复验双平台 Actions CI，并做干净机器从零安装与 30 万细胞上限压测。

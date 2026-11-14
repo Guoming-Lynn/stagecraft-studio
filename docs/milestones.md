@@ -116,7 +116,7 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 ## G6 审阅中心
 
-状态：已提交 `6aa352b`，测试 `1f0d309`。正式分析页是分辨率图墙和 cluster 表。从速览带入只保留数据路径、字段映射和目标基因。Playwright 仍只有速览那一条。
+状态：已提交 `6aa352b`，测试 `1f0d309`。正式分析页是分辨率图墙和 cluster 表。从速览带入只保留数据路径、字段映射和目标基因。现已新增 `web/e2e/formal.spec.ts`，由 Playwright 真实驱动研究方案冻结、Part 1 分辨率与审阅表、细胞群去留与命名锁定、工作区规则检查及图库科学边界展示。
 
 ## M5 科学状态
 
@@ -161,7 +161,7 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 - **M5 真实数据全流程验收**：`D:\geo_data\formal_atlas` 的 StageRun `#1` 已完成协议冻结、16/16 load、16/16 QC、merge、`resolution=0.5` 选择及审阅表生成（7 个群、140 行 marker），当前停在 `REVIEW_CLUSTERS`。须由用户亲自提交 KEEP/DELETE 与稳定轮细胞群命名，之后继续 Part 1 lock、Part 3、Part 2/4/5。
 - **M6 真实外部端点验收**：离线/模拟闭环已完成；待维护者提供真实模型端点与 API key 后做一次联调验收（流式展示仍为可选未实现项）。
-- **M7 发布、规模耗时与干净机器验收**：环境页 R 包完备性探测（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）与 SQLite WAL 在线备份/校验恢复 CLI（`stagecraft-studio backup` / `restore`）已完成并通过单测；剩余推送 `stagecraft-formal-engine` 源码并跑通远端 CI、核对发行包第三方依赖许可证声明、干净机器安装验证与规模耗时实测。
+- **M7 发布、规模耗时与干净机器验收**：已完成环境页 R 包完备性探测（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）、SQLite WAL 在线备份/校验恢复 CLI（`stagecraft-studio backup` / `restore`）、三仓运行时依赖 `GPL-3.0-only` 兼容性核验、10,000 细胞多文库 Part 1 实测基准（103.37 s）及正式引擎 Ubuntu R CI 加固；剩余推送远端仓库验证 CI、干净机器从零安装验证及 30 万细胞峰值压测。
 
 ## M6 AI 助手
 
