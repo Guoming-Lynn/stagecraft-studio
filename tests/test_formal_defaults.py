@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from stagecraft_studio.engine.formal_args import SPECS
 from stagecraft_studio.rules.gates import (
     get_target_gene,
     is_blinding_active,
@@ -13,6 +14,7 @@ from stagecraft_studio.rules.gates import (
 )
 from stagecraft_studio.worker.formal_defaults import (
     ProtocolDefaultsError,
+    enqueue_validation_defaults,
     fill_protocol_defaults,
     publish_subpath,
 )
@@ -122,3 +124,122 @@ def test_get_target_gene_reads_the_protocol_only() -> None:
             return _Protocol() if name == "ProtocolVersion" else type("P", (), {"name": "KRAS"})()
 
     assert get_target_gene(_Session(), _Run()) == "CD14"  # type: ignore[arg-type]
+
+
+def test_load_qc_and_grid_defaults_fill_from_protocol(tmp_path: Path) -> None:
+    work_dir = tmp_path / "project"
+    work_dir.mkdir()
+    raw = work_dir / "counts.h5ad"
+    raw.write_bytes(b"h5ad")
+    stage_dir = work_dir / "analysis" / "stage_1"
+    tmp_dir = stage_dir / ".studio" / "tmp" / "1"
+    tmp_dir.mkdir(parents=True)
+
+    doc: dict[str, object] = {
+        "target_gene": "STAT1",
+        "species": "human",
+        "harmony_keys": ["dataset"],
+        "qc": {"loose_min_genes": 250},
+        "data_path": "counts.h5ad",
+        "manifest": [{"library_id": "L1", "dataset": "D1", "donor_id": "P1", "source_block": "S1"}],
+    }
+
+    load_fields: dict[str, object] = {"library_id": "L1"}
+    fill_protocol_defaults(
+        "formal_part1_load",
+        load_fields,
+        document=doc,
+        stage_dir=stage_dir,
+        tmp_dir=tmp_dir,
+        work_dir=work_dir,
+    )
+    assert load_fields["input"] == raw.resolve()
+    assert load_fields["format"] == "h5ad"
+
+    qc_fields: dict[str, object] = {"library_id": "L1"}
+    fill_protocol_defaults(
+        "formal_part1_qc",
+        qc_fields,
+        document=doc,
+        stage_dir=stage_dir,
+        tmp_dir=tmp_dir,
+        work_dir=work_dir,
+    )
+    assert qc_fields["source"] == raw.resolve()
+    qc_cfg = json.loads(Path(str(qc_fields["config"])).read_text(encoding="utf-8"))
+    assert qc_cfg["random_seed"] == 42
+    assert qc_cfg["loose_min_genes"] == 250
+
+    grid_fields: dict[str, object] = {}
+    fill_protocol_defaults(
+        "formal_part1_grid",
+        grid_fields,
+        document=doc,
+        stage_dir=stage_dir,
+        tmp_dir=tmp_dir,
+        work_dir=work_dir,
+    )
+    assert grid_fields["gene"] == "STAT1"
+    assert grid_fields["common"] == stage_dir / "formal_part1_merge" / "primary_common.h5ad"
+    grid_cfg = json.loads(Path(str(grid_fields["config"])).read_text(encoding="utf-8"))
+    assert grid_cfg == {"random_seed": 42, "harmony_keys": ["dataset"]}
+
+
+def test_post_lock_defaults_and_part3_barcode_extraction(tmp_path: Path) -> None:
+    stage_dir = tmp_path / "stage_1"
+    lock_dir = stage_dir / "formal_part1_lock"
+    lock_dir.mkdir(parents=True)
+    (lock_dir / "cell_annotations.csv").write_text(
+        "barcode,cluster,cell_type\ncell_1,0,Monocyte\ncell_2,1,T_cell\ncell_3,0,Monocyte\n",
+        encoding="utf-8",
+    )
+    tmp_dir = tmp_path / "tmp"
+    tmp_dir.mkdir()
+    doc: dict[str, object] = {"target_gene": "STAT1"}
+
+    p2_fig: dict[str, object] = {}
+    fill_protocol_defaults(
+        "formal_part2_figures", p2_fig, document=doc, stage_dir=stage_dir, tmp_dir=tmp_dir
+    )
+    assert p2_fig["input"] == lock_dir / "locked_atlas.h5ad"
+    assert p2_fig["colors"] == lock_dir / "colors.json"
+    assert p2_fig["group"] == "cell_type"
+    assert p2_fig["gene"] == "STAT1"
+
+    p3_fields: dict[str, object] = {"lineage": "Monocyte"}
+    fill_protocol_defaults(
+        "formal_part3_recluster", p3_fields, document=doc, stage_dir=stage_dir, tmp_dir=tmp_dir
+    )
+    bc_lines = Path(str(p3_fields["barcodes"])).read_text(encoding="utf-8").splitlines()
+    assert bc_lines == ["cell_1", "cell_3"]
+    assert p3_fields["seed"] == 42
+    assert p3_fields["completed_rounds"] == 0
+
+    with pytest.raises(ProtocolDefaultsError, match="PART3_LINEAGE_EMPTY"):
+        fill_protocol_defaults(
+            "formal_part3_recluster",
+            {"lineage": "NK_cell"},
+            document=doc,
+            stage_dir=stage_dir,
+            tmp_dir=tmp_dir,
+        )
+
+    p5_fields: dict[str, object] = {"arm": "Monocyte"}
+    fill_protocol_defaults(
+        "formal_part5_prepare", p5_fields, document=doc, stage_dir=stage_dir, tmp_dir=tmp_dir
+    )
+    assert p5_fields["input"] == lock_dir / "locked_atlas.h5ad"
+    assert p5_fields["group"] == "cell_type"
+    assert p5_fields["gene"] == "STAT1"
+
+
+def test_enqueue_validation_defaults_accepts_minimal_and_rejects_bad_tokens() -> None:
+    _, load_model, _ = SPECS["formal_part1_load"]
+    minimal_load: dict[str, object] = {"library_id": "L1"}
+    enqueue_validation_defaults("formal_part1_load", minimal_load)
+    load_model.model_validate(minimal_load)
+
+    bad_load: dict[str, object] = {"library_id": "bad space"}
+    enqueue_validation_defaults("formal_part1_load", bad_load)
+    with pytest.raises(ValueError):
+        load_model.model_validate(bad_load)

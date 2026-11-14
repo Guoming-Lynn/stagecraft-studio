@@ -44,6 +44,7 @@ def create_app(
     assistant = assistant_service or AssistantService(db_path)
 
     worker = formal_worker
+    owns_worker = False
     if worker is None:
         f_launch = formal_launch
         if f_launch is None:
@@ -53,16 +54,18 @@ def create_app(
                 f_launch = None
         if f_launch is not None:
             worker = FormalWorker(database=db_path, launch=f_launch)
-            worker.recover()
-            worker.start()
+            owns_worker = True
 
     from collections.abc import AsyncIterator
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        if worker is not None and owns_worker:
+            worker.recover()
+            worker.start()
         yield
-        if worker is not None:
+        if worker is not None and owns_worker:
             worker.stop()
         await assistant.close()
 

@@ -46,6 +46,7 @@ from stagecraft_studio.worker.formal_defaults import (
     ProtocolDefaultsError,
     fill_protocol_defaults,
     publish_subpath,
+    write_default_grid_config,
 )
 from stagecraft_studio.worker.process_tree import kill_tree, spawn
 from stagecraft_studio.worker.publish import atomic_publish, register_artifacts
@@ -273,7 +274,12 @@ class FormalWorker:
 
         try:
             fill_protocol_defaults(
-                task_id, fields, document=document, stage_dir=stage_dir, tmp_dir=tmp_dir
+                task_id,
+                fields,
+                document=document,
+                stage_dir=stage_dir,
+                tmp_dir=tmp_dir,
+                work_dir=work_dir,
             )
             publish_rel = publish_subpath(task_id, fields)
         except (ProtocolDefaultsError, OSError, json.JSONDecodeError) as exc:
@@ -320,8 +326,12 @@ class FormalWorker:
                         grid_config = Path(str(grid_fields["config"]))
                         break
                 if grid_config is None:
-                    self._mark_failed(session, job, "GRID_CONFIG_NOT_FOUND")
-                    return
+                    published_cfg = stage_dir / "formal_part1_grid" / "grid_config.json"
+                    grid_config = (
+                        published_cfg
+                        if published_cfg.is_file()
+                        else write_default_grid_config(document, tmp_dir)
+                    )
             review_path = tmp_dir / "cluster_review.json"
             review_path.write_text(
                 json.dumps(
@@ -402,7 +412,15 @@ class FormalWorker:
         else:
             fields["out"] = tmp_dir
 
-        path_keys: set[str] = {"out", "stage", "donor_map", "audit_flags", "verdict_table"}
+        path_keys: set[str] = {
+            "out",
+            "stage",
+            "donor_map",
+            "loaded",
+            "manifest",
+            "audit_flags",
+            "verdict_table",
+        }
         spec = SPECS.get(task_id)
         if spec is not None:
             path_keys |= {key for _, key, kind in spec[2] if kind == "path"}

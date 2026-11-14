@@ -44,6 +44,7 @@ from stagecraft_studio.rules.gates import (
 )
 from stagecraft_studio.rules.quicklook import saw_quicklook
 from stagecraft_studio.rules.scientific_status import scientific_status
+from stagecraft_studio.worker.formal_defaults import enqueue_validation_defaults
 
 
 def submit_resolution(
@@ -251,25 +252,7 @@ def enqueue(
     if task_id in SPECS and (fields or validate_task_fields):
         _, model, _ = SPECS[task_id]
         check_fields = dict(job_fields)
-        if task_id == "formal_part1_round":
-            check_fields.update(
-                common="placeholder_common",
-                previous_grid="placeholder_grid",
-                review="placeholder_review",
-                config="placeholder_config",
-                gene="GENE",
-                out="placeholder_out",
-            )
-        if task_id == "formal_part1_review_tables":
-            check_fields.update(
-                grid="placeholder_grid",
-                gene="GENE",
-                out="placeholder_out",
-            )
-        if "out" not in check_fields:
-            check_fields["out"] = "placeholder_out"
-        if task_id == "formal_stage_report" and "stage" not in check_fields:
-            check_fields["stage"] = "placeholder_stage"
+        enqueue_validation_defaults(task_id, check_fields)
         try:
             model.model_validate(check_fields)
         except Exception:
