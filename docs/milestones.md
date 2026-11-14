@@ -2,7 +2,7 @@
 
 任务书第 15 节是里程碑定义。这里只记录切片状态。
 
-CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与 3.11 的 ubuntu 和 windows，web 的 ubuntu 和 windows）。`740dd15` 之后的提交还没推送，那些提交的 CI 没跑。Playwright 不在 Actions 里。下面各节里写「见文首的 CI 现状」的，当时那一节结束时 CI 还没跑，后来的结果以这一段为准。
+CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/windows，web 的 ubuntu/windows）；速览引擎 `scrna-target-engine`（`3da496b`）双平台 Actions 已通过。Studio 在 `149a74e` 推送时曾因 Ruff 与 Prettier 失败，已在后续收尾分支修复并通过全套本地门禁，待推送复验。Playwright 不在 Actions 里，在本地运行。
 
 ## M0-A 仓库骨架
 
@@ -102,9 +102,9 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 状态：一条路径：打开页面、运行演示、看到结果、打开一张图、下载复现包。用假引擎，不跑 1600 细胞。见文首的 CI 现状。
 
-## G0 专有声明
+## G0 专有声明（已由 2026-10-27 开源决定取代）
 
-状态：已提交 `22a55a6`。根目录 `LICENSE` 是 `Copyright 2026 GuomingLin. All rights reserved.`。产品闭源。GitHub 仓库的可见性由维护者在网页上确认为私有之前，不推送。
+状态：历史提交 `22a55a6` 曾设为专有版权；`50f0ca4` 起 Studio 与两个引擎均已改为 `GPL-3.0-only` 开源。
 
 ## G4 数据库与协议冻结
 
@@ -145,7 +145,7 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 | 人工 gate 跳不过去，直接调 API 也不行 | 通过 | `tests/test_review_gates.py`，请求模型 `extra=forbid`，无令牌 401 |
 | 旧审阅不能用于新聚类 | 通过 | `test_old_cluster_review_does_not_apply_to_new_ids` |
 | Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
-| 新引擎 CI 在 ubuntu 和 windows 通过 | 未满足 | 正式引擎为私有、闭源仓库，尚无远端，CI 未真实运行（需要私有远端，GitHub Actions 对私有仓库消耗额度，由维护者决定是否启用） |
+| 新引擎 CI 在 ubuntu 和 windows 通过 | 部分满足 | 速览引擎 `scrna-target-engine` 双平台 CI 已通过；正式引擎 `stagecraft-formal-engine` 本地测试与卫生门禁通过，远端仓库源码尚未推送 |
 | 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
 | 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | `tests/test_formal_real_chain.py` 与 `tests/test_formal_real_pipeline.py` 均使用真实正式引擎脚本端到端执行通过（覆盖 Part 1 加载→QC→合并→网格→审阅→Part 3 重聚类及后续，依赖本地正式引擎环境变量，CI 环境未配置时自动 skip） |
 
@@ -159,12 +159,11 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 ## 剩余工作
 
-- 真人交互试用当前 Studio；收集并修复用户指出的术语和操作可读性问题。用户真实提交 resolution/cluster 审阅前，不继续真实 StageRun 的下游阶段。
-- 大样本真实数据在 Studio GUI 中从人工 resolution/cluster gate 继续完成 Part 1–5；真实设计、load、QC、merge、grid 已完成，当前没有 Part 3 任务。
-- 正式引擎私有远端仓库配置（由维护者创建与推送，GitHub Actions 对私有仓库消耗额度，由维护者决定是否启用）。
-- GPL 依赖与闭源分发的许可风险，M7 打包前必须解决（替换实现或取得合规方案）。涉及：harmonypy（GPL-3.0，用于 Part 1 合并批次校正 formal_part1_merge）、leidenalg（GPL-3.0，用于 Part 1 分辨率网格聚类 formal_part1_grid 与 Part 3 重聚类 formal_part3_recluster）、python-igraph（GPL-2.0-or-later，leidenalg 的底层图计算依赖）。
-- M6（可选 AI 助手，只读证据与代码解释，不生成新标签与推断结论）。
-- M7（打包与部署）。
+- **M5 真实数据全流程验收**：`D:\geo_data\formal_atlas` 的 StageRun `#1` 已完成协议冻结、16/16 load、16/16 QC、merge、`resolution=0.5` 选择及审阅表生成（7 个群、140 行 marker），当前停在 `REVIEW_CLUSTERS`。须由用户亲自提交 KEEP/DELETE 与稳定轮细胞群命名，之后继续 Part 1 lock、Part 3、Part 2/4/5。
+- **规则函数收尾**：补齐 `docs/rule-coverage.md` 中尚标为未落实的两项（`DONOR_MAPPING_REQUIRED`、`QUICKLOOK_CLAIM_SCOPE`）。
+- **M6 真实外部端点验收**：离线/模拟闭环已完成；待维护者提供真实模型端点与 API key 后做一次联调验收（流式展示仍为可选未实现项）。
+- **M1 策展基线复跑与对比**：在速览引擎上完成至少两个 `06_curated_results` 数据集重跑对比并记录容差。
+- **M7 安装、性能与发布验收**：推送 `stagecraft-formal-engine` 源码并跑通远端 CI、核对发行包第三方依赖许可证声明、干净环境安装验证、规模耗时实测及备份恢复演练。
 
 ## M6 AI 助手
 
@@ -176,13 +175,10 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 
 ## 当前执行顺序
 
-1. 用户在 `http://127.0.0.1:8795/` 真人完整试用；依据即时反馈修复界面并继续同步术语。
-2. 用户亲自完成真实 Part 1 resolution 与 cluster KEEP/DELETE/命名审阅；严禁用 fixture 或模型代交。
-3. 依注册任务继续 Part 1 lock、Part 3、Part 2/4/5；Part 5 根据真实设计可估计性决定是否拟合。
-4. M6 真实端点验收待维护者提供服务和凭据；不阻塞当前试用。
-5. 再按原计划进入 M1 速览引擎安装/CI/卫生/curated 基线，之后进入 M7 许可、安装、性能和备份恢复验收。
-
-2026-10-11 试用前验证：图库后端 `tests/test_gallery.py` 为 `5 passed`；Web Vitest 为 `14 passed`，typecheck、ESLint、Prettier、生产构建通过。Studio 真人服务使用仓库外 SQLite；本次仅只读核查，StageRun #1 仍为 `READY`，无 Part 3 job，无人工审阅变更。
+1. 保持代码门禁与 CI 全绿，完成当前收尾分支合并。
+2. 用户在本地 Studio 服务上亲自完成真实 StageRun `#1` 的 Part 1 KEEP/DELETE 与稳定轮细胞群命名审阅（严禁用 fixture 或模型代交），随后推进 Part 1 lock、Part 3、Part 2/4/5。
+3. 补齐 `docs/rule-coverage.md` 剩余 2 条规则函数覆盖。
+4. 推进 M1 策展数据集重跑对比、M7 发布验收（正式引擎推送、依赖声明、干净环境安装、性能与备份恢复），以及维护者提供凭据后的 M6 真实端点验收。
 ### 真人试用：Part 1 群体审阅表格（2026-10-11）
 
 右侧面板新增“表格”入口，读取正式引擎生成的逐群 QC 与 marker 摘要。当前真实运行尚未到生成这些表的阶段，因此显示受控空状态；不会用估算值替代正式产物。QC 复核提示仅供人工审阅，不改变审阅门禁。
@@ -194,6 +190,10 @@ CI 现状：Studio `740dd15` 的 Actions 成功过，6 个 job（Python 3.10 与
 ## 2026-10-12 Part 1 marker/QC 表格质量修复
 
 状态：代码已更新，真实表格待重跑。Formal Engine 现在兼容真实合并对象的 QC 字段，并从 counts 补算缺失的核糖体比例、Top 50 基因比例和复杂度；新增逐行 marker 证据表，记录群内/群外检出率、检出率差和描述性质量等级。Studio API 与右侧界面拆分 QC 汇总和 Marker 证据两张表，旧紧凑 marker 文件保留兼容读取。Scrublet 未保存时明确显示“对象未保存”。TypeScript 与 AST 语法检查通过，完整 Python 回归受当前 Windows 环境 DLL/解释器问题影响尚未完成。真实 Run #1 未改变，人工审阅仍需用户完成。
+
+## 2026-10-13 Part 1 QC 五数摘要与 Marker 滚动收口
+
+状态：已完成并通过门禁。移除机器自动贴给 Leiden 群的 `qc_flags` 复核提示，改为对 UMI、检出基因数、线粒体/血红蛋白/核糖体比例、Top 50 占比、基因/UMI 复杂度与 Scrublet 评分输出 P5/P25/P50/P75/P95 五数摘要；Marker 证据表增加顶部同步横向滚动条与固定高度纵向视口，并将 `ReviewTables.tsx` 与 `MarkerEvidenceTable.tsx` 拆分为两个低于 300 行上限的组件。
 
 ## 2026-10-27 开源决定
 

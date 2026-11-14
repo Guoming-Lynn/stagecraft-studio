@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- chore: 拆分 `ReviewTables.tsx` 与 `MarkerEvidenceTable.tsx` 以符合 300 行组件卫生上限，清理 Studio 与正式引擎的 Ruff / mypy / Prettier 门禁问题，并将 `HANDOFF.md` 与 `docs/` 对齐当前代码基线。
+- feat: Studio 与两个引擎统一改为 `GPL-3.0-only` 开源，提供根目录 `Start Studio.cmd` 双击启动入口，默认浅色主题并保留用户主题偏好。
+- feat: 完善 Part 1 分轮人工审阅：选定 resolution 后生成正式 QC 五数摘要表（移除机器 `qc_flags` 标记）与逐基因 Marker 证据表（含顶部同步横向滚动条），KEEP/DELETE 与稳定轮命名分步执行，DELETE 后从保留 raw counts 重算下一轮。
+
 ## 0.0.0 - 2026-10-11
 
 - Part 1 QC review now shows per-cluster P5/P25/median/P75/P95 distributions in a compact labeled summary and no longer labels clusters with machine-generated QC review flags.
@@ -72,9 +78,3 @@
 - 单元 F5：汇总图上的每一格打开原图；旁边有同名表时，中栏打开那张表。
 - 单元 F6：双击 `scripts/start-studio.cmd` 同步两个环境，必要时构建页面，启动 serve，并打开浏览器。
 - 启动脚本在显示中文前提示控制台使用 UTF-8，避免代码页 936 把提示打成乱码。
-# Unreleased
-
-- feat: add a right-side Part 1 review tables view for per-Leiden QC summaries and top markers. QC flags are review prompts only and never submit KEEP/DELETE decisions.
-- fix: enforce the Part 1 review stops in order: selected resolution generates formal marker/QC tables, KEEP/DELETE is separate from naming, DELETE triggers retained-count reclustering, and Part 1 locks after naming in a stable round. Failed review-table, reclustering, and lock jobs can be retried.
-- fix: repair Part 1 review-table QC field compatibility and derive missing QC summaries from raw counts; export one marker gene per row with detection-rate evidence tiers, and split the Studio view into separate QC and marker tables.
-- 修复真实 Studio 在受限进程权限下提交分辨率时无法写入 SQLite、返回 500 的启动问题；默认主题改为浅色，同时保留用户已保存的主题偏好。
