@@ -39,8 +39,9 @@ from stagecraft_studio.engine.formal_args import (
 )
 from stagecraft_studio.engine.formal_contract import FORMAL_OUTPUT_CONTRACTS
 from stagecraft_studio.engine.formal_launch import FormalLaunch
-from stagecraft_studio.rules.evaluator import record_job_evidence, record_job_rules
+from stagecraft_studio.rules.evaluator import record_job_rules
 from stagecraft_studio.rules.quicklook import FormalInputRejected
+from stagecraft_studio.worker.evidence import record_job_evidence
 from stagecraft_studio.worker.formal_defaults import (
     ProtocolDefaultsError,
     fill_protocol_defaults,
