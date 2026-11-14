@@ -7,7 +7,7 @@
 | 目录 | 角色 | 许可证 | 当前状态 |
 | :--- | :--- | :--- | :--- |
 | `D:\stagecraft-studio` | Studio 主应用（API、20/20 规则、Worker、SQLite 备份恢复、双语前端、受限 AI 适配层） | `GPL-3.0-only` | 速览闭环（M2/M3）、Part 1–5 流水线与分轮人工门禁（M4/M5 代码）、20/20 规则覆盖、受限助手离线闭环（M6 代码）、R 包探测与 SQLite 备份恢复 CLI 均已入库并通过本地门禁 |
-| `D:\stagecraft-formal-engine` | 正式分析引擎（Part 1–5 donor 水平推断） | `GPL-3.0-only` | 脚本与 `stagecraft_formal` 包已完成并过本地门禁；远端仓库源码尚未推送 |
+| `D:\stagecraft-formal-engine` | 正式分析引擎（Part 1–5 donor 水平推断） | `GPL-3.0-only` | 源码已推送 `origin/master`，本地门禁与 GitHub Actions 双平台 + `r-models` CI 均已全绿通过 |
 | `D:\scrna-target-engine` | 速览引擎（`quicklook` 细胞水平探索性分析，本地 GMT 富集） | `GPL-3.0-only` | 本地门禁与 GitHub Actions 双平台 CI 均通过 |
 | `D:\target-gene-scrna-stagecraft` | 原始科学规格与产品任务书 | `MIT` | 规格基准 `2.4.0`（任务书仅保留在本地，不提交进该仓库） |
 
@@ -64,4 +64,4 @@ pnpm -C web e2e
 - **剩余待办（需真人审阅 / 外部凭据 / 远端发布与干净机器验证）**：
   1. **M5 真实数据人工审阅闭环**：启动 Studio 连接 `D:\geo_data\formal_atlas\studio-gui-20261011.sqlite`，由用户在界面审阅 QC / Marker 表并亲自提交 `KEEP/DELETE` 与稳定轮细胞群命名，随后继续跑 `Part 1 lock` → `Part 3` → `Part 2 / 4 / 5` 与阶段报告。
   2. **M6 真实外部模型端点联调**：待维护者提供真实外部模型端点与 API key 后做一次联调验收。
-  3. **M7 远端推送与干净机器验收**：确认后将 `stagecraft-studio` 与 `stagecraft-formal-engine` 本地 `master` 推送至 GitHub 复验双平台 Actions CI，并做干净机器从零安装与 30 万细胞上限压测。
+  3. **M7 干净机器验收**：已完成 `stagecraft-studio`（6/6 jobs）与 `stagecraft-formal-engine`（3/3 jobs，含 `r-models`）GitHub Actions 远端 CI 复验；剩余干净机器从零安装与 30 万细胞上限压测。

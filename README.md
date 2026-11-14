@@ -67,7 +67,7 @@ QC 表按群体展示 UMI、检出基因数、线粒体与其他转录本比例�
 
 3. 双击 stagecraft-studio/Start Studio.cmd。保持启动窗口打开；关闭窗口会停止本地服务。
 
-正式引擎仓库目前尚未上传源码，完整正式分析暂不可从 GitHub 安装。速览引擎可单独配合 Studio 使用。正式分析还需要 R、R 包 jsonlite、Matrix，以及模型对应的 limma、edgeR 或 DESeq2。安装说明和命令行选项见 [docs/install.md](docs/install.md)。
+正式分析引擎（`stagecraft-formal-engine`）与速览引擎（`scrna-target-engine`）源码均已开源在 GitHub。正式分析还需要 R、R 包 `jsonlite`、`Matrix`，以及模型对应的 `limma`、`edgeR` 或 `DESeq2`。安装说明和命令行选项见 [docs/install.md](docs/install.md)。
 
 ## 使用前请知悉
 

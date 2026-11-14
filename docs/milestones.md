@@ -2,7 +2,7 @@
 
 任务书第 15 节是里程碑定义。这里只记录切片状态。
 
-CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/windows，web 的 ubuntu/windows）；速览引擎 `scrna-target-engine`（`3da496b`）双平台 Actions 已通过。Studio 在 `149a74e` 推送时曾因 Ruff 与 Prettier 失败，已在后续收尾分支修复并通过全套本地门禁，待推送复验。Playwright 不在 Actions 里，在本地运行。
+CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/windows，web 的 ubuntu/windows，run `43582490412` 全绿通过）；正式引擎 `stagecraft-formal-engine`（`c4c5d4b`，run `43583864446`）双平台 Python 与 Ubuntu R 4.5.2（`limma`/`edgeR`/`DESeq2`）3 个 job 全绿通过；速览引擎 `scrna-target-engine`（`3da496b`）双平台 Actions 已通过。Playwright（5 条 E2E）不在 Actions 里，在本地全量通过。
 
 ## M0-A 仓库骨架
 
@@ -145,7 +145,7 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 | 人工 gate 跳不过去，直接调 API 也不行 | 通过 | `tests/test_review_gates.py`，请求模型 `extra=forbid`，无令牌 401 |
 | 旧审阅不能用于新聚类 | 通过 | `test_old_cluster_review_does_not_apply_to_new_ids` |
 | Scrublet 失败路径有测试 | 通过 | 正式引擎 `tests/test_part1_qc.py`，pytest 通过 |
-| 新引擎 CI 在 ubuntu 和 windows 通过 | 部分满足 | 速览引擎 `scrna-target-engine` 双平台 CI 已通过；正式引擎 `stagecraft-formal-engine` 本地测试与卫生门禁通过，远端仓库源码尚未推送 |
+| 新引擎 CI 在 ubuntu 和 windows 通过 | 通过 | 速览引擎 `scrna-target-engine`（run `40474601661`）与正式引擎 `stagecraft-formal-engine`（run `43583864446`，含 `r-models`）双平台 CI 均已通过 |
 | 从速览开始只带入路径、字段映射和基因 | 通过 | `test_quicklook_carry_omits_labels_and_resolution` |
 | 合成多 library 数据从 Part 1 走到 Part 3 一轮 | 通过 | `tests/test_formal_real_chain.py` 与 `tests/test_formal_real_pipeline.py` 均使用真实正式引擎脚本端到端执行通过（覆盖 Part 1 加载→QC→合并→网格→审阅→Part 3 重聚类及后续，依赖本地正式引擎环境变量，CI 环境未配置时自动 skip） |
 
@@ -161,7 +161,7 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 - **M5 真实数据全流程验收**：`D:\geo_data\formal_atlas` 的 StageRun `#1` 已完成协议冻结、16/16 load、16/16 QC、merge、`resolution=0.5` 选择及审阅表生成（7 个群、140 行 marker），当前停在 `REVIEW_CLUSTERS`。须由用户亲自提交 KEEP/DELETE 与稳定轮细胞群命名，之后继续 Part 1 lock、Part 3、Part 2/4/5。
 - **M6 真实外部端点验收**：离线/模拟闭环已完成；待维护者提供真实模型端点与 API key 后做一次联调验收（流式展示仍为可选未实现项）。
-- **M7 发布、规模耗时与干净机器验收**：已完成环境页 R 包完备性探测（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）、SQLite WAL 在线备份/校验恢复 CLI（`stagecraft-studio backup` / `restore`）、三仓运行时依赖 `GPL-3.0-only` 兼容性核验、10,000 细胞多文库 Part 1 实测基准（103.37 s）及正式引擎 Ubuntu R CI 加固；剩余推送远端仓库验证 CI、干净机器从零安装验证及 30 万细胞峰值压测。
+- **M7 发布、规模耗时与干净机器验收**：已完成环境页 R 包完备性探测（`jsonlite`、`Matrix`、`limma`、`edgeR`、`DESeq2`）、SQLite WAL 在线备份/校验恢复 CLI（`stagecraft-studio backup` / `restore`）、三仓运行时依赖 `GPL-3.0-only` 兼容性核验、10,000 细胞多文库 Part 1 实测基准（103.37 s）以及 `stagecraft-studio`（6/6 jobs）与 `stagecraft-formal-engine`（3/3 jobs，含 `r-models`）推送远端全绿 CI；剩余干净机器从零安装验证及 30 万细胞峰值压测。
 
 ## M6 AI 助手
 
@@ -169,13 +169,12 @@ CI 现状：Studio Actions 包含 6 个 job（Python 3.10 与 3.11 的 ubuntu/wi
 
 已完成 M6 第一项中的 provider HTTP mock、错误/恶意响应拒绝，以及从授权 marker evidence 生成只读 `cluster_annotation` Proposal；目标基因、盲审 marker、未授权 cluster/marker 均被服务端过滤或拒绝，候选不会写回正式标签。补充覆盖了 Anthropic Messages 请求/解析、服务级取消，以及 GUI 取消和 `protocol_config` 草案回填（只进入研究设计表单，不自动冻结或提交审阅）。见 `tests/test_assistant.py` 与 `tests/test_assistant_providers.py`。
 
-验证：Studio Python 全量 `182 passed, 1 warning`；mypy、Ruff、hygiene、OpenAPI、Web typecheck/ESLint/Vitest（3 files / 12 tests）、Prettier 和 Playwright（4 tests）均通过。剩余：维护者提供端点后进行真实服务验证；前端仍为完整响应，未实现流式展示。真实模型服务、key 和人工审阅仍未验收。
+验证：Studio Python 全量（189 passed，含跨仓真实引擎回归 2 passed）、mypy、Ruff、OpenAPI、Web typecheck/ESLint/Vitest（3 files / 14 tests）、Prettier 和 Playwright（5 tests）均通过。剩余：维护者提供端点后进行真实服务验证；前端仍为完整响应，未实现流式展示。真实模型服务、key 和人工审阅仍未验收。
 
 ## 当前执行顺序
 
-1. 推送本地 `master` 修复并复验远端 Actions CI（包括 `stagecraft-formal-engine` 首次源码推送）。
-2. 用户在本地 Studio 服务上亲自完成真实 StageRun `#1` 的 Part 1 KEEP/DELETE 与稳定轮细胞群命名审阅（严禁用 fixture 或模型代交），随后推进 Part 1 lock、Part 3、Part 2/4/5。
-3. 完成 M7 剩余发布验收（第三方依赖声明、干净机器安装、规模耗时实测）及维护者提供凭据后的 M6 真实端点验收。
+1. 用户在本地 Studio 服务上亲自完成真实 StageRun `#1` 的 Part 1 KEEP/DELETE 与稳定轮细胞群命名审阅（严禁用 fixture 或模型代交），随后推进 Part 1 lock、Part 3、Part 2/4/5。
+2. 完成 M7 剩余干净机器安装与 30 万细胞峰值压测，以及维护者提供凭据后的 M6 真实端点验收。
 ### 真人试用：Part 1 群体审阅表格（2026-10-11）
 
 右侧面板新增“表格”入口，读取正式引擎生成的逐群 QC 与 marker 摘要。当前真实运行尚未到生成这些表的阶段，因此显示受控空状态；不会用估算值替代正式产物。QC 复核提示仅供人工审阅，不改变审阅门禁。
