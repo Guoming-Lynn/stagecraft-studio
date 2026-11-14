@@ -10,6 +10,10 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from stagecraft_studio.db.models import Job, RuleResultRow
+from stagecraft_studio.rules.donor_mapping import (
+    evaluate_donor_audit,
+    evaluate_donor_metadata_rows,
+)
 
 
 def _now() -> datetime:
@@ -61,6 +65,21 @@ def record_job_rules(
                 "PASS",
                 {"library_id": lib_id, "format": fmt, "basis": "output_file_present"},
             )
+            audit_file = dest_dir / "donor_audit.json"
+            if audit_file.is_file():
+                try:
+                    donor_audit: object = json.loads(audit_file.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    donor_audit = None
+                d_status, d_detail = evaluate_donor_audit(donor_audit, library_id=lib_id)
+                _add_row(
+                    session,
+                    rows,
+                    job.stage_run_id,
+                    "DONOR_MAPPING_REQUIRED",
+                    d_status,
+                    d_detail,
+                )
         else:
             _add_row(
                 session,
@@ -70,6 +89,20 @@ def record_job_rules(
                 "BLOCK",
                 {"library_id": lib_id, "format": fmt, "reason": failure_reason or "LOAD_FAILED"},
             )
+            if failure_reason and (
+                "DONOR_ID_MISSING" in failure_reason or "donor_map" in failure_reason
+            ):
+                d_status, d_detail = evaluate_donor_audit(
+                    None, library_id=lib_id, failure_reason=failure_reason
+                )
+                _add_row(
+                    session,
+                    rows,
+                    job.stage_run_id,
+                    "DONOR_MAPPING_REQUIRED",
+                    d_status,
+                    d_detail,
+                )
 
     elif task_id == "formal_part1_qc":
         lib_id = str(fields.get("library_id", ""))
@@ -231,6 +264,26 @@ def record_job_rules(
 
     elif task_id == "formal_part5_prepare":
         arm = str(fields.get("arm", ""))
+        meta_file = (dest_dir / "metadata.csv") if dest_dir is not None else None
+        if meta_file is not None and meta_file.is_file():
+            try:
+                with meta_file.open(encoding="utf-8") as mf:
+                    meta_rows = [
+                        {str(k): str(v or "") for k, v in row.items() if k is not None}
+                        for row in csv.DictReader(mf)
+                    ]
+                m_status, m_detail = evaluate_donor_metadata_rows(meta_rows)
+            except OSError as exc:
+                m_status = "BLOCK"
+                m_detail = {"arm": arm, "reason": f"DONOR_METADATA_READ_FAILED: {exc}"}
+            _add_row(
+                session,
+                rows,
+                job.stage_run_id,
+                "DONOR_MAPPING_REQUIRED",
+                m_status,
+                {"arm": arm, **m_detail},
+            )
         verdict_file = (dest_dir / "verdict.json") if dest_dir is not None else None
         if verdict_file is not None and verdict_file.is_file():
             try:

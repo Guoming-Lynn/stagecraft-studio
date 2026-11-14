@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from stagecraft_studio.api.copy import CLAIM_SCOPE, MISSING, PHASES
+from stagecraft_studio.rules.quicklook import require_quicklook_claim_scope
 
 
 def methods_paragraph(
@@ -19,7 +20,7 @@ def methods_paragraph(
     phase = PHASES.get(stopped_after, stopped_after or MISSING)
     gene_text = gene or MISSING
     seed_text = seed or MISSING
-    return (
+    return require_quicklook_claim_scope(
         "本段按固定模板写成，没有调用模型。"
         f"{CLAIM_SCOPE}。临时标签。"
         f"目标基因是 {gene_text}，随机种子是 {seed_text}。"

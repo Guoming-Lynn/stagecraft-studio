@@ -15,7 +15,7 @@
 | LINEAR_INVALIDATION | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_upstream_change_invalidates_downstream | 上游一变，下游 INVALIDATED，旧结果只读。 |
 | INPUT_COUNTS_VALID | 机器校验 | 已落实 | stagecraft_formal/counts.py | test_input_counts_valid_recorded_on_load | counts 不合法时在预检阻断。正式引擎拒绝非整数与负数，Worker 读产物记录规则判定。 |
 | TARGET_MEASURED_IN_COMMON_SET | 机器校验 | 已落实 | stagecraft_formal/merge.py | test_target_measured_in_common_set_recorded_on_merge | 目标基因不在 strict-common 就停止。正式引擎阻止合并，Worker 读产物记录规则判定。 |
-| DONOR_MAPPING_REQUIRED | 机器校验 | 未落实 |  |  | 缺失身份对应关系时阻断 donor 推断。 |
+| DONOR_MAPPING_REQUIRED | 机器校验 | 已落实 | stagecraft_studio/rules/donor_mapping.py | test_donor_mapping_required_blocks_unmapped_inference | 缺失身份对应关系时阻断 donor 推断；程序不能凭字符串证明身份独立。 |
 | DOUBLET_FAILURE_EXPLICIT | 机器校验 | 已落实 | stagecraft_formal/qc.py | test_doublet_failure_explicit_recorded_on_qc | Scrublet 失败不能当成全是 singlet。过小或失败 library 离开主 atlas 并显式记录。 |
 | PER_LIBRARY_QC | 机器校验 | 已落实 | stagecraft_formal/qc.py | test_per_library_qc_recorded_on_qc | MAD 与 Scrublet 逐 library 估计，由 Worker 记录各 library 的 QC 规则判定。 |
 | DESIGN_ESTIMABLE | 机器校验 | 已落实 | stagecraft_formal/eligibility.py | test_design_estimable_recorded_on_prepare | 按冻结模型检查秩、自由度与暴露变化。不合格记 NOT_ESTIMABLE 并由 Worker 记录 BLOCK。 |
@@ -23,5 +23,5 @@
 | CALIBRATION_STATUS_PRESERVED | 机器校验 | 已落实 | stagecraft_studio/rules/scientific_status.py | test_a_stored_pass_does_not_raise_the_ceiling | 校准状态不得因软件跑完或请求里写了通过而升级。 |
 | QUICKLOOK_LABELS_PROVISIONAL | 机器校验 | 已落实 | stagecraft_studio/db/reviews.py | test_quicklook_carry_omits_labels_and_resolution | 从速览带入时只保留数据路径、字段映射和目标基因。 |
 | LINEAGE_ROUND_LIMIT | 机器校验 | 已落实 | stagecraft_formal/part3.py | test_two_mixed_rounds_stop_the_lineage | 两轮后仍然混杂就停止这个 lineage。 |
-| QUICKLOOK_CLAIM_SCOPE | 纯说明 | 未落实 | stagecraft_studio/api/copy.py |  | 主张范围只写在 CLAIM_SCOPE。结果页已显示，规则函数还没接。 |
+| QUICKLOOK_CLAIM_SCOPE | 机器校验 | 已落实 | stagecraft_studio/rules/quicklook.py | test_quicklook_claim_scope_rejects_missing_or_overclaimed_text | 速览摘要、方法与复现包强制校验 CLAIM_SCOPE 并拦截越界主张。 |
 | HARMONY_KEYS_ALLOWED | 机器校验 | 已落实 | stagecraft_studio/domain/protocol_form.py | test_donor_is_not_a_harmony_key | Harmony 必须含 dataset，拒绝 donor、condition、disease、cell_type 和目标基因。 |

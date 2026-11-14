@@ -102,10 +102,12 @@ def build_router(
     @router.get("/api/runs/{run_id}/bundle")
     def bundle(run_id: str) -> Response:
         record = _record(store, run_id)
+        view = run_view(record, identity)
         payload = build_bundle(
             record.output_root,
-            run_view(record, identity).command_line,
+            view.command_line,
             identity,
+            methods_text=view.methods_text,
         )
         filename = f"{run_id}-reproduce.zip"
         return Response(

@@ -99,10 +99,10 @@ ROWS: tuple[CoverageRow, ...] = (
     CoverageRow(
         "DONOR_MAPPING_REQUIRED",
         "机器校验",
-        "未落实",
-        "",
-        "",
-        "缺失身份对应关系时阻断 donor 推断。",
+        "已落实",
+        "stagecraft_studio/rules/donor_mapping.py",
+        "test_donor_mapping_required_blocks_unmapped_inference",
+        "缺失身份对应关系时阻断 donor 推断；程序不能凭字符串证明身份独立。",
     ),
     CoverageRow(
         "DOUBLET_FAILURE_EXPLICIT",
@@ -162,11 +162,11 @@ ROWS: tuple[CoverageRow, ...] = (
     ),
     CoverageRow(
         "QUICKLOOK_CLAIM_SCOPE",
-        "纯说明",
-        "未落实",
-        "stagecraft_studio/api/copy.py",
-        "",
-        "主张范围只写在 CLAIM_SCOPE。结果页已显示，规则函数还没接。",
+        "机器校验",
+        "已落实",
+        "stagecraft_studio/rules/quicklook.py",
+        "test_quicklook_claim_scope_rejects_missing_or_overclaimed_text",
+        "速览摘要、方法与复现包强制校验 CLAIM_SCOPE 并拦截越界主张。",
     ),
     CoverageRow(
         "HARMONY_KEYS_ALLOWED",

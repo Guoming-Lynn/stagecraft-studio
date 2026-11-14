@@ -22,6 +22,10 @@ from stagecraft_studio.db.models import (
 from stagecraft_studio.db.store import _audit, create_project, open_stage_run
 from stagecraft_studio.engine.formal_args import SPECS
 from stagecraft_studio.engine.registry import UnsupportedTask, require_task
+from stagecraft_studio.rules.donor_mapping import (
+    DONOR_INFERENCE_TASKS,
+    require_donor_mapping_for_inference,
+)
 from stagecraft_studio.rules.gates import (
     POST_LOCK_TASKS,
     PRE_RESOLUTION,
@@ -238,6 +242,8 @@ def enqueue(
             return existing_lock
     if task_id in POST_LOCK_TASKS:
         _require_locked_atlas(session, run)
+    if task_id in DONOR_INFERENCE_TASKS:
+        _require_donor_mapping(session, run, task_id)
     validate_task_fields = task_id in {
         "formal_part1_round",
         "formal_part1_review_tables",
@@ -767,3 +773,46 @@ def _require_locked_atlas(session: Session, run: StageRun) -> None:
     )
     if completed is None:
         _block(session, run, "LOCKED_ATLAS_REQUIRED")
+
+
+def _require_donor_mapping(session: Session, run: StageRun, task_id: str) -> None:
+    protocol = session.get(ProtocolVersion, run.protocol_id)
+    document: dict[str, object] = {}
+    if protocol is not None and protocol.document_json:
+        try:
+            parsed = json.loads(protocol.document_json)
+            if isinstance(parsed, dict):
+                document = parsed
+        except json.JSONDecodeError:
+            document = {}
+    recorded: dict[str, str] = {}
+    has_unscoped_block = False
+    rows = session.scalars(
+        select(RuleResultRow)
+        .where(
+            RuleResultRow.stage_run_id == run.id,
+            RuleResultRow.rule_id == "DONOR_MAPPING_REQUIRED",
+        )
+        .order_by(RuleResultRow.id.asc())
+    )
+    for row in rows:
+        lib_id = ""
+        try:
+            detail = json.loads(row.detail_json)
+            if isinstance(detail, dict):
+                lib_id = str(detail.get("library_id", "")).strip()
+        except json.JSONDecodeError:
+            lib_id = ""
+        if lib_id:
+            recorded[lib_id] = row.rule_status
+        elif row.rule_status == "BLOCK":
+            has_unscoped_block = True
+    try:
+        require_donor_mapping_for_inference(
+            task_id,
+            protocol_document=document,
+            recorded_statuses=recorded,
+            has_any_block=has_unscoped_block,
+        )
+    except GateRejected:
+        _block(session, run, "DONOR_MAPPING_REQUIRED")

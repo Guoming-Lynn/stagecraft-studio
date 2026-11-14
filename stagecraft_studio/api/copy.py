@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from stagecraft_studio.rules.quicklook import QUICKLOOK_CLAIM_TEXT
+
 ENGINE_STATUS = {
     "running": "运行中",
     "starting": "正在启动",
@@ -33,7 +35,7 @@ SOURCE_LABELS = {
     "inferred": "自动推断",
 }
 GROUP_NOTE = "没有分组时不出 case/control 对比图"
-CLAIM_SCOPE = "细胞水平探索性分析，不做 donor 水平推断，p 值不代表样本间的可重复性"
+CLAIM_SCOPE = QUICKLOOK_CLAIM_TEXT
 LEDE = "产物标记为 quicklook。它不能当作正式分析的输入。" + CLAIM_SCOPE + "。"
 FIGURE_PASS = "通过"
 FIGURE_FAIL = "不通过"

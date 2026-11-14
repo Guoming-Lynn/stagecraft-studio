@@ -7,14 +7,24 @@ import json
 import zipfile
 from pathlib import Path
 
-from stagecraft_studio.api.copy import MISSING
+from stagecraft_studio.api.copy import CLAIM_SCOPE, MISSING
 from stagecraft_studio.api.steps import EngineIdentity
+from stagecraft_studio.rules.quicklook import QUICKLOOK_TIER, require_quicklook_claim_scope
 
 _LOCK_NAME = "uv.lock"
 
 
-def build_bundle(root: Path, command_line: str, identity: EngineIdentity) -> bytes:
+def build_bundle(
+    root: Path,
+    command_line: str,
+    identity: EngineIdentity,
+    *,
+    methods_text: str | None = None,
+) -> bytes:
     """Pack the files needed to see how a run was launched. Data files are omitted."""
+    verified_scope = require_quicklook_claim_scope(CLAIM_SCOPE)
+    if methods_text is not None:
+        require_quicklook_claim_scope(methods_text)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("config.json", _config_text(root))
@@ -28,6 +38,8 @@ def build_bundle(root: Path, command_line: str, identity: EngineIdentity) -> byt
                     "version": identity.version,
                     "git": identity.git,
                     "lock": _LOCK_NAME if lock is not None else MISSING,
+                    "analysis_tier": QUICKLOOK_TIER,
+                    "claim_scope": verified_scope,
                 },
                 ensure_ascii=False,
                 indent=2,

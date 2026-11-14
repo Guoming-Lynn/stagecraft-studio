@@ -41,6 +41,7 @@ from stagecraft_studio.api.steps import (
     step_state,
 )
 from stagecraft_studio.rules.figure_copy import figure_reason, outcome_label
+from stagecraft_studio.rules.quicklook import require_quicklook_claim_scope
 from stagecraft_studio.worker.runs import RunRecord
 
 
@@ -63,7 +64,7 @@ def run_view(record: RunRecord, identity: EngineIdentity) -> RunView:
         status=record.status,
         status_label=ENGINE_STATUS.get(record.status, record.status),
         heading=_heading(record.status, stopped_after),
-        lede=LEDE,
+        lede=require_quicklook_claim_scope(LEDE),
         can_cancel=record.status in {"running", "starting"},
         returncode=_returncode(status_file),
         enrichment=enrichment,
